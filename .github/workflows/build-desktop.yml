@@ -1,0 +1,53 @@
+name: build-desktop
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: |
+          cd electron
+          rm -rf webapp
+          mkdir -p webapp
+          bash ../webapp/sync-core.sh
+          cp ../webapp/index.html ../webapp/app.css ../webapp/app.js ../webapp/downloads.js \
+             ../webapp/rng.js ../webapp/gen4.js ../webapp/gen12.js webapp/
+          npm install --no-audit --no-fund
+          npx electron-builder --mac --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shiny-solution-mac
+          path: |
+            electron/dist/*.dmg
+            electron/dist/*-mac-*.zip
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: |
+          cd electron
+          rm -rf webapp
+          mkdir -p webapp
+          bash ../webapp/sync-core.sh
+          cp ../webapp/index.html ../webapp/app.css ../webapp/app.js ../webapp/downloads.js \
+             ../webapp/rng.js ../webapp/gen4.js ../webapp/gen12.js webapp/
+          npm install --no-audit --no-fund
+          npx electron-builder --linux --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shiny-solution-linux
+          path: |
+            electron/dist/*.AppImage
+            electron/dist/*.tar.gz

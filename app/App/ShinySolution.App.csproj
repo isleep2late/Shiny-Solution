@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>ShinySolution</AssemblyName>
+    <AssemblyTitle>Shiny-Solution</AssemblyTitle>
+    <Product>Shiny-Solution</Product>
+    <Version>0.3.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Core/ShinySolution.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../lua/shiny-solution.lua" LogicalName="lua.gen3" />
+    <EmbeddedResource Include="../../lua/shiny-solution-gb.lua" LogicalName="lua.gb" />
+  </ItemGroup>
+</Project>

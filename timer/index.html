@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shiny-Solution Timer</title>
+<link rel="stylesheet" href="timer.css">
+</head>
+<body>
+<header>
+  <h1>Shiny-Solution</h1>
+  <p>Console-assist timer for dead-battery Ruby/Sapphire (fixed boot seed 0x5A0)</p>
+</header>
+<nav id="tabs">
+  <button data-tab="tid" class="active">TID Manip</button>
+  <button data-tab="starter">Shiny Starter</button>
+  <button data-tab="custom">Custom Target</button>
+</nav>
+<main>
+  <section id="tab-tid" class="tab active">
+    <div class="card">
+      <h2>Find TID targets</h2>
+      <div class="row">
+        <label>Target TID <input id="tid-target" type="number" min="0" max="65535" value="7777"></label>
+        <label>Search window (minutes from power-on) <input id="tid-minutes" type="number" min="1" max="120" value="15"></label>
+        <button id="tid-search">Find targets</button>
+      </div>
+      <div id="tid-results"></div>
+    </div>
+    <div class="card">
+      <h2>Calibrate</h2>
+      <p>After an attempt, enter the TID you actually got. The tool finds where you landed, shifts the timer, and tells you the SID of the save you just made.</p>
+      <div class="row">
+        <label>TID you got <input id="tid-got" type="number" min="0" max="65535"></label>
+        <button id="tid-calibrate">Calibrate</button>
+      </div>
+      <p id="tid-cal-result" class="result"></p>
+    </div>
+  </section>
+  <section id="tab-starter" class="tab">
+    <div class="card">
+      <h2>Find shiny starter targets</h2>
+      <div class="row">
+        <label>TID <input id="st-tid" type="number" min="0" max="65535"></label>
+        <label>SID <input id="st-sid" type="number" min="0" max="65535"></label>
+      </div>
+      <div class="row">
+        <label>Nature <select id="st-nature"><option value="">Any</option></select></label>
+        <label>Gender <select id="st-gender"><option value="">Any</option><option value="M">Male</option><option value="F">Female</option></select></label>
+        <label>Min IV floor <input id="st-miniv" type="number" min="0" max="31" value="0"></label>
+      </div>
+      <div class="row">
+        <label>Earliest press (minutes from power-on) <input id="st-min-minutes" type="number" min="0" max="600" value="5"></label>
+        <label>Search window (minutes) <input id="st-minutes" type="number" min="1" max="600" value="120"></label>
+        <button id="st-search">Find targets</button>
+      </div>
+      <div id="st-results"></div>
+    </div>
+    <div class="card">
+      <h2>Calibrate</h2>
+      <p>After an attempt, enter what the starter turned out to be: nature, gender and the six stats straight off the summary screen. The stats are what make the landing spot unambiguous — nature and gender alone repeat every few dozen frames.</p>
+      <div class="row">
+        <label>Starter <select id="st-species"><option>Treecko</option><option>Torchic</option><option>Mudkip</option></select></label>
+        <label>Nature <select id="st-got-nature"></select></label>
+        <label>Gender <select id="st-got-gender"><option value="M">Male</option><option value="F">Female</option></select></label>
+      </div>
+      <div class="row">
+        <label>HP <input id="st-got-hp" type="number" min="1" max="40"></label>
+        <label>Attack <input id="st-got-atk" type="number" min="1" max="40"></label>
+        <label>Defense <input id="st-got-def" type="number" min="1" max="40"></label>
+        <label>Sp. Atk <input id="st-got-spa" type="number" min="1" max="40"></label>
+        <label>Sp. Def <input id="st-got-spd" type="number" min="1" max="40"></label>
+        <label>Speed <input id="st-got-spe" type="number" min="1" max="40"></label>
+        <button id="st-calibrate">Calibrate</button>
+      </div>
+      <p id="st-cal-result" class="result"></p>
+    </div>
+  </section>
+  <section id="tab-custom" class="tab">
+    <div class="card">
+      <h2>Custom target</h2>
+      <div class="row">
+        <label>Target advance <input id="cu-advance" type="number" min="1" value="10000"></label>
+        <button id="cu-load">Load into timer</button>
+      </div>
+    </div>
+  </section>
+  <section id="timer-panel" class="card hidden">
+    <h2 id="timer-title">Timer</h2>
+    <p id="timer-info"></p>
+    <div id="timer-display">--:--.---</div>
+    <div class="row">
+      <button id="timer-start">Start at power-on (Space)</button>
+      <button id="timer-cancel">Cancel</button>
+    </div>
+    <p class="hint">Click Start (or press Space) at the exact instant you power the console on. Beeps sound each second for the last five; press A on the long final beep. Retries reuse the same target: dead-battery boots are identical every time.</p>
+    <p id="timer-cal">Calibration offset: <span id="cal-value">0</span> ms <button id="cal-reset">reset</button></p>
+  </section>
+</main>
+<footer>
+  <p>Targets assume the Ruby/Sapphire dead-battery boot seed 0x5A0 and one RNG advance per frame at 59.7275 fps. All timing error is absorbed by the calibration loop.</p>
+</footer>
+<script src="../core/rng.js"></script>
+<script src="timer.js"></script>
+</body>
+</html>

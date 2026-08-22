@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shiny-Solution</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header>
+  <h1>Shiny-Solution</h1>
+  <p>RNG manipulation calculators &amp; timers for Pokémon Gens 1–4 — no emulator required. Decomp-verified math.</p>
+</header>
+<nav id="tabs">
+  <button data-tab="g3timer" class="active">Gen 3 Timer</button>
+  <button data-tab="g3check">Gen 3 Checker</button>
+  <button data-tab="g4">Gen 4</button>
+  <button data-tab="g12">Gen 1/2 DVs</button>
+  <button data-tab="about">About</button>
+</nav>
+<main>
+  <section id="tab-g3timer" class="tab active">
+    <div class="card">
+      <h2>Find TID targets (dead-battery Ruby/Sapphire, seed 0x5A0)</h2>
+      <div class="row">
+        <label>Target TID <input id="tid-target" type="number" min="0" max="65535" value="7777"></label>
+        <label>Search window (minutes from power-on) <input id="tid-minutes" type="number" min="1" max="120" value="15"></label>
+        <button id="tid-search">Find targets</button>
+      </div>
+      <div id="tid-results"></div>
+    </div>
+    <div class="card">
+      <h2>Find shiny starter targets</h2>
+      <div class="row">
+        <label>TID <input id="st-tid" type="number" min="0" max="65535"></label>
+        <label>SID <input id="st-sid" type="number" min="0" max="65535"></label>
+        <label>Nature <select id="st-nature"><option value="">Any</option></select></label>
+        <label>Gender <select id="st-gender"><option value="">Any</option><option value="M">Male</option><option value="F">Female</option></select></label>
+        <label>Min IV floor <input id="st-miniv" type="number" min="0" max="31" value="0"></label>
+      </div>
+      <div class="row">
+        <label>Earliest press (min) <input id="st-min-minutes" type="number" min="0" max="600" value="5"></label>
+        <label>Window (min) <input id="st-minutes" type="number" min="1" max="600" value="120"></label>
+        <button id="st-search">Find targets</button>
+      </div>
+      <div id="st-results"></div>
+    </div>
+    <div class="card">
+      <h2>Calibrate after a TID attempt</h2>
+      <div class="row">
+        <label>TID you got <input id="tid-got" type="number" min="0" max="65535"></label>
+        <button id="tid-calibrate">Calibrate</button>
+      </div>
+      <p id="tid-cal-result" class="result"></p>
+    </div>
+    <div class="card">
+      <h2>Calibrate after a starter attempt (summary-screen stats)</h2>
+      <div class="row">
+        <label>Starter <select id="st-species"><option>Treecko</option><option>Torchic</option><option>Mudkip</option></select></label>
+        <label>Nature <select id="st-got-nature"></select></label>
+        <label>Gender <select id="st-got-gender"><option value="M">Male</option><option value="F">Female</option></select></label>
+      </div>
+      <div class="row">
+        <label>HP <input id="st-got-hp" type="number" min="1" max="40"></label>
+        <label>Atk <input id="st-got-atk" type="number" min="1" max="40"></label>
+        <label>Def <input id="st-got-def" type="number" min="1" max="40"></label>
+        <label>SpA <input id="st-got-spa" type="number" min="1" max="40"></label>
+        <label>SpD <input id="st-got-spd" type="number" min="1" max="40"></label>
+        <label>Spe <input id="st-got-spe" type="number" min="1" max="40"></label>
+        <button id="st-calibrate">Calibrate</button>
+      </div>
+      <p id="st-cal-result" class="result"></p>
+    </div>
+  </section>
+  <section id="tab-g3check" class="tab">
+    <div class="card">
+      <h2>Shiny checker — is this PID shiny for my IDs?</h2>
+      <div class="row">
+        <label>PID (hex) <input id="ck-pid" class="mono" value="00000000"></label>
+        <label>TID <input id="ck-tid" type="number" min="0" max="65535" value="0"></label>
+        <label>SID <input id="ck-sid" type="number" min="0" max="65535" value="0"></label>
+        <button id="ck-check">Check</button>
+      </div>
+      <p id="ck-result" class="result"></p>
+    </div>
+    <div class="card">
+      <h2>Method-1 calculator — what spawns at an advance?</h2>
+      <div class="row">
+        <label>Seed (hex) <input id="m1-seed" class="mono" value="000005A0"></label>
+        <label>Advance <input id="m1-adv" type="number" min="0" value="1000"></label>
+        <label>Count <input id="m1-count" type="number" min="1" max="50" value="10"></label>
+        <button id="m1-run">Calculate</button>
+      </div>
+      <div id="m1-results"></div>
+    </div>
+  </section>
+  <section id="tab-g4" class="tab">
+    <div class="card">
+      <h2>Seed &amp; TID/SID calculator (D/P/Pt/HG/SS)</h2>
+      <div class="row">
+        <label>Boot date/time <input id="g4-date" type="datetime-local" step="1" value="2026-01-01T10:00:00"></label>
+        <label>Delay <input id="g4-delay" type="number" min="0" max="65535" value="600"></label>
+        <label>Elm skips <input id="g4-skips" type="number" min="0" max="50" value="0"></label>
+        <button id="g4-calc">Compute</button>
+      </div>
+      <p id="g4-calc-out" class="result mono"></p>
+    </div>
+    <div class="card">
+      <h2>Find TID targets by delay</h2>
+      <div class="row">
+        <label>Target TID <input id="g4-tid" type="number" min="0" max="65535" value="7777"></label>
+        <label>Boot minute <input id="g4-tdate" type="datetime-local" value="2026-01-01T10:00"></label>
+        <label>Delay range <input id="g4-dmin" type="number" min="0" max="65535" value="300"></label>
+        <label>to <input id="g4-dmax" type="number" min="0" max="65535" value="5000"></label>
+        <button id="g4-tid-search">Find</button>
+      </div>
+      <div id="g4-tid-results"></div>
+    </div>
+    <div class="card">
+      <h2>Shiny Method-1 search from a seed (statics, starters, gifts)</h2>
+      <div class="row">
+        <label>Seed (hex) <input id="g4-shseed" class="mono"></label>
+        <label>TID <input id="g4-shtid" type="number" min="0" max="65535" value="0"></label>
+        <label>SID <input id="g4-shsid" type="number" min="0" max="65535" value="0"></label>
+        <label>Nature <select id="g4-shnature"><option value="">Any</option></select></label>
+        <label>Advances <input id="g4-shmin" type="number" min="0" value="0"></label>
+        <label>to <input id="g4-shmax" type="number" min="1" value="5000"></label>
+        <button id="g4-sh-search">Find</button>
+      </div>
+      <div id="g4-sh-results"></div>
+    </div>
+    <div class="card">
+      <h2>Two-phase timer</h2>
+      <p id="g4-target-info">no target loaded — pick a row in the TID table above</p>
+      <p id="g4-clock-note" class="result"></p>
+      <p id="g4-phase"></p>
+      <div id="g4-display" class="bigtime">--:--.---</div>
+      <div class="row">
+        <button id="g4-start">Start at clock confirm</button>
+        <button id="g4-cancel">Cancel</button>
+        <label>calibrated delay <input id="g4-cald" type="number" step="0.1" value="500"></label>
+        <label>calibrated second <input id="g4-cals" type="number" min="0" max="59" value="14"></label>
+      </div>
+      <div class="row">
+        <label>Delay you hit <input id="g4-hit" type="number" min="0" max="65535"></label>
+        <button id="g4-calibrate">Calibrate from hit</button>
+        <span id="g4-cal-result" class="result"></span>
+      </div>
+      <div class="row">
+        <label>Coin flips (H/T, DPPt) <input id="g4-flips" class="mono" size="24"></label>
+        <label>second ± <input id="g4-frad" type="number" min="0" max="30" value="3"></label>
+        <label>delay ± <input id="g4-fwidth" type="number" min="100" max="65535" value="2000"></label>
+        <button id="g4-match">Match</button>
+      </div>
+      <p id="g4-match-result" class="result"></p>
+    </div>
+  </section>
+  <section id="tab-g12" class="tab">
+    <div class="card">
+      <h2>Gen 2 shiny DV checker (also: will my Gen 1 mon be shiny in Gen 2?)</h2>
+      <div class="row">
+        <label>Attack DV <input id="dv-atk" type="number" min="0" max="15" value="10"></label>
+        <label>Defense DV <input id="dv-def" type="number" min="0" max="15" value="10"></label>
+        <label>Speed DV <input id="dv-spe" type="number" min="0" max="15" value="10"></label>
+        <label>Special DV <input id="dv-spc" type="number" min="0" max="15" value="10"></label>
+        <button id="dv-check">Check</button>
+      </div>
+      <p id="dv-result" class="result"></p>
+      <p>The rule (from the Crystal decompilation): Defense, Speed and Special DVs must all be
+      exactly 10, and the Attack DV must be one of 2, 3, 6, 7, 10, 11, 14, 15. That is 1/8192.
+      Gen 1 has no shininess of its own — but the Time Capsule copies DVs unchanged, so a Gen 1
+      mon with these DVs IS shiny once traded to Gen 2.</p>
+      <p>Automated shiny hunting for Gen 1/2 needs an emulator: it is part of the Windows desktop
+      app driving mGBA, not this web version.</p>
+    </div>
+  </section>
+  <section id="tab-about" class="tab">
+    <div class="card">
+      <h2>About</h2>
+      <p>Shiny-Solution manipulates the actual RNG of the classic Pokémon games: every mechanic
+      here was verified against the pret decompilations. This web version covers everything that
+      needs no emulator: searchers, calculators, checkers and calibrated timers for real-hardware
+      manipulation.</p>
+      <p>The full desktop version additionally drives the mGBA emulator for frame-perfect
+      automatic manipulation (Gen 3) and automated savestate hunting (Gen 1/2):</p>
+      <ul id="download-list">
+        <li><a id="dl-win" href="#">Windows (full: emulator auto-press + everything here)</a></li>
+        <li><a id="dl-linux" href="#">Linux (calculators &amp; timers)</a></li>
+        <li><a id="dl-mac" href="#">macOS (calculators &amp; timers)</a></li>
+      </ul>
+      <p id="about-version"></p>
+    </div>
+  </section>
+</main>
+<footer>
+  <p>GBA timing: 59.7275 fps. NDS timing: 59.8261 fps. All timing error is absorbed by the calibration loops.</p>
+</footer>
+<script src="rng.js"></script>
+<script src="gen4.js"></script>
+<script src="gen12.js"></script>
+<script src="downloads.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

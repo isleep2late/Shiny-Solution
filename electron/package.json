@@ -1,0 +1,36 @@
+{
+  "name": "shiny-solution-lite",
+  "productName": "Shiny Solution",
+  "version": "0.3.0",
+  "description": "RNG manipulation calculators and timers for Pokemon Gens 1-4 (decomp-verified)",
+  "main": "main.js",
+  "license": "GPL-3.0",
+  "author": "isleep2late",
+  "scripts": {
+    "start": "electron .",
+    "dist:linux": "electron-builder --linux",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.hackmons.shinysolution",
+    "files": ["main.js", "webapp/**"],
+    "linux": {
+      "target": ["AppImage", "tar.gz"],
+      "category": "Utility",
+      "artifactName": "shiny-solution-${version}-linux-${arch}.${ext}"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.utilities",
+      "artifactName": "shiny-solution-${version}-mac-${arch}.${ext}"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
