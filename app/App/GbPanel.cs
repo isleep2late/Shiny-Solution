@@ -23,6 +23,8 @@ public sealed class GbPanel : UserControl
     public GbPanel()
     {
         _btnConnect = Ui.Btn("Connect", (_, _) => ToggleConnect());
+        _link.ScriptName = "lua/shiny-solution-gb.lua";
+        _link.ExpectedPort = 8357;
         _link.Log += AddLog;
         _link.ConnectedChanged += ok =>
         {
@@ -43,7 +45,7 @@ public sealed class GbPanel : UserControl
             Ui.Row(Ui.L("mGBA host"), _host, Ui.L("port"), _port, _btnConnect, _linkStatus),
             Ui.Row(_stGame, _stMode, _stAttempt, _stWait, _stLast),
             Ui.Row(Ui.L("trigger"), _trigger, Ui.L("watch"), _watch, Ui.L("target"), _target,
-                Ui.L("custom (hex, ? wildcards)"), _custom),
+                Ui.L("custom (hex, or a plain TID number, ? wildcards)"), _custom),
             Ui.Row(Ui.L("wait step"), _step, Ui.L("timeout frames"), _timeout,
                 Ui.Btn("Apply settings", (_, _) => ApplySettings()),
                 Ui.Btn("Start hunt", (_, _) => Send("hunt")),
@@ -76,9 +78,49 @@ public sealed class GbPanel : UserControl
         Send("set trigger " + _trigger.SelectedItem);
         Send("set watch " + _watch.SelectedItem!.ToString()!.Split(' ')[0]);
         Send("set target " + (_target.SelectedIndex == 0 ? "shiny" : "custom"));
-        if (_target.SelectedIndex == 1 && _custom.Text.Length > 0) Send("set custom_dvs " + _custom.Text.Trim());
+        if (_target.SelectedIndex == 1 && _custom.Text.Length > 0)
+        {
+            var pattern = NormalisePattern(_custom.Text.Trim(), WatchIsTid());
+            if (pattern is null)
+            {
+                AddLog("that custom target is not a 4-character hex pattern (or, for a TID hunt, a plain "
+                    + "number 0-65535) - nothing was applied");
+                return;
+            }
+            Send("set custom_dvs " + pattern);
+        }
         Send($"set wait_step {(int)_step.Value}");
         Send($"set timeout_frames {(int)_timeout.Value}");
+    }
+
+    bool WatchIsTid() => _watch.SelectedIndex == 2;
+
+    /// <summary>
+    /// The script matches a 4-character hex pattern with '?' wildcards. A TID, though, is a number
+    /// every game shows in DECIMAL - so in TID mode a bare number is read as decimal and converted,
+    /// and hex is written with a 0x prefix. Getting this wrong is silent and expensive: TID 1234 is
+    /// a perfectly valid hex string too, so guessing by shape would hunt the wrong trainer forever.
+    /// </summary>
+    internal static string? NormalisePattern(string text, bool tidMode)
+    {
+        if (text.Length == 0) return null;
+
+        var hex = text;
+        if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            hex = hex[2..];
+        else if (tidMode && text.All(char.IsDigit))
+        {
+            if (!ushort.TryParse(text, out var tid)) return null;
+            return tid.ToString("X4");
+        }
+
+        hex = hex.ToUpperInvariant();
+        if (hex.Length != 4) return null;
+        foreach (var c in hex)
+        {
+            if (c != '?' && !Uri.IsHexDigit(c)) return null;
+        }
+        return hex;
     }
 
     void AddLog(string msg)

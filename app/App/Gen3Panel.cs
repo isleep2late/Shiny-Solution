@@ -72,6 +72,8 @@ public sealed class Gen3Panel : UserControl
         _countdown = new CountdownController(_display, _info, _calLabel);
         _btnConnect = Ui.Btn("Connect", (_, _) => ToggleConnect());
 
+        _link.ScriptName = "lua/shiny-solution.lua";
+        _link.ExpectedPort = 8356;
         _link.Log += AddLog;
         _link.ConnectedChanged += ok =>
         {

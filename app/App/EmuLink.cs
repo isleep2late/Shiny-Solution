@@ -29,6 +29,38 @@ public sealed class EmuLink : IDisposable
 
     void Post(Action action) => _ui.Post(_ => action(), null);
 
+    /// <summary>The script that is supposed to be listening, and the port it listens on by default.
+    /// Set by each panel so a refused connection can say what to actually DO about it instead of
+    /// handing the user a raw socket error - the failure that cost a viewer an evening: the port box
+    /// held 8537, the script was on 8357, and "target machine actively refused it" named neither.</summary>
+    public string ScriptName { get; set; } = "the Shiny-Solution script";
+    public int ExpectedPort { get; set; }
+
+    /// <summary>How long to wait before calling a connection refused. A wrong HOST (as opposed to a
+    /// wrong port) does not refuse, it hangs, and an untimed Connect would hang with it.</summary>
+    static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
+
+    string ExplainFailure(Exception ex, string host, int port)
+    {
+        var refused = ex is SocketException { SocketErrorCode: SocketError.ConnectionRefused };
+        var timedOut = ex is TimeoutException
+            || ex is SocketException { SocketErrorCode: SocketError.TimedOut };
+        if (!refused && !timedOut)
+            return $"link error: {ex.Message}";
+
+        var what = refused
+            ? $"Nothing is listening on {host}:{port}."
+            : $"No answer from {host}:{port} within {ConnectTimeout.TotalSeconds:0} seconds.";
+
+        var portHint = ExpectedPort > 0 && port != ExpectedPort
+            ? $" THE PORT LOOKS WRONG: this tab's script listens on {ExpectedPort}, not {port}."
+                + " Fix the port box and press Connect again."
+            : $" Load {ScriptName} in mGBA first (Tools > Scripting > File > Load script), and check the"
+                + " port in the box matches the one mGBA's scripting window printed.";
+
+        return what + portHint;
+    }
+
     public void Connect(string host, int port)
     {
         int session;
@@ -46,7 +78,8 @@ public sealed class EmuLink : IDisposable
             try
             {
                 tcp = new TcpClient();
-                tcp.Connect(host, port);
+                if (!tcp.ConnectAsync(host, port).Wait(ConnectTimeout))
+                    throw new TimeoutException($"no answer from {host}:{port}");
                 var stream = tcp.GetStream();
                 var writer = new StreamWriter(stream) { AutoFlush = true, NewLine = "\n" };
                 lock (_sync)
@@ -81,7 +114,9 @@ public sealed class EmuLink : IDisposable
             {
                 bool current;
                 lock (_sync) current = session == _session;
-                if (current) Post(() => Log?.Invoke($"link error: {ex.Message}"));
+                var explained = ExplainFailure(ex is AggregateException agg && agg.InnerException is { } inner
+                    ? inner : ex, host, port);
+                if (current) Post(() => Log?.Invoke(explained));
             }
             finally
             {
