@@ -69,6 +69,18 @@
     return s;
   }
   function isHaltedState(state) { return state.indexOf("halt") === 0; }
+  var ID_MAX = 0xFFFF;
+  var FAMILIES = ["all", "running", "halted"];
+  // Typed IDs are integers 0..65535; a hex string, NaN or an out-of-range number is a caller bug, not "absent from the tables".
+  function id16(x, name) {
+    if (typeof x !== "number" || !Number.isInteger(x) || x < 0 || x > ID_MAX) fail(name + " must be an integer 0..65535 (got " + JSON.stringify(x) + ")");
+    return x;
+  }
+  function optId16(x, name) { return isNil(x) ? null : id16(x, name); }
+  function finite(x, name) {
+    if (typeof x !== "number" || !Number.isFinite(x)) fail(name + " must be a finite number (got " + String(x) + ")");
+    return x;
+  }
   function tableKey(gameKey, platformKey, state) { return gameKey + "/" + platformKey + "/" + state; }
   function splitKey(key) { var p = key.split("/"); return { game: p[0], platformKey: p[1], state: p[2] }; }
 
@@ -116,15 +128,30 @@
       state: state, methodology: m.id, timing: m.timing, rule: binRule(data, gameKey) };
   }
   // Every table key of a game in data order (platform keys, then the running and halted states).
+  // The scope options are validated here (invert, ambiguity, sampleFromHit and verify all come through): an unknown platform,
+  // family or state throws instead of silently scoping to no table at all.
   function tableKeys(data, gameKey, opts) {
     var o = opts || {};
     var g = game(data, gameKey), out = [];
     var states = stateIds(data, gameKey);
+    var family = isNil(o.family) ? "all" : o.family;
+    if (FAMILIES.indexOf(family) === -1) fail("family must be one of " + FAMILIES.join(", ") + " (got " + JSON.stringify(o.family) + ")");
+    if (!isNil(o.platformKey) && g.platform_keys.indexOf(o.platformKey) === -1) {
+      fail("no platform " + JSON.stringify(o.platformKey) + " for " + gameKey + " (choose from " + g.platform_keys.join(", ") + ")");
+    }
+    // states: every id must be a real RTC state (rtc.states); for an RTC-immune game (Crystal) the filter is then moot,
+    // whatever the cartridge's clock its one table is days0.
+    var stateFilter = null;
+    if (!isNil(o.states)) {
+      if (!Array.isArray(o.states) || o.states.length === 0) fail("states must be a non-empty array of RTC state ids");
+      o.states.forEach(function (st) { stateInfo(data, st); });
+      if (g.rtc_dependent) stateFilter = o.states;
+    }
     g.platform_keys.forEach(function (pk) {
       if (!isNil(o.platformKey) && pk !== o.platformKey) return;
       states.forEach(function (st) {
-        if (o.family && o.family !== "all" && ((o.family === "halted") !== isHaltedState(st))) return;
-        if (o.states && o.states.indexOf(st) === -1) return;
+        if (family !== "all" && ((family === "halted") !== isHaltedState(st))) return;
+        if (stateFilter !== null && stateFilter.indexOf(st) === -1) return;
         out.push(tableKey(gameKey, pk, st));
       });
     });
@@ -133,7 +160,8 @@
 
   // ---- bins --------------------------------------------------------------------------------------
   function binOf(offset, rule) {
-    if (!(offset >= 0 && offset <= OFFSET_MAX)) return null;
+    if (typeof offset !== "number" || !Number.isInteger(offset)) fail("offset must be an integer frame count (got " + JSON.stringify(offset) + ")");
+    if (offset < 0 || offset > OFFSET_MAX) return null;
     if (rule.dropped_offsets.indexOf(offset) !== -1) return null;
     if (rule.bin0_offsets[0] <= offset && offset <= rule.bin0_offsets[1]) return 0;
     return Math.floor((offset - rule.subtract) / 4);
@@ -181,14 +209,20 @@
     return groups;
   }
   function reachable(data, gameKey, state) {
+    var info = stateInfo(data, state);
     if (!game(data, gameKey).rtc_dependent) return true;
-    return !!stateInfo(data, state).reachable_after_first_boot;
+    return !!info.reachable_after_first_boot;
   }
   // invert(data, game, tid, {lid, sid, platformKey, family: "all"|"running"|"halted", states: [..]})
+  // Each candidate: key = the table that carries the payload (identical tables are stored once, possibly under the other DMG
+  // platform), table = the first in-scope table of the group (use this in head text), members = every in-scope (platform, state).
   function invert(data, gameKey, tid, opts) {
     var o = opts || {};
-    var lid = isNil(o.lid) ? null : o.lid, sid = isNil(o.sid) ? null : o.sid;
-    var crystal = !game(data, gameKey).rtc_dependent;
+    var g = game(data, gameKey);
+    tid = id16(tid, "tid");
+    var lid = optId16(o.lid, "lid"), sid = optId16(o.sid, "sid");
+    if (sid !== null && g.ids.indexOf("sid") === -1) fail(gameKey + " rolls no Secret ID: sid must not be given");
+    var crystal = !g.rtc_dependent;
     var rule = binRule(data, gameKey);
     var cands = [];
     carrierGroups(data, gameKey, o).forEach(function (grp) {
@@ -199,7 +233,8 @@
         if (lid !== null && t.lids[b] !== lid) continue;
         if (sid !== null && (!t.sids || t.sids[b] !== sid)) continue;
         cands.push({
-          key: grp.carrier, members: grp.members.map(function (m) { return m.slice(); }), bin: b, offsets: offsetsForBin(b, rule),
+          key: grp.carrier, table: tableKey(gameKey, grp.members[0][0], grp.members[0][1]),
+          members: grp.members.map(function (m) { return m.slice(); }), bin: b, offsets: offsetsForBin(b, rule),
           tid: t.tids[b], lid: t.lids[b], sid: t.sids ? t.sids[b] : null,
           family: isHaltedState(st) ? "halted" : "running",
           reachableAfterFirstBoot: grp.members.some(function (m) { return reachable(data, gameKey, m[1]); })
@@ -237,7 +272,11 @@
   }
 
   // ---- target sets -------------------------------------------------------------------------------
-  function parseHex4(x) { return parseInt("" + x, 16); }
+  function parseHex4(x) {
+    var str = ("" + x).trim();
+    if (!/^[0-9A-Fa-f]{1,4}$/.test(str)) fail("target set member " + JSON.stringify(x) + " is not a 1-4 digit hex ID");
+    return parseInt(str, 16);
+  }
   function makeTargetSet(key, spec) {
     var ts = {
       key: key, name: isNil(spec.name) ? key : spec.name, kind: isNil(spec.kind) ? "tid-list" : spec.kind, games: (spec.games || []).slice(),
@@ -270,7 +309,10 @@
     if (ts.kind === "lid-list") return ts.key + ": Lucky ID " + ts.lids.map(function (t) { return "$" + hex(t, 4) + " (" + ("00000" + t).slice(-5) + ")"; }).join(", ");
     return ts.key + ": " + ts.pairs.map(function (p) { return "TID $" + hex(p[0], 4) + " + LID $" + hex(p[1], 4); }).join(", ");
   }
-  function setsAccepting(tid, lid, sid, sets) { return (sets || []).filter(function (s) { return setAccepts(s, tid, lid, sid); }); }
+  function setsAccepting(tid, lid, sid, sets) {
+    id16(tid, "tid"); optId16(lid, "lid"); optId16(sid, "sid");
+    return (sets || []).filter(function (s) { return setAccepts(s, tid, lid, sid); });
+  }
   function verdictDetail(tid, lid, sid, sets) {
     var hits = setsAccepting(tid, lid, sid, sets);
     return { verdict: hits.length ? "RUN" : "no", sets: hits.map(function (s) { return s.key; }) };
@@ -313,6 +355,8 @@
     var beeps = isNil(o.beeps) ? 4 : o.beeps, spacing = isNil(o.spacingS) ? 1.0 : o.spacingS;
     var m = methodology(data, methodologyId), rule = binRule(data, m.game_key), timing = m.timing;
     if (m.anchors.indexOf(anchor) === -1) fail("anchor " + JSON.stringify(anchor) + " is not offered for " + methodologyId);
+    finite(correctionMs, "correction (ms)"); finite(spacing, "count-in spacing (s)");
+    if (!Number.isInteger(beeps) || beeps < 0) fail("count-in beeps must be an integer 0 or more (got " + String(beeps) + ")");
     var vw = visibleWindow(b, rule), aimV = aimOffset(b, rule) - VISIBLE_MENU_LAG_FRAMES;
     var cues, tA, holdLo = null, holdHi = null, menu = null, ci, base = 0.0;
     if (anchor === ANCHOR_MENU) {
@@ -325,7 +369,7 @@
       var extra = 0.0;
       if (anchor === ANCHOR_RESET) {
         if (isNil(o.resetExtraS)) fail("the reset anchor needs the console's reset delay (fade + stall)");
-        extra = o.resetExtraS;
+        extra = finite(o.resetExtraS, "reset delay (s)");
       }
       holdLo = timing.hold_lo_frame / FPS + extra;
       holdHi = timing.hold_hi_frame / FPS + extra;
@@ -366,6 +410,8 @@
   function sampleFromHit(data, gameKey, platformKey, state, typedTid, typedLid, aimedBin, correctionUsedMs, opts) {
     var o = opts || {};
     var rule = binRule(data, gameKey), crystal = !game(data, gameKey).rtc_dependent;
+    offsetsForBin(aimedBin, rule);
+    finite(correctionUsedMs, "correction used (ms)");
     var states = !isNil(state) ? [state] : (crystal ? null : TWO_STATE_PRIOR.slice());
     var inv = invert(data, gameKey, typedTid, { lid: isNil(typedLid) ? null : typedLid, platformKey: platformKey, states: states });
     var near = null;
@@ -396,6 +442,7 @@
   function verify(data, gameKey, platformKey, tid, lid, measuredS, opts) {
     var o = opts || {};
     var rule = binRule(data, gameKey);
+    finite(measuredS, "measured time (s)");
     var inv = invert(data, gameKey, tid, { lid: isNil(lid) ? null : lid, platformKey: platformKey, states: isNil(o.state) ? null : [o.state] });
     var predictedOffset = measuredS * FPS + VISIBLE_MENU_LAG_FRAMES;
     var predictedBin = binOf(Math.floor(predictedOffset + 0.5), rule);

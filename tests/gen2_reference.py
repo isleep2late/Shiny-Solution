@@ -45,7 +45,7 @@ RUNNING = ["days0", "days200", "days260", "days300", "days450", "days512", "days
 HALTED = ["halt-" + s for s in RUNNING]
 STATES = RUNNING + HALTED
 TWO_STATE = ["days0", "days512"]
-REACHABLE = {"days0", "days512", "halt-days0", "halt-days512"}       # after the first boot (README "What a cartridge does")
+REACHABLE = {"days0", "days512"}       # after the first boot: FixDays writes the days back mod 140, StartRTC clears the halt bit on every boot
 FAMILY_OF = {"gbp": "gbp", "gbc": "gbc", "dmg": "dmg", "dmg-latestart": "dmg"}
 PROTOCOL_OF = {"gbp": "hold-start", "gbc": "hold-start", "dmg": "hold-start", "dmg-latestart": "late-start"}
 ANCHORS_OF = {"gbp": ["menu", "poweron", "reset"], "gbc": ["menu", "poweron"], "dmg": ["menu", "poweron"]}
@@ -266,7 +266,38 @@ def main():
     def is_reachable(k):
         return state_of(k) in REACHABLE
 
+    def id16(x, name):
+        if not isinstance(x, int) or isinstance(x, bool) or not 0 <= x <= 0xFFFF:
+            raise ValueError("%s must be an integer 0..65535 (got %r)" % (name, x))
+        return x
+
+    def check_scope(game, plat, family, states):
+        """The scope rules the ports must enforce: an unknown platform / family / state raises, it does not scope to nothing."""
+        if plat is not None and plat not in PLATFORM_KEYS[game]:
+            raise ValueError("no platform %s for %s" % (plat, game))
+        if family not in ("all", "running", "halted"):
+            raise ValueError("family %r" % (family,))
+        if states is not None:
+            # every id must be a real RTC state; for an RTC-immune game (Crystal) the filter is then moot: its one table is days0
+            if not states or any(st not in STATES for st in states):
+                raise ValueError("states %r for %s" % (states, game))
+
+    def reachable(game, state):
+        if state not in STATES:
+            raise ValueError("no RTC state %s" % state)
+        return game == "crystal" or state in REACHABLE
+
     def invert(game, tid, lid=None, sid=None, plat=None, family="all", states=None):
+        id16(tid, "tid")
+        if lid is not None:
+            id16(lid, "lid")
+        if sid is not None:
+            id16(sid, "sid")
+            if game != "crystal":
+                raise ValueError("%s rolls no Secret ID" % game)
+        check_scope(game, plat, family, states)
+        if game == "crystal":
+            states = None
         scope = [k for k in order if k.startswith(game + "/") and (plat is None or plat_of(k) == plat)
                  and (family == "all" or (family == "halted") == state_of(k).startswith("halt")) and (states is None or state_of(k) in states)]
         by_carrier = collections.OrderedDict()
@@ -277,7 +308,7 @@ def main():
             for b in range(BIN_COUNT):
                 t, l, s, roll = ids(c)[b]
                 if t == tid and (lid is None or l == lid) and (sid is None or s == sid):
-                    cands.append({"key": c, "members": [[plat_of(m), state_of(m)] for m in members], "bin": b, "offsets": offsets_for_bin(game, b),
+                    cands.append({"key": c, "table": members[0], "members": [[plat_of(m), state_of(m)] for m in members], "bin": b, "offsets": offsets_for_bin(game, b),
                                   "tid": t, "lid": l, "sid": s if game == "crystal" else None,
                                   "family": "halted" if state_of(c).startswith("halt") else "running",
                                   "reachableAfterFirstBoot": any(is_reachable(m) for m in members)})
@@ -410,6 +441,29 @@ def main():
     cases.append({"game": "silver", "tid": 0xE94B, "lid": 0xE6FE, "sid": None, "platformKey": "gbp", "family": "running", "states": None, **invert("silver", 0xE94B, lid=0xE6FE, plat="gbp", family="running")})
     out["inversionStats"] = st
     out["inversionCases"] = cases
+
+    # scope and ID validation: an unknown platform / state / family, an out-of-range ID or a SID for a game without one must
+    # throw (it is a caller bug, not "absent from the tables"); two valid calls in the same section as controls
+    errs = []
+    for game, tid, lid, sid, plat, family, states in [
+        ("gold", 0xE83B, None, None, "sgb", "all", None), ("gold", 0xE83B, None, None, "gbp", "all", ["dayz0"]),
+        ("gold", 0xE83B, None, None, "gbp", "all", ["days0", "days-512"]), ("crystal", 0xBE4B, None, None, None, "all", ["days512"]),
+        ("crystal", 0xBE4B, None, None, "dmg", "all", None), ("gold", 0xE83B, None, None, "gbp", "foo", None),
+        ("gold", 0xE83B, None, None, "gbp", "all", []), ("gold", -1, None, None, None, "all", None), ("gold", 0x10000, None, None, None, "all", None),
+        ("gold", 0x1E83B, None, None, None, "all", None), ("gold", 0xE83B, -1, None, "gbp", "all", None), ("gold", 0xE83B, 0x10000, None, "gbp", "all", None),
+        ("crystal", 0xBE4B, None, 0x10000, "gbp", "all", None), ("gold", 0xE83B, None, 0, "gbp", "all", None), ("silver", 0xE94B, 0xE6FE, 0x1234, "gbp", "all", None),
+        ("gold", 0xE83B, None, None, "gbp", "all", ["days0"]), ("crystal", 0xBE4B, None, None, "gbp", "all", ["days0"]),
+    ]:
+        errs.append({"game": game, "tid": tid, "lid": lid, "sid": sid, "platformKey": plat, "family": family, "states": states,
+                     **attempt(invert, game, tid, lid=lid, sid=sid, plat=plat, family=family, states=states)})
+    out["inversionScope"] = errs
+    out["reachable"] = [{"game": g, "state": st, **attempt(reachable, g, st)} for g, st in [
+        ("gold", "days0"), ("gold", "days200"), ("gold", "days512"), ("gold", "days1000"), ("gold", "halt-days0"), ("gold", "halt-days512"),
+        ("gold", "halt-days700"), ("silver", "days450"), ("crystal", "days0"), ("crystal", "days200"), ("gold", "bogus"), ("crystal", "bogus"), ("gold", "")]]
+
+    # the DMG hold-start / late-start coincidence per RTC state, from the CSVs (the source README's "all halt states" is not exact)
+    out["dmgIdenticalStates"] = {game: [st for st in STATES if carrier["%s/dmg/%s" % (game, st)] == carrier["%s/dmg-latestart/%s" % (game, st)]]
+                                 for game in ("gold", "silver")}
 
     # target sets over every table (the measured single-press hits) and the primaries (expected empty)
     tg = []

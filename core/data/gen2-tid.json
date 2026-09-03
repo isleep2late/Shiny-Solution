@@ -501,7 +501,7 @@
    "date": "2026-09-03",
    "status": "emulator-derived, community-script cross-validated on GBP, no hardware sample",
    "predicts": "the Trainer ID and the Lucky ID of the New Game",
-   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables); Crystal is immune. Press START before the copyright text ends (START-down frames 0-355 after power-on; the copyright text is frames 243-347) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (446, visible 450); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
+   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune. Press START before the copyright text ends (START-down frames 0-355 after power-on; the copyright text is frames 243-347) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (446, visible 450); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
    "landmark": "Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
    "validity": [
     "Pokemon Gold (English) booted on GBA silicon booted with the CGB boot ROM and the GBA flag: GameCube Game Boy Player, GBA / GBA SP / GBA HD, GSE or gambatte-speedrun in GBP mode with the GBC BIOS (cgb_boot.bin 2304 B sha1 1293d68bf9643bc4f36954c1e80e38f39864528d, CGB_MODE|GBA_FLAG|READONLY_SAV).",
@@ -510,6 +510,7 @@
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover."
    ],
    "anchors": [
@@ -621,7 +622,7 @@
    "date": "2026-09-03",
    "status": "emulator-derived, community-script cross-validated on GBP, no hardware sample",
    "predicts": "the Trainer ID and the Lucky ID of the New Game",
-   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables); Crystal is immune. Hold START before switching the Game Boy Color on (any START-down frame 0-355 works, i.e. before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (446, visible 450); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
+   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune. Hold START before switching the Game Boy Color on (any START-down frame 0-355 works, i.e. before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (446, visible 450); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
    "landmark": "Hold START before switching the console on (or at any rate before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears.",
    "validity": [
     "Pokemon Gold (English) booted on Game Boy Color: CGB boot ROM, no GBA flag (cgb_boot.bin 2304 B sha1 1293d68bf9643bc4f36954c1e80e38f39864528d, CGB_MODE|READONLY_SAV).",
@@ -630,6 +631,7 @@
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover."
    ],
    "anchors": [
@@ -740,7 +742,7 @@
    "date": "2026-09-03",
    "status": "emulator-derived, community-script cross-validated on GBP, no hardware sample",
    "predicts": "the Trainer ID and the Lucky ID of the New Game",
-   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables); Crystal is immune. Hold START before switching the Game Boy on, so it is down before the boot logo ends (START-down frames 0-347; the logo vanishes at 334), and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (627, visible 631); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
+   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune. Hold START before switching the Game Boy on, so it is down before the boot logo ends (START-down frames 0-347; the logo vanishes at 334), and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (627, visible 631); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
    "landmark": "Two protocols, two tables: 'hold-start' = START down before the boot logo ends (hold frames 0-347: hold it before switching on); 'late-start' = START first pressed while the copyright text is on screen (frames 435-536; the white gap 348-434 also belongs to this table). The 347/348 boundary is 14 frames after the boot logo vanishes (334), so 'press START when the logo disappears' lands on either side: never cue that.",
    "validity": [
     "Pokemon Gold (English) booted on Original Game Boy (DMG) with the genuine DMG boot ROM (dmg_boot.bin 256 B sha1 4ed31ec6b0b175bb109c0eb5fd3d193da823339f, READONLY_SAV (DMG, no CGB_MODE)).",
@@ -749,6 +751,7 @@
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover.",
     "START was already down when the boot logo ended (frame 334); a START first pressed after that is the late-start methodology."
    ],
@@ -860,7 +863,7 @@
    "date": "2026-09-03",
    "status": "emulator-derived, community-script cross-validated on GBP, no hardware sample",
    "predicts": "the Trainer ID and the Lucky ID of the New Game",
-   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables); Crystal is immune. Switch the Game Boy on with nothing held. Press START while the copyright text is on screen (frames 435-536; the white gap 348-434 after the boot logo also belongs to this table, START-down frames 348-545) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (627, visible 631); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
+   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune. Switch the Game Boy on with nothing held. Press START while the copyright text is on screen (frames 435-536; the white gap 348-434 after the boot logo also belongs to this table, START-down frames 348-545) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (627, visible 631); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
    "landmark": "Two protocols, two tables: 'hold-start' = START down before the boot logo ends (hold frames 0-347: hold it before switching on); 'late-start' = START first pressed while the copyright text is on screen (frames 435-536; the white gap 348-434 also belongs to this table). The 347/348 boundary is 14 frames after the boot logo vanishes (334), so 'press START when the logo disappears' lands on either side: never cue that.",
    "validity": [
     "Pokemon Gold (English) booted on Original Game Boy (DMG) with the genuine DMG boot ROM (dmg_boot.bin 256 B sha1 4ed31ec6b0b175bb109c0eb5fd3d193da823339f, READONLY_SAV (DMG, no CGB_MODE)).",
@@ -869,8 +872,9 @@
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover.",
-    "START was NOT down while the boot logo was showing (that is the hold-start methodology's table; the two differ by one DIV step on every bin in RTC state days0 and coincide in every other state)."
+    "START was NOT down while the boot logo was showing (that is the hold-start methodology's table; the two differ by one DIV step on every bin in RTC state days0, differ as well in days700 (0 of 599 bins equal), days780 (0 of 599 bins equal), days850 (0 of 599 bins equal), days1000 (0 of 599 bins equal), halt-days700 (0 of 599 bins equal), and coincide in days200, days260, days300, days450, days512, halt-days0, halt-days200, halt-days260, halt-days300, halt-days450, halt-days512, halt-days780, halt-days850, halt-days1000: measured, rtc.identical_tables / rtc.dmg_equal_bins)."
    ],
    "anchors": [
     "menu",
@@ -980,7 +984,7 @@
    "date": "2026-09-03",
    "status": "emulator-derived, community-script cross-validated on GBP, no hardware sample",
    "predicts": "the Trainer ID and the Lucky ID of the New Game",
-   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables); Crystal is immune. Press START before the copyright text ends (START-down frames 0-355 after power-on; the copyright text is frames 243-347) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (448, visible 452); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
+   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune. Press START before the copyright text ends (START-down frames 0-355 after power-on; the copyright text is frames 243-347) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (448, visible 452); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
    "landmark": "Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
    "validity": [
     "Pokemon Silver (English) booted on GBA silicon booted with the CGB boot ROM and the GBA flag: GameCube Game Boy Player, GBA / GBA SP / GBA HD, GSE or gambatte-speedrun in GBP mode with the GBC BIOS (cgb_boot.bin 2304 B sha1 1293d68bf9643bc4f36954c1e80e38f39864528d, CGB_MODE|GBA_FLAG|READONLY_SAV).",
@@ -989,6 +993,7 @@
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover."
    ],
    "anchors": [
@@ -1100,7 +1105,7 @@
    "date": "2026-09-03",
    "status": "emulator-derived, community-script cross-validated on GBP, no hardware sample",
    "predicts": "the Trainer ID and the Lucky ID of the New Game",
-   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables); Crystal is immune. Hold START before switching the Game Boy Color on (any START-down frame 0-355 works, i.e. before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (448, visible 452); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
+   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune. Hold START before switching the Game Boy Color on (any START-down frame 0-355 works, i.e. before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (448, visible 452); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
    "landmark": "Hold START before switching the console on (or at any rate before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears.",
    "validity": [
     "Pokemon Silver (English) booted on Game Boy Color: CGB boot ROM, no GBA flag (cgb_boot.bin 2304 B sha1 1293d68bf9643bc4f36954c1e80e38f39864528d, CGB_MODE|READONLY_SAV).",
@@ -1109,6 +1114,7 @@
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover."
    ],
    "anchors": [
@@ -1219,7 +1225,7 @@
    "date": "2026-09-03",
    "status": "emulator-derived, community-script cross-validated on GBP, no hardware sample",
    "predicts": "the Trainer ID and the Lucky ID of the New Game",
-   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables); Crystal is immune. Hold START before switching the Game Boy on, so it is down before the boot logo ends (START-down frames 0-347; the logo vanishes at 334), and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (629, visible 633); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
+   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune. Hold START before switching the Game Boy on, so it is down before the boot logo ends (START-down frames 0-347; the logo vanishes at 334), and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (629, visible 633); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
    "landmark": "Two protocols, two tables: 'hold-start' = START down before the boot logo ends (hold frames 0-347: hold it before switching on); 'late-start' = START first pressed while the copyright text is on screen (frames 435-536; the white gap 348-434 also belongs to this table). The 347/348 boundary is 14 frames after the boot logo vanishes (334), so 'press START when the logo disappears' lands on either side: never cue that.",
    "validity": [
     "Pokemon Silver (English) booted on Original Game Boy (DMG) with the genuine DMG boot ROM (dmg_boot.bin 256 B sha1 4ed31ec6b0b175bb109c0eb5fd3d193da823339f, READONLY_SAV (DMG, no CGB_MODE)).",
@@ -1228,6 +1234,7 @@
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover.",
     "START was already down when the boot logo ended (frame 334); a START first pressed after that is the late-start methodology."
    ],
@@ -1339,7 +1346,7 @@
    "date": "2026-09-03",
    "status": "emulator-derived, community-script cross-validated on GBP, no hardware sample",
    "predicts": "the Trainer ID and the Lucky ID of the New Game",
-   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables); Crystal is immune. Switch the Game Boy on with nothing held. Press START while the copyright text is on screen (frames 435-536; the white gap 348-434 after the boot logo also belongs to this table, START-down frames 348-545) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (629, visible 633); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
+   "protocol": "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column applies only to the first New Game after that clear. RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune. Switch the Game Boy on with nothing held. Press START while the copyright text is on screen (frames 435-536; the white gap 348-434 after the boot logo also belongs to this table, START-down frames 348-545) and keep it held until the NEW GAME / OPTION menu box appears. The menu box is drawn 4 frames after the game's detector frame (629, visible 633); release START as it appears. At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu, v = offset - 4 (frames after the VISIBLE menu box); v in -3..4 -> bin 0, then bin k = v in 4k+1..4k+4; the menu's first poll accepts an A that went down up to visible+5 and then every 4 frames, so the target is a 4-frame bin, not a frame. Gold/Silver: START must be up before the A tap and nothing may be down from 7 frames after the accepting poll until the New Game roll 13 frames after it (about 0.35 s after the tap): a tap over 8 frames or START still held changes the Lucky ID on 40-51 % of bins and the Trainer ID (+/-1 in one byte) on 7-25 %. Read the Trainer ID (and the Lucky ID on the Radio Tower lottery screen) afterwards.",
    "landmark": "Two protocols, two tables: 'hold-start' = START down before the boot logo ends (hold frames 0-347: hold it before switching on); 'late-start' = START first pressed while the copyright text is on screen (frames 435-536; the white gap 348-434 also belongs to this table). The 347/348 boundary is 14 frames after the boot logo vanishes (334), so 'press START when the logo disappears' lands on either side: never cue that.",
    "validity": [
     "Pokemon Silver (English) booted on Original Game Boy (DMG) with the genuine DMG boot ROM (dmg_boot.bin 256 B sha1 4ed31ec6b0b175bb109c0eb5fd3d193da823339f, READONLY_SAV (DMG, no CGB_MODE)).",
@@ -1348,8 +1355,9 @@
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover.",
-    "START was NOT down while the boot logo was showing (that is the hold-start methodology's table; the two differ by one DIV step on every bin in RTC state days0 and coincide in every other state)."
+    "START was NOT down while the boot logo was showing (that is the hold-start methodology's table; the two differ by one DIV step on every bin in RTC state days0, differ as well in days700 (0 of 599 bins equal), days780 (0 of 599 bins equal), days850 (0 of 599 bins equal), days1000 (0 of 599 bins equal), halt-days700 (0 of 599 bins equal), and coincide in days200, days260, days300, days450, days512, halt-days0, halt-days200, halt-days260, halt-days300, halt-days450, halt-days512, halt-days780, halt-days850, halt-days1000: measured, rtc.identical_tables / rtc.dmg_equal_bins)."
    ],
    "anchors": [
     "menu",
@@ -1467,7 +1475,7 @@
     "START goes down inside START-down frames 0-407 after power-on and stays held until the NEW GAME / OPTION menu box appears; the menu detector fires on frame 522 and the box is visible on 526 whatever the START frame inside the window.",
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset <= 1 -> dropped (NOROLL); offsets 2..9 -> bin 0; else bin = (offset - 6) // 4; bin 598 = offsets 2398-2399 (offset = frames after the detector at which A goes down).",
-    "Any RTC state (Crystal's StartClock runs after the LCD is on and rIF is cleared before ei, so the clock's cycle count is absorbed: measured identical for 0-1000 days, carry and halted states not swept separately).",
+    "Any RTC state (Crystal's StartClock runs after the LCD is on and rIF is cleared before ei, so the clock's cycle count is absorbed: measured identical for 0-1000 days including the carry brackets, the nine bracket sweeps equal the primary; the halted family was not swept for Crystal).",
     "Any other input pattern (a second press, the community setopt scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover."
    ],
    "anchors": [
@@ -1571,7 +1579,7 @@
     "START goes down inside START-down frames 0-407 after power-on and stays held until the NEW GAME / OPTION menu box appears; the menu detector fires on frame 522 and the box is visible on 526 whatever the START frame inside the window.",
     "START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
     "The A tap's bin: offset <= 1 -> dropped (NOROLL); offsets 2..9 -> bin 0; else bin = (offset - 6) // 4; bin 598 = offsets 2398-2399 (offset = frames after the detector at which A goes down).",
-    "Any RTC state (Crystal's StartClock runs after the LCD is on and rIF is cleared before ei, so the clock's cycle count is absorbed: measured identical for 0-1000 days, carry and halted states not swept separately).",
+    "Any RTC state (Crystal's StartClock runs after the LCD is on and rIF is cleared before ei, so the clock's cycle count is absorbed: measured identical for 0-1000 days including the carry brackets, the nine bracket sweeps equal the primary; the halted family was not swept for Crystal).",
     "Any other input pattern (a second press, the community setopt scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover."
    ],
    "anchors": [
@@ -1805,8 +1813,8 @@
     "representative_days": 0,
     "label": "HALTED, 0-139 days, no carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
-    "reachable_after_first_boot": true,
-    "why": "a halted cartridge under 140 days stays halted (no SetClock call) until the game sets the clock",
+    "reachable_after_first_boot": false,
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days0",
     "identical_to": []
    },
    "halt-days200": {
@@ -1821,7 +1829,7 @@
     "label": "HALTED, 140-255 days, no carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
     "reachable_after_first_boot": false,
-    "why": "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot",
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days0; on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well",
     "identical_to": []
    },
    "halt-days260": {
@@ -1836,7 +1844,7 @@
     "label": "HALTED, 256-279 days, no carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
     "reachable_after_first_boot": false,
-    "why": "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot",
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days0; on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well",
     "identical_to": [
      "halt-days850"
     ]
@@ -1853,7 +1861,7 @@
     "label": "HALTED, 280-419 days, no carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
     "reachable_after_first_boot": false,
-    "why": "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot",
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days0; on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well",
     "identical_to": [
      "halt-days1000"
     ]
@@ -1870,7 +1878,7 @@
     "label": "HALTED, 420-511 days, no carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
     "reachable_after_first_boot": false,
-    "why": "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot",
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days0; on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well",
     "identical_to": []
    },
    "halt-days512": {
@@ -1884,8 +1892,8 @@
     "representative_days": 512,
     "label": "HALTED, 0-139 days (mod 512) + carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
-    "reachable_after_first_boot": true,
-    "why": "a halted cartridge under 140 days stays halted (no SetClock call) until the game sets the clock",
+    "reachable_after_first_boot": false,
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days512 (the carry is written back unchanged)",
     "identical_to": []
    },
    "halt-days700": {
@@ -1900,7 +1908,7 @@
     "label": "HALTED, 140-255 days (mod 512) + carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
     "reachable_after_first_boot": false,
-    "why": "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot",
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days512 (the carry is written back unchanged); on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well",
     "identical_to": []
    },
    "halt-days780": {
@@ -1915,7 +1923,7 @@
     "label": "HALTED, 256-279 days (mod 512) + carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
     "reachable_after_first_boot": false,
-    "why": "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot",
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days512 (the carry is written back unchanged); on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well",
     "identical_to": []
    },
    "halt-days850": {
@@ -1930,7 +1938,7 @@
     "label": "HALTED, 280-419 days (mod 512) + carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
     "reachable_after_first_boot": false,
-    "why": "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot",
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days512 (the carry is written back unchanged); on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well",
     "identical_to": [
      "halt-days260"
     ]
@@ -1947,7 +1955,7 @@
     "label": "HALTED, 420-511 days (mod 512) + carry",
     "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
     "reachable_after_first_boot": false,
-    "why": "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot",
+    "why": "StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only; the next boot is days512 (the carry is written back unchanged); on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well",
     "identical_to": [
      "halt-days300"
     ]
@@ -2143,7 +2151,53 @@
     "silver/gbp/halt-days850"
    ]
   ],
-  "dmg_note": "the DMG hold-start and late-start tables coincide in RTC states days200/260/300/450/512 and in every halted state (measured, identical_tables), and differ in days0 and in the carry brackets days700/780/850/1000; some DMG brackets are near-identical without being equal (days700 vs days780: 2247 of 2399 offsets equal; halt-days200 vs halt-days260: 2279).",
+  "dmg_identical_states": [
+   "days200",
+   "days260",
+   "days300",
+   "days450",
+   "days512",
+   "halt-days0",
+   "halt-days200",
+   "halt-days260",
+   "halt-days300",
+   "halt-days450",
+   "halt-days512",
+   "halt-days780",
+   "halt-days850",
+   "halt-days1000"
+  ],
+  "dmg_split_states": [
+   "days0",
+   "days700",
+   "days780",
+   "days850",
+   "days1000",
+   "halt-days700"
+  ],
+  "dmg_equal_bins": {
+   "days0": 0,
+   "days200": 599,
+   "days260": 599,
+   "days300": 599,
+   "days450": 599,
+   "days512": 599,
+   "days700": 0,
+   "days780": 0,
+   "days850": 0,
+   "days1000": 0,
+   "halt-days0": 599,
+   "halt-days200": 599,
+   "halt-days260": 599,
+   "halt-days300": 599,
+   "halt-days450": 599,
+   "halt-days512": 599,
+   "halt-days700": 0,
+   "halt-days780": 599,
+   "halt-days850": 599,
+   "halt-days1000": 599
+  },
+  "dmg_note": "the DMG hold-start and late-start tables coincide in RTC states days200, days260, days300, days450, days512, halt-days0, halt-days200, halt-days260, halt-days300, halt-days450, halt-days512, halt-days780, halt-days850, halt-days1000 (measured: identical_tables) and differ in days0 (0 of 599), days700 (0 of 599), days780 (0 of 599), days850 (0 of 599), days1000 (0 of 599), halt-days700 (0 of 599) (dmg_equal_bins = bins with the same TID and LID in both tables); the source README's 'all halt states' is not exact (halt-days700 differs). Some DMG brackets are near-identical without being equal (days700 vs days780: 2247 of 2399 offsets equal; halt-days200 vs halt-days260: 2279).",
   "tables": {
    "gold/gbp/days200": {
     "file": "rtc-brackets/gold-gbp-rtc-days200.csv",
@@ -8730,7 +8784,7 @@
   "procedure": [
    "know the platform (console; on a DMG also whether START was down before the boot logo ended): a typed TID normally also identifies the platform (45 of 2396 Gold and 41 of 2396 Silver (platform, bin) entries share a TID with another platform's primary) but ask, do not infer",
    "if the Lucky ID was typed, look up (TID, LID): unique across every table of a platform except the listed collisions (Silver GBP: one, between two carry brackets); this needs the LID conditions (first New Game after a clear, a 4-8-frame tap)",
-   "otherwise look up the TID with the two-state prior: a cartridge booted at least once since the battery went in is in days0 or days512 (2.0-2.3 % of entries ambiguous between the two, max 2 candidates); fall back to the ten running brackets (8.7-9.1 % ambiguous, max 4), then the halted family, only for a never-booted or halted-clock cartridge",
+   "otherwise look up the TID with the two-state prior: a cartridge booted at least once since the battery went in is in days0 or days512 (2.0-2.3 % of entries ambiguous between the two, max 2 candidates); fall back to the ten running brackets (8.7-9.1 % ambiguous, max 4), then the halted family, only for a cartridge whose clock was halted and that has not been booted since (StartRTC clears the halt bit on every boot)",
    "no candidate at all: wrong platform (SGB, 3DS Virtual Console, a header-renamed ROM), a dead-battery register state, or a violated protocol (held input, tap length, a second press): ask for a second boot"
   ],
   "games": {

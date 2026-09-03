@@ -62,6 +62,14 @@ static class Gen2TidChecks
 
     static void Check(string label, object? expected, object? actual) => Check(label, ToJson(expected), actual);
 
+    static void Throws(string label, Action fn)
+    {
+        checks++;
+        try { fn(); Mismatch(label, "ArgumentException", "no throw"); }
+        catch (ArgumentException) { }
+        catch (Exception ex) { Mismatch(label, "ArgumentException", ex.GetType().Name + ": " + ex.Message); }
+    }
+
     static void CheckCase(string label, JsonElement c, Func<object?> fn)
     {
         checks++;
@@ -90,7 +98,7 @@ static class Gen2TidChecks
     static string[]? SAN(JsonElement e) => e.ValueKind == JsonValueKind.Null ? null : SA(e);
     static JsonElement P(JsonElement e, string name) => e.GetProperty(name);
 
-    static object Cand(Gen2Candidate c) => new { key = c.Key, members = c.Members, bin = c.Bin, offsets = c.Offsets, tid = c.Tid, lid = c.Lid, sid = c.Sid, family = c.Family, reachableAfterFirstBoot = c.ReachableAfterFirstBoot };
+    static object Cand(Gen2Candidate c) => new { key = c.Key, table = c.Table, members = c.Members, bin = c.Bin, offsets = c.Offsets, tid = c.Tid, lid = c.Lid, sid = c.Sid, family = c.Family, reachableAfterFirstBoot = c.ReachableAfterFirstBoot };
     static object Inv(Gen2Inversion r) => new { candidates = r.Candidates.Select(Cand), preferred = r.Preferred.Select(Cand), ambiguous = r.Ambiguous, resolved = r.Resolved is null ? null : Cand(r.Resolved) };
     static object Sched(Gen2Schedule s) => new
     {
@@ -219,6 +227,38 @@ static class Gen2TidChecks
             Check($"invert {S(P(c, "game"))} {I(P(c, "tid"))}/{P(c, "lid").GetRawText()}/{P(c, "sid").GetRawText()} on {P(c, "platformKey").GetRawText()} {S(P(c, "family"))} {P(c, "states").GetRawText()}",
                 new { candidates = P(c, "candidates"), preferred = P(c, "preferred"), ambiguous = P(c, "ambiguous"), resolved = P(c, "resolved") }, Inv(r));
         }
+
+        foreach (var c in P(V, "inversionScope").EnumerateArray())
+        {
+            CheckCase($"invert scope {S(P(c, "game"))} {I(P(c, "tid"))}/{P(c, "lid").GetRawText()}/{P(c, "sid").GetRawText()} on {P(c, "platformKey").GetRawText()} {S(P(c, "family"))} {P(c, "states").GetRawText()}", c,
+                () => Inv(Gen2Tid.Invert(DATA, S(P(c, "game")), I(P(c, "tid")), IN(P(c, "lid")), IN(P(c, "sid")), SN(P(c, "platformKey")), S(P(c, "family")), SAN(P(c, "states")))));
+        }
+        foreach (var c in P(V, "reachable").EnumerateArray())
+            CheckCase($"reachable {S(P(c, "game"))} '{S(P(c, "state"))}'", c, () => DATA.Reachable(S(P(c, "game")), S(P(c, "state"))));
+        foreach (var g in P(V, "dmgIdenticalStates").EnumerateObject())
+        {
+            var recorded = DATA.Root.GetProperty("rtc").GetProperty("dmg_identical_states").EnumerateArray().Select(S).ToArray();
+            Check($"dmg hold-start == late-start states recorded ({g.Name})", g.Value, recorded);
+            var engine = DATA.StateIds(g.Name).Where(st => DATA.ResolveTable($"{g.Name}/dmg/{st}").Key == DATA.ResolveTable($"{g.Name}/dmg-latestart/{st}").Key).ToArray();
+            Check($"dmg hold-start == late-start states resolved by the engine ({g.Name})", g.Value, engine);
+        }
+
+        // ---- argument validation the JSON vectors cannot carry (NaN, infinities) -------------------
+        Throws("schedule NaN correction throws", () => Gen2Tid.Schedule(DATA, "gold/gbp/hold-start-v1", 100, double.NaN));
+        Throws("schedule -Infinity correction throws", () => Gen2Tid.Schedule(DATA, "gold/gbp/hold-start-v1", 100, double.NegativeInfinity));
+        Throws("schedule NaN reset delay throws", () => Gen2Tid.Schedule(DATA, "gold/gbp/hold-start-v1", 100, 100, Gen2Tid.AnchorReset, 4, 1.0, double.NaN));
+        Throws("schedule NaN spacing throws", () => Gen2Tid.Schedule(DATA, "gold/gbp/hold-start-v1", 100, 100, Gen2Tid.AnchorMenu, 4, double.NaN));
+        Throws("schedule Infinity spacing throws", () => Gen2Tid.Schedule(DATA, "gold/gbp/hold-start-v1", 100, 100, Gen2Tid.AnchorMenu, 4, double.PositiveInfinity));
+        Check("schedule with finite arguments still works", true, double.IsFinite(Gen2Tid.Schedule(DATA, "gold/gbp/hold-start-v1", 100, 100).TA));
+        Throws("target set invalid hex throws", () => new Gen2TargetSet("x", JsonDocument.Parse("{\"tids\":[\"ZZZZ\"],\"games\":[\"gold\"]}").RootElement));
+        Throws("target set 5-digit hex throws", () => new Gen2TargetSet("x", JsonDocument.Parse("{\"tids\":[\"1E83B\"],\"games\":[\"gold\"]}").RootElement));
+        Throws("verdict out-of-range TID throws", () => Gen2Tid.Verdict(0x1E83B, null, null, DATA.TargetSetsFor("gold", new[] { "psr-gs-any-09705" })));
+        Throws("verify NaN measured time throws", () => Gen2Tid.Verify(DATA, "gold", "gbp", 0xE83B, null, double.NaN));
+        Throws("sampleFromHit NaN correction throws", () => Gen2Tid.SampleFromHit(DATA, "gold", "gbp", null, 0xE83B, null, 100, double.NaN));
+        Throws("sampleFromHit aimed bin 599 throws", () => Gen2Tid.SampleFromHit(DATA, "gold", "gbp", null, 0xE83B, null, 599, 200));
+        Check("sampleFromHit on Crystal with a bracket state uses its one table", Gen2Tid.SampleFromHit(DATA, "crystal", "gbp", null, 0xBE4B, null, 100, 200).NearestBin,
+            Gen2Tid.SampleFromHit(DATA, "crystal", "gbp", "days512", 0xBE4B, null, 100, 200).NearestBin);
+        Throws("sampleFromHit unknown state throws", () => Gen2Tid.SampleFromHit(DATA, "crystal", "gbp", "dayz0", 0xBE4B, null, 100, 200));
 
         // ---- targets and verdicts -----------------------------------------------------------------
         foreach (var c in P(V, "targets").EnumerateArray())

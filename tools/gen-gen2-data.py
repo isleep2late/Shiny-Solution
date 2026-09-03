@@ -21,8 +21,10 @@ What this script computes rather than copies (and checks against the folder's ow
   * for every target set, the (table, bin) entries that produce it under the single-press
     protocol ("single_press_hits"; the README's analysis covers the primaries only).
 
-Usage:  python3 tools/gen-gen2-data.py [path-to-gen2-tid-folder]
-        (default ~/Desktop/Red-WR-Practice/gen2-tid; the folder is read-only)
+Usage:  python3 tools/gen-gen2-data.py [path-to-gen2-tid-folder] [output-json]
+        (default ~/Desktop/Red-WR-Practice/gen2-tid, read-only; the output defaults to
+        core/data/gen2-tid.json or $SHINY_GEN2_OUT; tests/run-tests.sh regenerates into a
+        temp file and cmp's it against the committed file, so a mismatch never dirties the tree)
 Re-running it on the same inputs writes a byte-identical file (no timestamps, fixed order).
 """
 import collections
@@ -35,7 +37,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, ".."))
 SRC = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/Desktop/Red-WR-Practice/gen2-tid"))
-OUT = os.path.join(ROOT, "core", "data", "gen2-tid.json")
+OUT = os.path.abspath(sys.argv[2] if len(sys.argv) > 2 else os.environ.get("SHINY_GEN2_OUT") or os.path.join(ROOT, "core", "data", "gen2-tid.json"))
 
 FPS_EXPR = "4194304/70224"
 DATE = "2026-09-03"          # the derivation and review date (README.md, REVIEW.md), not a run timestamp
@@ -381,6 +383,27 @@ def main():
                 if not any(ka in g and kb in g for g in identical_groups):
                     raise SystemExit("README claims %s == %s but the CSVs differ" % (ka, kb))
 
+    # DMG hold-start vs late-start per RTC state, MEASURED from the payloads (the README's "all halt states" is not exact:
+    # halt-days700 differs); Gold and Silver must agree, and the identical-table grouping must agree with the equal-bin count.
+    def carrier_of(key):
+        p = methodologies.get(key) or rtc_tables[key]
+        return p.get("same_data_as", key)
+    dmg_identical, dmg_equal_bins = None, None
+    for game in ("gold", "silver"):
+        same, eq = [], {}
+        for state in STATES:
+            a, b = ids_by_table["%s/dmg/%s" % (game, state)], ids_by_table["%s/dmg-latestart/%s" % (game, state)]
+            eq[state] = sum(1 for i in range(BIN_COUNT) if a[0][i] == b[0][i] and a[1][i] == b[1][i])
+            if carrier_of("%s/dmg/%s" % (game, state)) == carrier_of("%s/dmg-latestart/%s" % (game, state)):
+                same.append(state)
+            if (eq[state] == BIN_COUNT) != (state in same):
+                raise SystemExit("%s %s: DMG tables equal on %d bins but the payload grouping says %s" % (game, state, eq[state], state in same))
+        if dmg_identical is None:
+            dmg_identical, dmg_equal_bins = same, eq
+        elif (same, eq) != (dmg_identical, dmg_equal_bins):
+            raise SystemExit("Gold and Silver disagree on which RTC states the DMG hold-start and late-start tables coincide in")
+    dmg_split = [st for st in STATES if st not in dmg_identical]
+
     # methodology records
     meth_records = {}
     for game in GAMES:
@@ -412,7 +435,8 @@ def main():
                 "Clear the save data (Up+B+Select on the title screen) so the menu shows NEW GAME with no CONTINUE; the Lucky ID column"
                 " applies only to the first New Game after that clear.",
                 "RTC: a Gold/Silver cartridge must have its clock running with fewer than 140 days on the counter (the primary table, RTC state"
-                " days0) or a known bracket (the rtc tables); Crystal is immune." if gs else "Crystal is immune to the RTC state and to held input.",
+                " days0) or a known bracket (the rtc tables; a 140-511-day bracket lasts ONE boot: the game writes the counter back mod 140, so the"
+                " next boot of the same cartridge is days0, or days512 with the carry bit); Crystal is immune." if gs else "Crystal is immune to the RTC state and to held input.",
                 start_step,
                 "The menu box is drawn 4 frames after the game's detector frame (%d, visible %d); release START as it appears." % (menu, menu + VISIBLE_LAG),
                 "At the cue tap A ONCE for 4-8 frames (67-134 ms). The A press is the one timed input: with v = frames after the visible menu,"
@@ -439,17 +463,28 @@ def main():
                     "The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it"
                     " (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock"
                     " select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+                    "The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays"
+                    " writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same"
+                    " cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock"
+                    " clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally,"
+                    " so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its"
+                    " battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior);"
+                    " GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
                     "Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts,"
                     " a CONTINUE menu) gives a different deterministic result that this methodology does not cover.",
                 ]
             else:
                 validity += ["Any RTC state (Crystal's StartClock runs after the LCD is on and rIF is cleared before ei, so the clock's cycle count"
-                             " is absorbed: measured identical for 0-1000 days, carry and halted states not swept separately).",
+                             " is absorbed: measured identical for 0-1000 days including the carry brackets, the nine bracket sweeps equal the"
+                             " primary; the halted family was not swept for Crystal).",
                              "Any other input pattern (a second press, the community setopt scripts, a CONTINUE menu) gives a different"
                              " deterministic result that this methodology does not cover."]
             if info["protocol"] == "late-start":
                 validity.append("START was NOT down while the boot logo was showing (that is the hold-start methodology's table; the two differ by"
-                                " one DIV step on every bin in RTC state days0 and coincide in every other state).")
+                                " one DIV step on every bin in RTC state days0, differ as well in %s, and coincide in %s: measured,"
+                                " rtc.identical_tables / rtc.dmg_equal_bins)."
+                                % (", ".join("%s (%d of %d bins equal)" % (st, dmg_equal_bins[st], BIN_COUNT) for st in dmg_split if st != "days0"),
+                                   ", ".join(dmg_identical)))
             elif info["family"] == "dmg":
                 validity.append("START was already down when the boot logo ended (frame 334); a START first pressed after that is the late-start methodology.")
             timing = {
@@ -519,9 +554,11 @@ def main():
         same = [pair for pair in HALTED_IDENTICAL if h in pair]
         states[h] = {"family": "halted", "halt": True, "carry": carry, "day_bracket": bracket, "representative_days": rep,
                      "label": "HALTED, " + states[sid]["label"], "registers": "DH = 0x40 | (carry << 7) | (day bit 8), DL = days & 0xFF, H = M = S = 0",
-                     "reachable_after_first_boot": bracket[0] == 0,
-                     "why": ("a halted cartridge under 140 days stays halted (no SetClock call) until the game sets the clock"
-                             if bracket[0] == 0 else "SetClock clears the halt bit when it writes the clock back, so a halted cartridge with >= 140 days leaves the halted family on its first boot"),
+                     "reachable_after_first_boot": False,
+                     "why": ("StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC:"
+                             " res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally, so a halted cartridge is halted for its first boot only;"
+                             " the next boot is %s" % ("days512 (the carry is written back unchanged)" if carry else "days0"))
+                            + ("" if bracket[0] == 0 else "; on this boot FixDays also writes the day counter back mod 140 through SetClock, which clears the halt bit as well"),
                      "identical_to": [x for pair in same for x in pair if x != h]}
     rtc = {
         "applies_to": ["gold", "silver"],
@@ -558,9 +595,14 @@ def main():
                         " the halted family; if only the carry, in the days512 family; otherwise in a day bracket; which one can only come from a"
                         " typed TID (inversion).",
         "identical_tables": identical_groups,
-        "dmg_note": "the DMG hold-start and late-start tables coincide in RTC states days200/260/300/450/512 and in every halted state (measured,"
-                    " identical_tables), and differ in days0 and in the carry brackets days700/780/850/1000; some DMG brackets are near-identical"
-                    " without being equal (days700 vs days780: 2247 of 2399 offsets equal; halt-days200 vs halt-days260: 2279).",
+        "dmg_identical_states": dmg_identical,
+        "dmg_split_states": dmg_split,
+        "dmg_equal_bins": dmg_equal_bins,
+        "dmg_note": "the DMG hold-start and late-start tables coincide in RTC states %s (measured: identical_tables) and differ in %s"
+                    " (dmg_equal_bins = bins with the same TID and LID in both tables); the source README's 'all halt states' is not exact"
+                    " (halt-days700 differs). Some DMG brackets are near-identical without being equal (days700 vs days780: 2247 of 2399"
+                    " offsets equal; halt-days200 vs halt-days260: 2279)."
+                    % (", ".join(dmg_identical), ", ".join("%s (%d of %d)" % (st, dmg_equal_bins[st], BIN_COUNT) for st in dmg_split)),
         "tables": rtc_tables,
     }
 
@@ -572,7 +614,8 @@ def main():
         " between two carry brackets); this needs the LID conditions (first New Game after a clear, a 4-8-frame tap)",
         "otherwise look up the TID with the two-state prior: a cartridge booted at least once since the battery went in is in days0 or days512"
         " (2.0-2.3 % of entries ambiguous between the two, max 2 candidates); fall back to the ten running brackets (8.7-9.1 % ambiguous, max 4),"
-        " then the halted family, only for a never-booted or halted-clock cartridge",
+        " then the halted family, only for a cartridge whose clock was halted and that has not been booted since (StartRTC clears the halt"
+        " bit on every boot)",
         "no candidate at all: wrong platform (SGB, 3DS Virtual Console, a header-renamed ROM), a dead-battery register state, or a violated"
         " protocol (held input, tap length, a second press): ask for a second boot",
     ], "games": {}}

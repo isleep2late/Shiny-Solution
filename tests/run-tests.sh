@@ -42,10 +42,10 @@ rm -f "$corrupted" "$corrupted.out"
 GEN2_SRC="${GEN2_TID_SRC:-$HOME/Desktop/Red-WR-Practice/gen2-tid}"
 if [ -f "$GEN2_SRC/gold-gbp.csv" ]; then
   python3 gen2_reference.py "$GEN2_SRC" 2>/dev/null | cmp - gen2tid-vectors.json && echo "gen2 vectors re-emitted from the CSVs: byte-identical"
+  # regenerated into a temp file (the generator's optional output path), never over the committed file
   regen=$(mktemp --suffix=.json)
-  cp ../core/data/gen2-tid.json "$regen"
-  python3 ../tools/gen-gen2-data.py "$GEN2_SRC" > /dev/null
-  cmp ../core/data/gen2-tid.json "$regen" && echo "gen2-tid.json regenerated from the CSVs: byte-identical"
+  python3 ../tools/gen-gen2-data.py "$GEN2_SRC" "$regen" > /dev/null
+  cmp "$regen" ../core/data/gen2-tid.json && echo "gen2-tid.json regenerated from the CSVs: byte-identical to the committed file"
   rm -f "$regen"
 else
   echo "gen2 derivation folder not found; checking the committed vectors only"

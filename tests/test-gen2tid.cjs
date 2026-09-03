@@ -63,7 +63,7 @@ function checkCase(label, c, fn) {
   }
 }
 
-const cand = (c) => ({ key: c.key, members: c.members, bin: c.bin, offsets: c.offsets, tid: c.tid, lid: c.lid, sid: c.sid, family: c.family, reachableAfterFirstBoot: c.reachableAfterFirstBoot });
+const cand = (c) => ({ key: c.key, table: c.table, members: c.members, bin: c.bin, offsets: c.offsets, tid: c.tid, lid: c.lid, sid: c.sid, family: c.family, reachableAfterFirstBoot: c.reachableAfterFirstBoot });
 const inversion = (r) => ({ candidates: r.candidates.map(cand), preferred: r.preferred.map(cand), ambiguous: r.ambiguous, resolved: r.resolved ? cand(r.resolved) : null });
 
 // ---- constants and rules --------------------------------------------------------------------------
@@ -164,6 +164,18 @@ for (const c of V.inversionCases) {
     { candidates: c.candidates, preferred: c.preferred, ambiguous: c.ambiguous, resolved: c.resolved }, inversion(r));
 }
 
+for (const c of V.inversionScope) {
+  checkCase(`invert scope ${c.game} ${c.tid}/${c.lid}/${c.sid} on ${c.platformKey} ${c.family} ${JSON.stringify(c.states)}`, c,
+    () => inversion(G.invert(DATA, c.game, c.tid, { lid: c.lid, sid: c.sid, platformKey: c.platformKey, family: c.family, states: c.states })));
+}
+for (const c of V.reachable) checkCase(`reachable ${c.game} ${JSON.stringify(c.state)}`, c, () => G.reachable(DATA, c.game, c.state));
+for (const [game, states] of Object.entries(V.dmgIdenticalStates)) {
+  check(`dmg hold-start == late-start states recorded (${game})`, states, DATA.rtc.dmg_identical_states);
+  const engine = G.stateIds(DATA, game).filter((st) => G.resolveTable(DATA, `${game}/dmg/${st}`).key === G.resolveTable(DATA, `${game}/dmg-latestart/${st}`).key);
+  check(`dmg hold-start == late-start states resolved by the engine (${game})`, states, engine);
+}
+check("dmg split states are the complement", G.stateIds(DATA, "gold").filter((st) => !(DATA.rtc.dmg_identical_states || []).includes(st)), DATA.rtc.dmg_split_states);
+
 // ---- targets and verdicts ---------------------------------------------------------------------------
 for (const c of V.targets) {
   const sets = G.targetSetsFor(DATA, c.game, c.sets);
@@ -192,6 +204,38 @@ for (const c of V.schedules) {
   checkCase(`schedule ${c.methodology} bin ${c.bin} ${c.anchor} corr ${c.correctionMs} beeps ${c.beeps} spacing ${c.spacingS}`, c,
     () => G.scheduleGen2(DATA, c.methodology, c.bin, c.correctionMs, { anchor: c.anchor, beeps: c.beeps, spacingS: c.spacingS, resetExtraS: c.resetExtraS }));
 }
+
+// ---- argument validation the JSON vectors cannot carry (NaN, infinities, wrong types) ---------------------
+function throws(label, fn) {
+  checks++;
+  let threw = null;
+  try { fn(); } catch (e) { threw = e; }
+  if (!threw || threw.name !== "ValueError") mismatch(label, "ValueError", threw ? `${threw.name}: ${threw.message}` : "no throw");
+}
+throws("schedule NaN correction throws", () => G.scheduleGen2(DATA, "gold/gbp/hold-start-v1", 100, NaN));
+throws("schedule -Infinity correction throws", () => G.scheduleGen2(DATA, "gold/gbp/hold-start-v1", 100, -Infinity));
+throws("schedule string correction throws", () => G.scheduleGen2(DATA, "gold/gbp/hold-start-v1", 100, "100"));
+throws("schedule NaN reset delay throws", () => G.scheduleGen2(DATA, "gold/gbp/hold-start-v1", 100, 100, { anchor: "reset", resetExtraS: NaN }));
+throws("schedule NaN spacing throws", () => G.scheduleGen2(DATA, "gold/gbp/hold-start-v1", 100, 100, { spacingS: NaN }));
+throws("schedule Infinity spacing throws", () => G.scheduleGen2(DATA, "gold/gbp/hold-start-v1", 100, 100, { spacingS: Infinity }));
+throws("schedule NaN beeps throws", () => G.scheduleGen2(DATA, "gold/gbp/hold-start-v1", 100, 100, { beeps: NaN }));
+check("schedule with finite arguments still works", true, Number.isFinite(G.scheduleGen2(DATA, "gold/gbp/hold-start-v1", 100, 100).tA));
+throws("bin null throws", () => G.bin(DATA, "gold", null));
+throws("bin 100.7 throws", () => G.bin(DATA, "gold", 100.7));
+throws("bin '100' throws", () => G.bin(DATA, "gold", "100"));
+throws("invert hex-string TID throws", () => G.invert(DATA, "gold", "E83B", {}));
+throws("invert decimal-string TID throws", () => G.invert(DATA, "gold", "59451", {}));
+throws("invert NaN TID throws", () => G.invert(DATA, "gold", NaN, {}));
+throws("invert 1.5 TID throws", () => G.invert(DATA, "gold", 1.5, {}));
+throws("verdict hex-string TID throws", () => G.verdict("25E9", null, null, G.targetSetsFor(DATA, "gold", ["psr-gs-any-09705"])));
+throws("makeTargetSet invalid hex throws", () => G.makeTargetSet("x", { tids: ["ZZZZ"], games: ["gold"] }));
+throws("makeTargetSet 5-digit hex throws", () => G.makeTargetSet("x", { tids: ["1E83B"], games: ["gold"] }));
+throws("verify NaN measured time throws", () => G.verify(DATA, "gold", "gbp", 0xE83B, null, NaN));
+throws("sampleFromHit NaN correction throws", () => G.sampleFromHit(DATA, "gold", "gbp", null, 0xE83B, null, 100, NaN));
+throws("sampleFromHit aimed bin 599 throws", () => G.sampleFromHit(DATA, "gold", "gbp", null, 0xE83B, null, 599, 200));
+check("sampleFromHit on Crystal with a bracket state uses its one table", G.sampleFromHit(DATA, "crystal", "gbp", null, 0xBE4B, null, 100, 200).nearestBin,
+  G.sampleFromHit(DATA, "crystal", "gbp", "days512", 0xBE4B, null, 100, 200).nearestBin);
+throws("sampleFromHit unknown state throws", () => G.sampleFromHit(DATA, "crystal", "gbp", "dayz0", 0xBE4B, null, 100, 200));
 
 // ---- calibration ------------------------------------------------------------------------------------
 for (const c of V.calibration) {

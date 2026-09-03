@@ -75,7 +75,8 @@ public sealed class Gen2TableRef
 
 public sealed class Gen2Candidate
 {
-    public string Key { get; init; } = "";
+    public string Key { get; init; } = "";          // the table that carries the payload (identical tables are stored once)
+    public string Table { get; init; } = "";        // the first in-scope table of the group: use this in head text
     public string[][] Members { get; init; } = Array.Empty<string[]>();
     public int Bin { get; init; }
     public int[] Offsets { get; init; } = Array.Empty<int>();
@@ -122,7 +123,12 @@ public sealed class Gen2TargetSet
     public int SinglePressHits { get; }
 
     static string Str(JsonElement e, string name, string dflt) => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? dflt : dflt;
-    static int Hex(JsonElement e) => Convert.ToInt32(e.ToString(), 16);
+    static int Hex(JsonElement e)
+    {
+        string str = e.ToString().Trim();
+        if (str.Length is < 1 or > 4 || !str.All(Uri.IsHexDigit)) throw new ArgumentException($"target set member '{e}' is not a 1-4 digit hex ID");
+        return Convert.ToInt32(str, 16);
+    }
 
     public Gen2TargetSet(string key, JsonElement spec)
     {
@@ -347,7 +353,11 @@ public sealed class Gen2TidData
     public JsonElement StateInfo(string state)
         => Root.GetProperty("rtc").GetProperty("states").TryGetProperty(state, out var s) ? s : throw new ArgumentException($"no RTC state '{state}'");
 
-    public bool Reachable(string gameKey, string state) => !RtcDependent(gameKey) || StateInfo(state).GetProperty("reachable_after_first_boot").GetBoolean();
+    public bool Reachable(string gameKey, string state)
+    {
+        var info = StateInfo(state);
+        return !RtcDependent(gameKey) || info.GetProperty("reachable_after_first_boot").GetBoolean();
+    }
 
     public JsonElement TableRecord(string key)
     {
@@ -408,18 +418,33 @@ public sealed class Gen2TidData
         };
     }
 
-    // Every table key of a game in data order (platform keys, then the running and halted states), filtered.
+    // Every table key of a game in data order (platform keys, then the running and halted states), filtered. The scope is
+    // validated here (Invert, Ambiguity, SampleFromHit and Verify all come through): an unknown platform, family or state
+    // throws instead of silently scoping to no table at all.
     public List<string> TableKeys(string gameKey, string? platformKey = null, string family = "all", IReadOnlyList<string>? states = null)
     {
         var out_ = new List<string>();
         var stateIds = StateIds(gameKey);
-        foreach (var pk in PlatformKeys(gameKey))
+        var platformKeys = PlatformKeys(gameKey);
+        if (!Gen2Tid.Families.Contains(family)) throw new ArgumentException($"family must be one of {string.Join(", ", Gen2Tid.Families)} (got '{family}')");
+        if (platformKey is not null && !platformKeys.Contains(platformKey))
+            throw new ArgumentException($"no platform '{platformKey}' for {gameKey} (choose from {string.Join(", ", platformKeys)})");
+        // states: every id must be a real RTC state (rtc.states); for an RTC-immune game (Crystal) the filter is then moot,
+        // whatever the cartridge's clock its one table is days0.
+        IReadOnlyList<string>? stateFilter = null;
+        if (states is not null)
+        {
+            if (states.Count == 0) throw new ArgumentException("states must be a non-empty list of RTC state ids");
+            foreach (var st in states) StateInfo(st);
+            if (RtcDependent(gameKey)) stateFilter = states;
+        }
+        foreach (var pk in platformKeys)
         {
             if (platformKey is not null && pk != platformKey) continue;
             foreach (var st in stateIds)
             {
                 if (family != "all" && ((family == "halted") != Gen2Tid.IsHaltedState(st))) continue;
-                if (states is not null && !states.Contains(st)) continue;
+                if (stateFilter is not null && !stateFilter.Contains(st)) continue;
                 out_.Add(Gen2Tid.TableKey(gameKey, pk, st));
             }
         }
@@ -471,6 +496,12 @@ public static class Gen2Tid
         return (p[0], p[1], p[2]);
     }
     public static bool IsHaltedState(string state) => state.StartsWith("halt", StringComparison.Ordinal);
+    public static readonly string[] Families = { "all", "running", "halted" };
+    const int IdMax = 0xFFFF;
+    // Typed IDs are integers 0..65535; an out-of-range value is a caller bug, not "absent from the tables".
+    static int Id16(int x, string name) => x is < 0 or > IdMax ? throw new ArgumentException($"{name} must be an integer 0..65535 (got {x})") : x;
+    static int? OptId16(int? x, string name) => x is null ? null : Id16(x.Value, name);
+    static double Finite(double x, string name) => double.IsFinite(x) ? x : throw new ArgumentException($"{name} must be a finite number (got {Py(x)})");
 
     // ---- bins ------------------------------------------------------------------------------------
     public static int? BinOf(int offset, Gen2BinRule rule)
@@ -536,6 +567,9 @@ public static class Gen2Tid
         string family = "all", IReadOnlyList<string>? states = null)
     {
         bool crystal = !data.RtcDependent(gameKey);
+        Id16(tid, "tid"); OptId16(lid, "lid"); OptId16(sid, "sid");
+        if (sid is not null && !data.Game(gameKey).GetProperty("ids").EnumerateArray().Any(x => x.GetString() == "sid"))
+            throw new ArgumentException($"{gameKey} rolls no Secret ID: sid must not be given");
         var rule = data.BinRule(gameKey);
         var cands = new List<Gen2Candidate>();
         foreach (var (carrier, members) in CarrierGroups(data, gameKey, platformKey, family, states))
@@ -549,7 +583,8 @@ public static class Gen2Tid
                 if (sid is not null && (t.Sids is null || t.Sids[b] != sid.Value)) continue;
                 cands.Add(new Gen2Candidate
                 {
-                    Key = carrier, Members = members.Select(m => (string[])m.Clone()).ToArray(), Bin = b, Offsets = OffsetsForBin(b, rule),
+                    Key = carrier, Table = TableKey(gameKey, members[0][0], members[0][1]),
+                    Members = members.Select(m => (string[])m.Clone()).ToArray(), Bin = b, Offsets = OffsetsForBin(b, rule),
                     Tid = t.Tids[b], Lid = t.Lids[b], Sid = t.Sids?[b], Family = IsHaltedState(st) ? "halted" : "running",
                     ReachableAfterFirstBoot = members.Any(m => data.Reachable(gameKey, m[1]))
                 });
@@ -587,7 +622,11 @@ public static class Gen2Tid
     }
 
     // ---- target sets -----------------------------------------------------------------------------
-    public static List<Gen2TargetSet> SetsAccepting(int tid, int? lid, int? sid, IEnumerable<Gen2TargetSet> sets) => sets.Where(s => s.Accepts(tid, lid, sid)).ToList();
+    public static List<Gen2TargetSet> SetsAccepting(int tid, int? lid, int? sid, IEnumerable<Gen2TargetSet> sets)
+    {
+        Id16(tid, "tid"); OptId16(lid, "lid"); OptId16(sid, "sid");
+        return sets.Where(s => s.Accepts(tid, lid, sid)).ToList();
+    }
     public static (string Verdict, string[] Sets) VerdictDetail(int tid, int? lid, int? sid, IEnumerable<Gen2TargetSet> sets)
     {
         var hits = SetsAccepting(tid, lid, sid, sets);
@@ -640,6 +679,7 @@ public static class Gen2Tid
         var rule = data.BinRule(m.GameKey);
         var timing = m.Timing;
         if (!m.Anchors.Contains(anchor)) throw new ArgumentException($"anchor '{anchor}' is not offered for {methodologyId}");
+        Finite(correctionMs, "correction (ms)"); Finite(spacingS, "count-in spacing (s)");
         var vw = VisibleWindow(bin, rule);
         double aimV = AimOffset(bin, rule) - VisibleMenuLagFrames;
         List<Cue> cues;
@@ -659,7 +699,7 @@ public static class Gen2Tid
             if (anchor == AnchorReset)
             {
                 if (resetExtraS is null) throw new ArgumentException("the reset anchor needs the console's reset delay (fade + stall)");
-                extra = resetExtraS.Value;
+                extra = Finite(resetExtraS.Value, "reset delay (s)");
             }
             double lo = timing.HoldLoFrame / Fps + extra, hi = timing.HoldHiFrame / Fps + extra, mn = timing.VisibleMenuFrame / Fps + extra;
             holdLo = lo; holdHi = hi; menu = mn;
@@ -699,6 +739,8 @@ public static class Gen2Tid
     {
         var rule = data.BinRule(gameKey);
         bool crystal = !data.RtcDependent(gameKey);
+        OffsetsForBin(aimedBin, rule);
+        Finite(correctionUsedMs, "correction used (ms)");
         IReadOnlyList<string>? states = state is not null ? new[] { state } : crystal ? null : TwoStatePrior;
         var inv = Invert(data, gameKey, typedTid, typedLid, null, platformKey, "all", states);
         Gen2Candidate? near = null;
@@ -729,6 +771,7 @@ public static class Gen2Tid
     public static Gen2VerifyResult Verify(Gen2TidData data, string gameKey, string platformKey, int tid, int? lid, double measuredS, string? state = null)
     {
         var rule = data.BinRule(gameKey);
+        Finite(measuredS, "measured time (s)");
         var inv = Invert(data, gameKey, tid, lid, null, platformKey, "all", state is null ? null : new[] { state });
         double predictedOffset = measuredS * Fps + VisibleMenuLagFrames;
         int? predictedBin = BinOf((int)Math.Floor(predictedOffset + 0.5), rule);
