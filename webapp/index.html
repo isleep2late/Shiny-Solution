@@ -9,7 +9,7 @@
 <body>
 <header>
   <h1>Shiny-Solution</h1>
-  <p>RNG manipulation calculators &amp; timers for Pokémon Gens 1–4 — no emulator required. Decomp-verified math. Gen 1 Trainer ID cues (Red / Blue / Yellow) and the Emerald / FireRed / LeafGreen Secret ID search under the Gen 1 TID tab.</p>
+  <p>RNG manipulation calculators &amp; timers for Pokémon Gens 1–4 — no emulator required. Decomp-verified math. Gen 1 Trainer ID cues (Red / Blue / Yellow) and the Emerald / FireRed / LeafGreen Secret ID search under the Gen 1 TID tab; Gen 2 Trainer ID / Lucky ID cues (Gold / Silver / Crystal, emulator-derived: no hardware sample yet) under the Gen 2 TID tab.</p>
 </header>
 <nav id="tabs">
   <button data-tab="g3timer" class="active">Gen 3 Timer</button>
@@ -17,6 +17,7 @@
   <button data-tab="g4">Gen 4</button>
   <button data-tab="g12">Gen 1/2 DVs</button>
   <button data-tab="g1tid">Gen 1 TID</button>
+  <button data-tab="g2tid">Gen 2 TID</button>
   <button data-tab="about">About</button>
 </nav>
 <div id="mode-bar">
@@ -330,6 +331,104 @@
       <div id="sid-table"></div>
     </div>
   </section>
+  <section id="tab-g2tid" class="tab">
+    <div class="card">
+      <h2>1. Gen 2 Trainer ID / Lucky ID (Gold / Silver / Crystal): the one timed A tap on NEW GAME</h2>
+      <p id="g2-rules"></p>
+      <p>TARGET mode: you say which bin (or which Trainer ID / Lucky ID) you want, the tool says what to do, cues the one
+      timed tap, and learns from the IDs you type afterwards. The target is a 4-frame poll bin (0-598) counted from the
+      NEW GAME / OPTION box you can see, not a frame; every prediction names its methodology, the input protocol it is
+      valid under, and the RTC state its table belongs to. The protocol's steps ARE the methodology.</p>
+      <div class="row">
+        <label>Game <select id="g2-game"></select></label>
+        <label>Console or emulator <select id="g2-platform"></select></label>
+        <label id="g2-methodology-row">Methodology <select id="g2-methodology"></select></label>
+        <label>RTC state of the cartridge <select id="g2-state"></select></label>
+        <div class="field">Target sets in force <span id="g2-targetsets" class="checks"></span></div>
+      </div>
+      <p id="g2-status" class="result pre"></p>
+      <details><summary>Methodology, validity conditions, target sets, and every methodology of this game verbatim</summary><pre id="g2-methodology-text" class="text"></pre></details>
+    </div>
+    <div class="card">
+      <h2>2. Target</h2>
+      <p>Bins that give a route target under the target sets in force (click a row to aim at it; a row in another RTC state switches the state, and is first boot only), or type a Trainer ID (and the Lucky ID if you want a pair), or any bin.</p>
+      <div id="g2-targets-table"></div>
+      <p id="g2-table-note" class="hint"></p>
+      <div class="row">
+        <label>Trainer ID you want (decimal like 20322, or hex $4F62) <input id="g2-tid" class="mono" value="20322"></label>
+        <label>Lucky ID (optional) <input id="g2-lid" class="mono"></label>
+        <button id="g2-find">Find bins</button>
+        <label>or any bin (0-598) <input id="g2-bin" type="number" min="0" max="598" value="300"></label>
+        <button id="g2-use-bin" class="secondary">Aim at bin</button>
+      </div>
+      <pre id="g2-find-out" class="text"></pre>
+      <div id="g2-find-buttons" class="row"></div>
+      <p id="g2-target-info" class="result">Target: none yet</p>
+    </div>
+    <div class="card">
+      <h2>3. Anchor and correction</h2>
+      <div class="row">
+        <label>Anchor: when will you press the anchor button? <select id="g2-anchor"></select></label>
+        <label>Correction (ms) <input id="g2-correction" type="number" step="0.1"></label>
+        <button id="g2-correction-reset" class="secondary">Use the calibrated one</button>
+        <label>Count-in beeps <input id="g2-beeps" type="number" min="0" max="10" value="4"></label>
+        <label>Spacing (s) <input id="g2-spacing" type="number" min="0.2" step="0.1" value="1.0"></label>
+      </div>
+      <p id="g2-correction-note" class="result pre"></p>
+      <pre id="g2-protocol" class="text"></pre>
+      <pre id="g2-schedule" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>4. Cue</h2>
+      <p>Press ANCHOR (or Space with nothing focused) at the anchor moment the protocol names. The beeps play from one
+      pre-rendered buffer on the audio clock (the Gen 1 tab's player: one AudioContext for the page), every tone on an
+      exact sample; the screen flashes with each beep, and the long high beep is the A tap. Space again cancels.</p>
+      <div id="g2-display" class="bigtime">--</div>
+      <div class="row">
+        <button id="g2-anchor-btn" disabled>ANCHOR (Space)</button>
+        <button id="g2-cancel" class="secondary">Cancel</button>
+      </div>
+      <p id="g2-phit" class="hint"></p>
+      <pre id="g2-cue-log" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>5. What did you get?</h2>
+      <div class="row">
+        <label>Trainer ID you got (decimal as on the Trainer Card, or hex $4F62) <input id="g2-got" class="mono"></label>
+        <label>Lucky ID you got (optional; the Radio Tower lottery screen) <input id="g2-got-lid" class="mono"></label>
+        <label class="check"><input id="g2-force" type="checkbox"> force (add even if it looks like a duplicate or is more than 15 bins out)</label>
+        <button id="g2-record">Record</button>
+        <button id="g2-drop-last" class="secondary">Drop last</button>
+        <button id="g2-clear" class="secondary">Clear (this methodology)</button>
+      </div>
+      <pre id="g2-outcome" class="text"></pre>
+      <h3>Your timing: spread, P(hit), attempts per hit, drift</h3>
+      <pre id="g2-stats" class="text"></pre>
+      <p class="hint">Samples are kept in this browser per console and anchor under shinySolution.gen2tid.calibration, each with its methodology id, the RTC state it inverted in and the mode it was made in (RUN or PRACTICE / HUNT, each mode in its own store); only samples under the active methodology made in the mode in force are averaged, the rest are listed as ignored. The hit and the aim are bin centres: the outlier guard is 60 frames = 15 bins.</p>
+    </div>
+    <div class="card">
+      <h2>Invert: which state and bin gave these IDs?</h2>
+      <p>A typed Trainer ID (and Lucky ID) against the tables of this console: every candidate (table, bin), whether it recurs after the first boot, and the ambiguity statistics of the scope.</p>
+      <div class="row">
+        <label>Trainer ID <input id="g2-invert-tid" class="mono"></label>
+        <label>Lucky ID (optional) <input id="g2-invert-lid" class="mono"></label>
+        <label>Scope <select id="g2-invert-scope"></select></label>
+        <button id="g2-invert">Invert</button>
+      </div>
+      <pre id="g2-invert-out" class="text"></pre>
+      <div id="g2-invert-buttons" class="row"></div>
+    </div>
+    <div class="card">
+      <h2>Verify (moderators): are these IDs consistent with a hand-measured tap time?</h2>
+      <div class="row">
+        <label>Trainer ID in the run <input id="g2-verify-tid" class="mono"></label>
+        <label>Lucky ID (optional) <input id="g2-verify-lid" class="mono"></label>
+        <label>Visible menu box to the A press (s, measured from the video) <input id="g2-verify-s" type="number" step="0.001"></label>
+        <button id="g2-verify">Verify</button>
+      </div>
+      <pre id="g2-verify-out" class="text"></pre>
+    </div>
+  </section>
   <section id="tab-about" class="tab">
     <div class="card">
       <h2>About</h2>
@@ -372,5 +471,6 @@
 <script src="mode.js"></script>
 <script src="app.js"></script>
 <script src="gen1tid-ui.js"></script>
+<script src="gen2tid-ui.js"></script>
 </body>
 </html>

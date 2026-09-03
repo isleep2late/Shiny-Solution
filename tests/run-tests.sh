@@ -364,7 +364,7 @@ fi
 if grep -qE 'Practice & Hunt|createHuntWindow|electron-source|preload|hunt\.html|GetSourceScreenshot|obs-websocket|"ws"' ../electron/main.js || grep -q '"ws"' ../electron/package.json; then
   echo "FAIL: electron/main.js or package.json carries the hunt window code path or its package"; exit 1
 fi
-echo "the plain electron stage: no hunt/ directory, no sentinel; main.js names no hunt window and package.json no ws; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; })"
+echo "the plain electron stage: no hunt/ directory, no sentinel; main.js names no hunt window and package.json no ws; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; }); gen2tid-ui.js staged: $([ -f ../electron/webapp/gen2tid-ui.js ] && echo yes || { echo no; exit 1; })"
 
 # Negative control: a bundle whose gen2tid.js UMD line is renamed (the engine no longer registers as ShinyGen2Tid) must FAIL,
 # and is shown failing, so the carry of core/gen2tid.js into the bundle is a checked fact.
@@ -404,6 +404,25 @@ else
 fi
 rm -f "$bundle.s4" "$bundle.out"
 
+# Negative control: a bundle whose Gen 2 tab module no longer registers as ShinyGen2TidUi (its export line renamed) must FAIL,
+# and is shown failing, so the carry of webapp/gen2tid-ui.js into the bundle is a checked fact.
+node -e '
+const fs = require("fs");
+const ts = fs.readFileSync(process.argv[1], "utf8");
+const needle = "root.ShinyGen2TidUi = api";
+if (!ts.includes(needle)) { console.error("negative control setup: the Gen 2 tab module export line was not found in the bundle"); process.exit(1); }
+fs.writeFileSync(process.argv[2], ts.split(needle).join("root.ShinyGen2TidGone = api"));
+' "$bundle" "$bundle.g2ui"
+if node test-webapp.cjs "$bundle.g2ui" > "$bundle.out" 2>&1; then
+  echo "negative control (bundle with the Gen 2 tab module renamed): DID NOT FAIL"
+  rm -f "$bundle" "$bundle.g2ui" "$bundle.out"
+  exit 1
+else
+  echo "negative control (bundle with the Gen 2 tab module renamed): FAILED as required ->"
+  grep -E '^FAIL|failure' "$bundle.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$bundle.g2ui" "$bundle.out"
+
 # Negative control: a bundle without the tab's button (the string deleted) must FAIL, and is shown failing.
 node -e '
 const fs = require("fs");
@@ -422,9 +441,10 @@ else
 fi
 rm -f "$bundle" "$bundle.cut" "$bundle.out"
 
-# The tab in a real browser (headless Chrome, when installed): its self-test drives the DOM through the tab's own
-# handlers (targets, protocol, an outcome recorded and persisted, Blue / DMG, the metronome, the Secret ID listing,
-# the mode switch with the reset adjustment and the pins, records of the other mode planted in the RUN stores).
+# The tabs in a real browser (headless Chrome, when installed): the Gen 1 TID tab's self-test drives the DOM through the
+# tab's own handlers (targets, protocol, an outcome recorded and persisted, Blue / DMG, the metronome, the Secret ID
+# listing, the mode switch with the reset adjustment and the pins, records of the other mode planted in the RUN stores),
+# then the Gen 2 TID tab's self-test does the same for its tab (below).
 if command -v google-chrome >/dev/null 2>&1; then
   bash ../webapp/sync-core.sh
   # One browser profile for three loads: a probe page seeds the origin's localStorage with a visitor's stand-in
@@ -443,9 +463,12 @@ var o = {}; for (var i = 0; i < localStorage.length; i++) { var k = localStorage
 document.getElementById("ls").textContent = JSON.stringify(o);
 </script></body></html>
 PROBE
-  chrome_dom() { timeout 120 google-chrome --headless=new --disable-gpu --no-sandbox --user-data-dir="$profile" --virtual-time-budget="$1" --dump-dom "$2" 2>/dev/null; }
+  chrome_dom() { timeout 120 google-chrome --headless=new --disable-gpu --user-data-dir="$profile" --virtual-time-budget="$1" --dump-dom "$2" 2>/dev/null; }
   chrome_dom 1000 "file://$probe?seed" | grep -o '<pre id="ls">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.seeded"
   chrome_dom 5000 "file://$(cd ../webapp && pwd)/index.html?g1selftest" | grep -o '<pre id="g1-selftest">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.dom"
+  # the Gen 2 TID tab's self-test (?g2selftest) in the same profile: its stores and the mode stay in memory too, so the
+  # after-probe below covers both tabs
+  chrome_dom 8000 "file://$(cd ../webapp && pwd)/index.html?g2selftest" | grep -o '<pre id="g2-selftest">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.dom2"
   chrome_dom 1000 "file://$probe" | grep -o '<pre id="ls">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.after"
   rm -rf "$profile" "$probe"
   node -e '
@@ -520,6 +543,61 @@ console.log("browser self-test: " + checks.length + " checks, " + bad + " failur
 fs.unlinkSync(process.argv[1] + ".seeded"); fs.unlinkSync(process.argv[1] + ".dom"); fs.unlinkSync(process.argv[1] + ".after");
 process.exit(bad ? 1 : 0);
 ' "$profile"
+  # The Gen 2 TID tab in the browser (webapp/gen2tid-ui.js): the same page, driven through the tab's own handlers under
+  # ?g2selftest (the status and protocol text, the target rows across RTC states, an outcome recorded in bins with the
+  # 15-bin outlier and duplicate guards, an outcome of another RTC state located, the invert panel, the reset anchor,
+  # Silver's halted-clock hit, a DMG's two methodologies, Crystal's one state, Space scoped to the tab and the shared
+  # player, verify, the mode wall with a planted practice sample); nothing written to the origin (the probe above).
+  node -e '
+const fs = require("fs");
+const un = (s) => s.replace(/&quot;/g, "\"").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "\x27");
+let r; try { r = JSON.parse(un(fs.readFileSync(process.argv[1] + ".dom2", "utf8"))); } catch (e) { r = { error: "no report from the Gen 2 self-test: " + e.message }; }
+const checks = [
+  ["Gold on GSE, gold/gbp/hold-start-v1, days0 by default", r.game === "gold" && r.platform === "gse" && r.methodology === "gold/gbp/hold-start-v1" && r.state === "days0"],
+  ["the status says no hardware sample exists for any Gen 2 configuration", r.statusNamesNoHardware === true],
+  ["the status says the published route IDs need their community scripts", r.statusNamesScripts === true],
+  ["the status states the reachability rule (only days0 and days512 recur)", r.statusNamesReachability === true],
+  ["all four Gold methodologies listed with their protocol text and validity verbatim", r.methodologiesListed === 4 && r.protocolVerbatim === true && r.validityVerbatim === true],
+  ["twenty RTC states offered for Gold", r.stateOptions === 20],
+  ["no single-tap route target in days0; the LID 01001 hit shown from halt-days200 bin 392", r.targetsInDays0 === 0 && JSON.stringify(r.targetsOtherStates) === "[\"halt-days200:392\"]"],
+  ["bin 300 described with its window, IDs and methodology", /^Target: bin 300 \(A down 1201\.\.1204 frames after the visible menu box, aim 1202\.5 = 20\.133 s .*TID 20322 \(\$4F62\), Lucky ID 61052 \(\$EE7C\).*methodology gold\/gbp\/hold-start-v1$/.test(r.targetInfo || "")],
+  ["protocol names the methodology and the hardware status", r.protocolHasMethodology === true && r.protocolHasNoHardware === true],
+  ["A cue at 19.933 s", r.scheduleA === "19.933"],
+  ["anchor button enabled", r.anchorEnabled === true],
+  ["outcome inverted to bin 302", /You hit bin 302 .*aimed 300: 8\.0 frames late/.test(r.outcome || "")],
+  ["correction moved to 333.9 ms", r.correctionAfter === "333.9"],
+  ["sample persisted under gse/menu with its bins, state, methodology and mode", !!(r.stored && r.stored["gse/menu"] && r.stored["gse/menu"].samples.length === 1 && r.stored["gse/menu"].samples[0].hit_bin === 302 && r.stored["gse/menu"].samples[0].state === "days0" && r.stored["gse/menu"].samples[0].methodology === "gold/gbp/hold-start-v1" && r.stored["gse/menu"].samples[0].mode === "run")],
+  ["a 16-bin miss is refused by the bin outlier guard", r.outlierRefused === true],
+  ["the same attempt twice is refused by the duplicate guard", r.duplicateRefused === true],
+  ["IDs of another RTC state teach nothing and are located (halt-days200 bin 392, first boot only)", /another RTC state: gold\/gbp\/halt-days200 bin 392 \(first boot only\)/.test(r.elsewhereOutcome || "") && /nothing can be learned/.test(r.elsewhereOutcome || "")],
+  ["the invert panel finds the candidate with the ambiguity statistics", /gold\/gbp\/halt-days200 bin 392: .*\[first boot only\]/.test(r.invertOut || "") && /769 with more than one candidate/.test(r.invertOut || "") && r.invertButtons === 1],
+  ["the reset anchor on GSE adds the fade and stall (hold 2.175 s, menu 9.709 s)", r.resetHold === "2.175" && r.resetMenu === "9.709"],
+  ["Silver on GSE in halt-days260: 55785 at bin 457, first boot only, said in the protocol", JSON.stringify(r.silverHaltTargets) === "[\"457:55785 ($D9E9):first boot only\"]" && r.silverHaltProtocolFirstBoot === true],
+  ["a DMG offers hold-start and late-start", JSON.stringify(r.dmgMethodologies) === "[\"silver/dmg/hold-start-v1\",\"silver/dmg/late-start-v1\"]"],
+  ["Crystal has one state and, on a Game Boy Color, the menu and power-on anchors", r.crystalStates === 1 && JSON.stringify(r.crystalAnchors) === "[\"menu\",\"poweron\"]"],
+  ["Crystal bin 300 carries the Secret ID", /Secret ID 57547 \(\$E0CB\)/.test(r.crystalTarget || "")],
+  ["Gen 2 tab active for the Space test", r.g2TabActive === true],
+  ["Space anchored the Gen 2 cue through the shared player, the Gen 1 log quiet", r.spaceAnchoredGen2 === true && r.gen1CueLogQuiet === true],
+  ["the cue log anchor line names the mode of the attempt", r.cueLogNamesMode === true],
+  ["verify: consistent at the bin own time, inconsistent 2 s later", r.verifyConsistent === true && r.verifyInconsistent === true],
+  ["RUN is the default mode", r.modeDefault === "run"],
+  ["PRACTICE / HUNT turned on through the switch", r.modeAfterToggle === "practice"],
+  ["the practice store starts empty (default correction 200.0)", r.correctionInPracticeBefore === "200.0"],
+  ["the practice attempt inverted to bin 304", /You hit bin 304 .*aimed 300: 16\.0 frames late/.test(r.practiceOutcome || "")],
+  ["the practice sample is stamped and stored under the practice key", !!(r.practiceStored && r.practiceStored["gse/menu"] && r.practiceStored["gse/menu"].samples.length === 1 && r.practiceStored["gse/menu"].samples[0].mode === "practice")],
+  ["the RUN store is untouched by the practice record", r.runStoreUnchangedByPractice === true],
+  ["the practice correction is the practice sample alone (467.9)", r.correctionInPractice === "467.9"],
+  ["back in RUN the practice sample is not in force (333.9 again)", r.modeBack === "run" && r.correctionBackInRun === "333.9" && r.correctionInRunBefore === "333.9"],
+  ["planted practice and unknown-mode samples in the RUN store are named and never in force", r.runNoteAboutPractice === true && r.correctionWithPlanted === "333.9" && r.samplesInForceWithPlanted === 1],
+  ["the self-test never wrote the Gen 2 stores or the mode to the origin", !!r.realStorage && r.realStorage["shinySolution.gen2tid.calibration"] === null && r.realStorage["shinySolution.gen2tid.calibration.practice"] === null && r.realStorage["shinySolution.mode"] === null]
+];
+let bad = 0;
+for (const [label, ok] of checks) if (!ok) { bad++; console.error("FAIL browser (Gen 2): " + label); }
+if (r.error) { bad++; console.error("FAIL browser (Gen 2): " + r.error); }
+console.log("browser self-test (Gen 2 TID tab): " + checks.length + " checks, " + bad + " failure" + (bad === 1 ? "" : "s"));
+fs.unlinkSync(process.argv[1] + ".dom2");
+process.exit(bad ? 1 : 0);
+' "$profile"
   # The Practice & Hunt page (webapp/hunt/hunt.html) in the same browser, straight from the source tree: it carries no
   # mode switch of its own; in RUN (a fresh profile) it says the mode is off and closes, showing no controls; once the
   # shared mode setting is PRACTICE / HUNT (seeded by a probe page on the same file:// origin, the way the main window's
@@ -528,7 +606,7 @@ process.exit(bad ? 1 : 0);
   hprobe=$(mktemp --suffix=.html)
   printf '<html><body><script>if (location.search === "?practice") localStorage.setItem("shinySolution.mode", "practice");</script></body></html>' > "$hprobe"
   hpage="file://$(cd ../webapp && pwd)/hunt/hunt.html"
-  chrome_h() { timeout 120 google-chrome --headless=new --disable-gpu --no-sandbox --user-data-dir="$hprofile" --virtual-time-budget="$1" --dump-dom "$2" 2>/dev/null; }
+  chrome_h() { timeout 120 google-chrome --headless=new --disable-gpu --user-data-dir="$hprofile" --virtual-time-budget="$1" --dump-dom "$2" 2>/dev/null; }
   run_dom=$(chrome_h 1000 "$hpage")
   chrome_h 500 "file://$hprobe?practice" > /dev/null
   practice_dom=$(chrome_h 2000 "$hpage")

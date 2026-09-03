@@ -1,6 +1,7 @@
-// Webapp smoke test for the Gen 1 Trainer ID tab: (1) the mobile bundle (build-mobile-bundle.mjs)
-// carries the tab, the engine, the tab module and the embedded data; (2) the tab's pure module
-// (webapp/gen1tid-ui.js) loaded in node agrees with the engine and with RNG Solution's numbers.
+// Webapp smoke test for the Gen 1 and Gen 2 Trainer ID tabs: (1) the mobile bundle (build-mobile-bundle.mjs)
+// carries the tabs, the engines, the tab modules and the embedded data; (2) the tabs' pure modules
+// (webapp/gen1tid-ui.js, webapp/gen2tid-ui.js) loaded in node agree with the engines, with RNG
+// Solution's numbers and with the Gen 2 derivation's (docs/FACTS.md).
 // usage: node test-webapp.cjs [bundle.ts]   (the bundle is built into a temp file when not given)
 const fs = require("fs");
 const os = require("os");
@@ -221,6 +222,156 @@ assert("firered preset path", G.kFixed(U.sidModelFor(fr, "mid", "rival-preset"),
 threw = false;
 try { U.sidModelFor(em, "turbo", null); } catch (e) { threw = true; }
 assert("an unmeasured text speed is refused", threw);
+
+// ---- 3. the Gen 2 Trainer ID / Lucky ID tab (webapp/gen2tid-ui.js over core/gen2tid.js) -------------
+assert("bundle has the Gen 2 TID tab button", html.includes('data-tab="g2tid"'));
+assert("bundle has the Gen 2 tab section", html.includes('id="tab-g2tid"'));
+assert("bundle embeds the Gen 2 tab module", html.includes("root.ShinyGen2TidUi = api"));
+assert("the Gen 2 tab module comes after the engine, mode.js and the Gen 1 tab module",
+  html.indexOf("root.ShinyGen2Tid = factory(root.ShinyGen1Tid)") < html.indexOf("root.ShinyGen2TidUi = api") &&
+  html.indexOf("root.ShinyMode = api") < html.indexOf("root.ShinyGen2TidUi = api") && html.indexOf("root.ShinyGen1TidUi = api") < html.indexOf("root.ShinyGen2TidUi = api"));
+assert("the Gen 1 tab module exposes its cue player to the Gen 2 tab", html.includes("api.cuePlayer = { prepare: prepare, play: play, stop: stop, warmAudio: warmAudio"));
+assert("the Gen 2 tab states that no hardware sample exists", html.includes("No hardware sample exists for any Gen 2 configuration"));
+assert("the Gen 2 self-test keeps storage in memory", html.includes('root.location.search.indexOf("g2selftest") !== -1') && html.includes("if (MEMORY_ONLY) return;"));
+assert("mode.js keeps the mode in memory under both self-tests", html.includes('root.location.search.indexOf("g2selftest") !== -1));') && html.includes('root.location.search.indexOf("g1selftest") !== -1 ||'));
+assert("bundle embeds the Gen 2 Gold GBP table verbatim", html.includes(GEN2DATA.methodologies["gold/gbp/hold-start-v1"].table_data.tids_hex));
+globalThis.ShinyGen2Tid = require(path.join(root, "core", "gen2tid.js"));
+globalThis.ShinyGen2TidData = GEN2DATA;
+const G2 = globalThis.ShinyGen2Tid;
+const U2 = require(path.join(root, "webapp", "gen2tid-ui.js"));
+const FPS2 = G2.FPS, LAG = G2.VISIBLE_MENU_LAG_FRAMES;
+assert("the Gen 2 tab exports its no-hardware statement", U2.NO_HARDWARE_LINE.startsWith("No hardware sample exists for any Gen 2 configuration"));
+assert("the Gen 2 store is its own key", U2.STORE_KEY_CAL === "shinySolution.gen2tid.calibration" && U2.calStoreKey(RUN) === U2.STORE_KEY_CAL && U2.calStoreKey(PRACTICE) === U2.STORE_KEY_CAL + ".practice");
+// data resolution: every supported game on every console that offers it, in every RTC state
+for (const game of U2.supportedGames(GEN2DATA)) {
+  const states = U2.stateOptions(GEN2DATA, game);
+  assert(`${game} state count`, states.length === (GEN2DATA.games[game].rtc_dependent ? 20 : 1), states.length);
+  for (const p of U2.platformsFor(GEN2DATA, game)) {
+    for (const mid of p.ids) {
+      for (const so of states) {
+        const plat = U2.resolve(GEN2DATA, game, p.key, mid, so.value, null, DATA);
+        assert(`resolve ${game}/${p.key}/${mid}/${so.value} names the game`, plat.methodologyId.split("/")[0] === game && plat.methodologyId === mid);
+        assert(`resolve ${game}/${p.key}/${mid} family matches`, GEN2DATA.methodologies[mid].console_id === plat.familyKey && plat.platformKey === GEN2DATA.methodologies[mid].platform_key);
+        assert(`resolve ${game}/${p.key}/${mid} menu anchor`, plat.anchors.indexOf("menu") !== -1 && plat.anchors.every((a) => GEN2DATA.methodologies[mid].anchors.includes(a) && GEN2DATA.platforms[p.key].anchors.includes(a)));
+        assert(`resolve ${game}/${p.key}/${mid}/${so.value} table`, plat.table.table.tids.length === G2.BIN_COUNT && plat.state === so.value);
+        assert(`resolve ${game}/${p.key}/${mid}/${so.value} reachability`, plat.reachable === so.reachable && plat.reachable === G2.reachable(GEN2DATA, game, so.value));
+        assert(`resolve ${game}/${p.key}/${mid} ids`, plat.hasLid === true && plat.hasSid === (game === "crystal"));
+        const ml = U2.methodologyLines(plat, true).join("\n");
+        assert(`methodology lines for ${mid} carry every validity condition verbatim`, GEN2DATA.methodologies[mid].validity.every((c) => ml.includes("- " + c)) && ml.includes("Methodology: " + mid) && ml.includes(U2.METHODOLOGY_SENTENCE));
+        const db = U2.describeBin(plat, 300);
+        assert(`describeBin ${game}/${mid}/${so.value} names the methodology and the first-boot flag`, db.includes("methodology " + mid) && db.includes("[RTC state " + so.value + ": first boot only]") === !so.reachable);
+      }
+    }
+  }
+  const all = U2.allMethodologyLines(GEN2DATA, game).join("\n");
+  for (const id of GEN2DATA.games[game].methodologies) {
+    const m = GEN2DATA.methodologies[id];
+    assert(`every methodology of ${game} is listed with its protocol and validity verbatim: ${id}`, all.includes("Methodology: " + id) && all.includes("Protocol: " + m.protocol) && m.validity.every((c) => all.includes("- " + c)));
+  }
+}
+assert("a DMG offers hold-start and late-start for Gold and Silver, nothing for Crystal",
+  JSON.stringify(U2.platformMethodologies(GEN2DATA, "dmg", "gold").ids) === '["gold/dmg/hold-start-v1","gold/dmg/late-start-v1"]' &&
+  JSON.stringify(U2.platformMethodologies(GEN2DATA, "dmg", "silver").ids) === '["silver/dmg/hold-start-v1","silver/dmg/late-start-v1"]' && U2.platformMethodologies(GEN2DATA, "dmg", "crystal").ids.length === 0);
+assert("the anchors a console offers", JSON.stringify(U2.resolve(GEN2DATA, "gold", "gse").anchors) === '["menu","reset"]' && JSON.stringify(U2.resolve(GEN2DATA, "gold", "gbp").anchors) === '["menu"]' &&
+  JSON.stringify(U2.resolve(GEN2DATA, "gold", "gba").anchors) === '["menu","poweron"]' && JSON.stringify(U2.resolve(GEN2DATA, "crystal", "gbc").anchors) === '["menu","poweron"]');
+assert("the reachability rule names the two recurring states", U2.reachabilityLines(GEN2DATA, "gold").join("\n").includes("Only days0 and days512 recur boot after boot") && U2.reachabilityLines(GEN2DATA, "crystal").join("\n").includes("immune"));
+assert("the scripts line names the published IDs as community scripts", U2.scriptsLine(GEN2DATA, "gold").includes("need their community multi-step scripts") && U2.scriptsLine(GEN2DATA, "gold").includes("$25E9") && U2.scriptsLine(GEN2DATA, "crystal").includes("$26FB"));
+
+// the schedule and its text (USAGE's worked example: Gold on GSE, bin 300, A at 19.933 s after the visible menu)
+const g2plat = U2.resolve(GEN2DATA, "gold", "gse", null, null, null, DATA);
+const g2info = U2.binInfo(g2plat, 300);
+assert("bin 300 of gold/gbp/days0", g2info.tid === 0x4F62 && g2info.lid === 0xEE7C && JSON.stringify(g2info.visible) === "[1201,1204]" && g2info.aimV === 1202.5);
+const g2sched = U2.buildSchedule(g2plat, "menu", 300, 200, 4, 1.0);
+assert("Gen 2 menu schedule A cue", near(g2sched.tA, 1202.5 / FPS2 - 0.2) && near(g2sched.tA, 19.933, 5e-4));
+assert("Gen 2 menu schedule count-in", g2sched.countInTimes.length === 4 && near(g2sched.countInTimes[0], g2sched.tA - 4));
+const g2proto = U2.protocolLines(g2plat, "menu", 300, g2sched, 200, 4, 1.0).join("\n");
+assert("Gen 2 protocol names the methodology and the contract", g2proto.includes("Methodology: gold/gbp/hold-start-v1") && g2proto.includes(U2.METHODOLOGY_SENTENCE));
+assert("Gen 2 protocol states the hardware status", g2proto.includes("NOTE: No hardware sample exists for any Gen 2 configuration"));
+assert("Gen 2 protocol states the target bin as a window after the visible menu", g2proto.includes("Target: bin 300 = A down 1201..1204 frames after the visible menu box (aim 1202.5 = 20.133 s (1202.5 frames))"));
+assert("Gen 2 protocol states the tap rule", g2proto.includes("tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s"));
+assert("Gen 2 protocol states the hold window and the visible menu frame", g2proto.includes("frames 0-355") && g2proto.includes("visible on frame 450, 7.53 s after the boot starts"));
+assert("Gen 2 protocol names the RTC state", g2proto.includes("RTC state: days0 (0-139 days, no carry; recurs boot after boot)"));
+assert("Gen 2 protocol is for the web anchor", !/\bENTER\b/.test(g2proto) && g2proto.includes("ANCHOR button"));
+const g2reset = U2.buildSchedule(g2plat, "reset", 300, 100, 4, 1.0);
+const g2extra = G.resetAnchorExtraSeconds(DATA.reset_models["gbp-fade"]);
+assert("Gen 2 reset anchor adds GSE's fade and stall", near(g2reset.holdLo, g2extra) && near(g2reset.menu, 450 / FPS2 + g2extra) && near(g2reset.tA, g2reset.menu + 1202.5 / FPS2 - 0.1));
+assert("Gen 2 reset protocol names Ctrl+R", U2.protocolLines(g2plat, "reset", 300, g2reset, 100, 4, 1.0).join("\n").includes("Ctrl+R (hard reset)"));
+const g2gbc = U2.resolve(GEN2DATA, "silver", "gbc", null, null, null, DATA);
+const g2pow = U2.buildSchedule(g2gbc, "poweron", 300, 100, 4, 1.0);
+assert("Gen 2 power-on protocol marks the hold window and the menu", U2.protocolLines(g2gbc, "poweron", 300, g2pow, 100, 4, 1.0).join("\n").includes("Two low beeps mark the START-hold window (0.00 s and 2.97 s after your anchor)") && near(g2pow.menu, 452 / FPS2));
+const g2late = U2.resolve(GEN2DATA, "gold", "dmg", "gold/dmg/late-start-v1", null, null, DATA);
+assert("Gen 2 late-start hold window", U2.protocolLines(g2late, "menu", 300, U2.buildSchedule(g2late, "menu", 300, 200, 4, 1.0), 200, 4, 1.0).join("\n").includes("Hold window: START down between 5.83 s and 9.12 s after the boot starts (frames 348-545)"));
+assert("Gen 2 schedule lines", U2.scheduleLines(g2sched, 300, 200, g2plat).join("\n").includes("A cue (long beep)   19.933 s"));
+const g2r = U.renderCues(g2sched.cues, 44100);
+assert("Gen 2 cues render on exact samples through the shared renderer", g2r.onsets.A === Math.round(g2sched.tA * 44100) && g2r.samples[g2r.onsets.A - 1] === 0 && g2r.samples[g2r.onsets.A] !== 0);
+const crystal = U2.resolve(GEN2DATA, "crystal", "gse", null, null, null, DATA);
+assert("Crystal bin 300 carries the Secret ID and one state", U2.binInfo(crystal, 300).sid === 0xE0CB && U2.describeBin(crystal, 300).includes("Secret ID") && crystal.states.length === 1 && crystal.reachable);
+
+// targets: the bins that give a member of a set in force, in the chosen state and in the platform's other states
+const g2rows = U2.targetRows(g2plat);
+assert("no single-tap route target in gold/gbp/days0; the LID 01001 hit is a halted-clock first boot", g2rows.inState.length === 0 && g2rows.otherStates.length === 1 && g2rows.otherStates[0].state === "halt-days200" && g2rows.otherStates[0].bin === 392 && !g2rows.otherStates[0].reachableAfterFirstBoot);
+const silverHalt = U2.resolve(GEN2DATA, "silver", "gse", null, "halt-days260", null, DATA);
+const shRows = U2.targetRows(silverHalt);
+assert("silver/gbp/halt-days260 gives 55785 at bin 457, first boot only", shRows.inState.length === 1 && shRows.inState[0].bin === 457 && shRows.inState[0].tid === 0xD9E9 && !shRows.inState[0].reachableAfterFirstBoot && !silverHalt.reachable);
+assert("the first-boot-only state is named in the protocol", U2.protocolLines(silverHalt, "menu", 457, U2.buildSchedule(silverHalt, "menu", 457, 200, 4, 1.0), 200, 4, 1.0).join("\n").includes("This is a FIRST-BOOT-ONLY state"));
+assert("target set lines name the single-press hits and the community scripts", U2.targetSetLines(g2plat).join("\n").includes("silver/gbp/halt-days260 bin 457 (TID $D9E9, LID $7805, first boot only)") && U2.targetSetLines(g2plat).join("\n").includes("protocol: community-script"));
+
+// calibration: the outcome flow with the bin guards (the engine's isOutlierBins plus gen1tid's isDuplicate over the Gen 2 store)
+const tidAt = (b) => G2.lookup(GEN2DATA, "gold", "gbp", "days0", b).tid;
+const g2cal = {};
+let o2 = U2.recordOutcome(g2cal, g2plat, "menu", 300, 200, tidAt(302), null, { attempt: "a1", when: "2026-09-03 00:00:00", mode: RUN });
+assert("Gen 2 outcome inverts to the hit bin", o2.hitBin === 302 && o2.added && near(o2.implied, 200 + 8 * G.FRAME_MS));
+assert("Gen 2 outcome text", o2.lines.join("\n").includes("You hit bin 302 (A down 1209..1212 frames after the visible menu), aimed 300: 8.0 frames late (133.9 ms; state days0)."));
+assert("Gen 2 correction in force after one sample", near(U2.correctionInForce(g2cal, g2plat, "menu", RUN), 200 + 8 * G.FRAME_MS));
+const g2s0 = U2.allSamples(g2cal, "gse", "menu")[0];
+assert("the stored Gen 2 sample carries the mode, the methodology, the state and the bins", g2s0.mode === RUN && g2s0.methodology === "gold/gbp/hold-start-v1" && g2s0.state === "days0" && g2s0.aimed_bin === 300 && g2s0.hit_bin === 302 && g2s0.aimed === 1206.5 && g2s0.hit === 1214.5);
+let g2threw = null;
+try { G.addSample([], g2s0, false); } catch (e) { g2threw = e.name; }
+assert("gen1tid's addSample refuses bin-centre offsets (so it is not the Gen 2 guard)", g2threw === "ValueError");
+o2 = U2.recordOutcome(g2cal, g2plat, "menu", 300, 200, tidAt(302), null, { attempt: "a1", mode: RUN });
+assert("Gen 2 duplicate refused", !o2.added && o2.refused === "duplicate");
+o2 = U2.recordOutcome(g2cal, g2plat, "menu", 300, 200, tidAt(316), null, { attempt: "a2", mode: RUN });
+assert("Gen 2 outlier refused at 16 bins (64 frames)", !o2.added && o2.refused === "outlier" && o2.lines.join("\n").includes("more than 60 frames (15 bins"));
+o2 = U2.recordOutcome(g2cal, g2plat, "menu", 300, 200, tidAt(315), null, { attempt: "a3", mode: RUN });
+assert("Gen 2 sample at 15 bins (60 frames) accepted", o2.added && o2.hitBin === 315);
+o2 = U2.recordOutcome(g2cal, g2plat, "menu", 300, 200, tidAt(316), null, { attempt: "a2", force: true, mode: RUN });
+assert("Gen 2 outlier added when forced", o2.added);
+o2 = U2.recordOutcome(g2cal, g2plat, "menu", 300, 200, 0x6F53, 0x03E9, { attempt: "a4", mode: RUN });
+assert("IDs of another RTC state teach nothing and are located", !o2.added && o2.hitBin === null && o2.elsewhere.length === 1 && o2.elsewhere[0].table === "gold/gbp/halt-days200" && o2.elsewhere[0].bin === 392 && o2.lines.join("\n").includes("another RTC state: gold/gbp/halt-days200 bin 392 (first boot only)"));
+o2 = U2.recordOutcome(g2cal, g2plat, "menu", 300, 200, 1, null, { attempt: "a5", mode: RUN });
+assert("an ID absent from every table teaches nothing", !o2.added && o2.elsewhere.length === 0 && o2.lines.join("\n").includes("Correction unchanged"));
+assert("stored Gen 2 samples carry the methodology", U2.allSamples(g2cal, "gse", "menu").every((s) => s.methodology === "gold/gbp/hold-start-v1") && U2.allSamples(g2cal, "gse", "menu").length === 3);
+g2cal["gse/menu"].samples.push({ tid: 1, aimed_bin: 300, hit_bin: 300, aimed: 1206.5, hit: 1206.5, correction_used_ms: 200, implied_ms: 200, attempt: "x", methodology: "gold/dmg/late-start-v1", mode: RUN });
+assert("foreign-methodology Gen 2 samples are ignored", U2.samplesFor(g2cal, "gse", "menu", g2plat.methodologyId, RUN).length === 3 && U2.ignoredSampleLines(g2cal, g2plat, "menu", RUN)[0].includes("recorded under gold/dmg/late-start-v1"));
+g2cal["gse/menu"].samples.push({ tid: 2, aimed_bin: 300, hit_bin: 304, aimed: 1206.5, hit: 1222.5, correction_used_ms: 200, implied_ms: 467.9, attempt: "p", methodology: g2plat.methodologyId, mode: PRACTICE });
+assert("a practice Gen 2 sample is not in force in RUN", U2.samplesFor(g2cal, "gse", "menu", g2plat.methodologyId, RUN).length === 3 && U2.ignoredSampleLines(g2cal, g2plat, "menu", RUN).some((l) => l.includes("recorded in PRACTICE / HUNT mode, not RUN")));
+assert("the practice Gen 2 sample is in force in PRACTICE", U2.samplesFor(g2cal, "gse", "menu", g2plat.methodologyId, PRACTICE).length === 1 && near(U2.correctionInForce(g2cal, g2plat, "menu", PRACTICE), 467.9));
+const d2 = U2.dropLastSample(g2cal, g2plat, "menu", RUN);
+assert("Gen 2 drop last stays inside the methodology and the mode", d2 && d2.hit_bin === 316 && U2.allSamples(g2cal, "gse", "menu").length === 4);
+const cl2 = U2.clearSamples(g2cal, g2plat, "menu", false, RUN);
+assert("Gen 2 clear keeps the other methodology's and the other mode's samples", cl2.removed.length === 2 && cl2.kept.length === 2);
+const three2 = [180, 200, 220].map((v) => ({ tid: 1, aimed_bin: 300, hit_bin: 300, aimed: 1206.5, hit: 1206.5, correction_used_ms: 200, implied_ms: v, methodology: g2plat.methodologyId, when: "", state: "days0" }));
+assert("Gen 2 P(hit) text through the shared summary", U2.hitSummary(three2, "menu", g2plat.methodologyId).line.includes("P(hit) with your current sd: about 32 %"));
+const stats2 = U2.statsLines(three2, g2plat, "menu", RUN).join("\n");
+assert("Gen 2 stats block", stats2.includes("n 3   mean 200.0 ms") && stats2.includes("aimed bin 300  hit bin 300") && stats2.includes("recommendation ["));
+
+// the invert panel with the ambiguity statistics (docs/FACTS.md Inversion: 14 Gold / 12 Silver ambiguous under the prior; 769 / 817 over all 18 GBP states)
+const inv2 = U2.invertLines(g2plat, 0x6F53, 0x03E9, { family: "all" });
+assert("invert finds the LID 01001 single-press neighbour, first boot only", inv2.inversion.candidates.length === 1 && inv2.inversion.candidates[0].table === "gold/gbp/halt-days200" && inv2.inversion.candidates[0].bin === 392 && inv2.lines.join("\n").includes("[first boot only]"));
+assert("invert ambiguity over all 18 GBP states (Gold)", inv2.ambiguity.tables === 18 && inv2.ambiguity.ambiguousTids === 769 && inv2.ambiguity.maxCandidates === 5 && inv2.ambiguity.pairCollisions === 2);
+const invPrior = U2.invertLines(g2plat, tidAt(300), null, { family: "prior" });
+assert("invert under the two-state prior (Gold)", invPrior.inversion.candidates.length === 1 && invPrior.inversion.candidates[0].bin === 300 && invPrior.ambiguity.tables === 2 && invPrior.ambiguity.ambiguousTids === 14 && invPrior.ambiguity.pairCollisions === 0);
+const silverPlat = U2.resolve(GEN2DATA, "silver", "gse", null, null, null, DATA);
+assert("invert ambiguity (Silver)", U2.invertLines(silverPlat, 1, null, { family: "prior" }).ambiguity.ambiguousTids === 12 && U2.invertLines(silverPlat, 1, null, { family: "all" }).ambiguity.ambiguousTids === 817 && U2.invertLines(silverPlat, 1, null, { family: "all" }).ambiguity.maxCandidates === 4);
+assert("invert with no candidate says so", U2.invertLines(g2plat, 1, null, { family: "all" }).lines.join("\n").includes("no candidate"));
+assert("invert lines name the methodology", inv2.lines.join("\n").includes("Methodology: gold/gbp/hold-start-v1"));
+assert("Crystal invert scope is one table", U2.invertLines(crystal, 1, null, { family: "all" }).ambiguity.tables === 1);
+
+// verify (the visible menu box to the press): bin 300's TID at its own time is consistent, 2 s later it is not
+assert("Gen 2 verify right timing is CONSISTENT", U2.verifyLines(g2plat, tidAt(300), null, 20.13).consistent);
+assert("Gen 2 verify wrong timing is INCONSISTENT", !U2.verifyLines(g2plat, tidAt(300), null, 22.13).consistent);
+const v2 = U2.verifyLines(g2plat, tidAt(300), null, 20.13).lines.join("\n");
+assert("Gen 2 verify text names the bin, the methodology and the missing lag", v2.includes("the tables produce them at bin 300") && v2.includes("Methodology: gold/gbp/hold-start-v1") && v2.includes("no press-to-visible lag is known for Gen 2"));
 
 if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
 console.log(`webapp smoke: ${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}`);

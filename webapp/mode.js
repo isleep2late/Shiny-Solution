@@ -17,9 +17,10 @@
   var RUN = "run", PRACTICE = "practice";
   var KEY = "shinySolution.mode";              // absent or anything but "practice" means RUN
   var BANNER = "PRACTICE / HUNT mode - tools that read the capture are enabled; not for submitted runs";
-  // Under ?g1selftest (tests/run-tests.sh drives the page headless) the mode lives in memory only,
-  // like the Gen 1 TID tab's stores, so the self-test never flips a visitor's mode.
-  var MEMORY_ONLY = !!(root.location && typeof root.location.search === "string" && root.location.search.indexOf("g1selftest") !== -1);
+  // Under ?g1selftest or ?g2selftest (tests/run-tests.sh drives the page headless) the mode lives in memory
+  // only, like the Gen 1 and Gen 2 TID tabs' stores, so a self-test never flips a visitor's mode.
+  var MEMORY_ONLY = !!(root.location && typeof root.location.search === "string" &&
+    (root.location.search.indexOf("g1selftest") !== -1 || root.location.search.indexOf("g2selftest") !== -1));
   var mem = null;
   var listeners = [];
 

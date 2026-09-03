@@ -827,6 +827,9 @@
     if (reason === "done") { player.display.textContent = "done"; if (player.onDone) player.onDone(); }
     else { player.display.textContent = "cancelled"; player.log.textContent += "  stopped\n"; }
   }
+  // The page has one AudioContext, one player and one flash element; the Gen 2 TID tab (gen2tid-ui.js) plays
+  // its schedules through these, so a cue running in either tab blocks the other's anchor.
+  api.cuePlayer = { prepare: prepare, play: play, stop: stop, warmAudio: warmAudio, running: function () { return player.running; } };
 
   // -- state
   var st = { plat: null, offset: null, anchor: G.ANCHOR_MENU, sched: null, correction: null, attempt: null, sidCue: null };

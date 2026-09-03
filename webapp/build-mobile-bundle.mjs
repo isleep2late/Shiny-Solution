@@ -54,7 +54,7 @@ for (const name of ["rng.js", "gen4.js", "gen12.js", "gen1tid.js", "timers.js", 
 const inlineJson = (name) => readFileSync(join(here, "..", "core", "data", name), "utf8").trim().replace(/<\//g, "<\\/");
 const dataJs = "window.ShinyGen1Data = " + inlineJson("gen1-tid.json") + ";\nwindow.ShinyGen3SidData = " + inlineJson("gen3-sid.json") + ";\nwindow.ShinyGen2TidData = " + inlineJson("gen2-tid.json") + ";\n";
 html = html.replace('<script src="gen1-data.js"></script>', "<script>\n" + dataJs + "</script>");
-for (const local of ["downloads.js", "mode.js", "app.js", "gen1tid-ui.js"]) {
+for (const local of ["downloads.js", "mode.js", "app.js", "gen1tid-ui.js", "gen2tid-ui.js"]) {
   const js = readFileSync(join(here, local), "utf8");
   html = html.replace(`<script src="${local}"></script>`, "<script>\n" + js + "\n</script>");
 }
