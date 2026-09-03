@@ -17,8 +17,31 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   node test-gen5.cjs gen5-vectors.json gen5-random.json
   dotnet run --project ../app/Tests -c Release -- --generators generators-vectors.json generators-cross.json
   node test-generators.cjs generators-vectors.json generators-cross.json
+
+  # Gen 4 seed-to-time / reversal: JS and C# answer the same 310 random inputs (300 plus 10 hour-byte-carry cases, tests/seedtime4-cross.cjs) and
+  # must agree; a tampered answer file is shown to fail so the comparison is known to bite.
+  cross_in=$(mktemp --suffix=.json); cross_out=$(mktemp --suffix=.json)
+  node seedtime4-cross.cjs inputs "$cross_in" 300
+  dotnet run --project ../app/Tests -c Release --no-build -- --seedtime4-cross "$cross_in" "$cross_out"
+  node seedtime4-cross.cjs compare "$cross_in" "$cross_out"
+  node -e '
+const fs = require("fs");
+const a = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+a.ivs[0] = a.ivs[0].length ? a.ivs[0].slice(1) : [1];
+a.mtSecond[3] ^= 1;
+fs.writeFileSync(process.argv[2], JSON.stringify(a));
+' "$cross_out" "$cross_out.bad"
+  if node seedtime4-cross.cjs compare "$cross_in" "$cross_out.bad" > "$cross_out.log" 2>&1; then
+    echo "negative control (tampered C# seedtime4 answers): DID NOT FAIL"
+    rm -f "$cross_in" "$cross_out" "$cross_out.bad" "$cross_out.log"
+    exit 1
+  else
+    echo "negative control (tampered C# seedtime4 answers): FAILED as required ->"
+    grep -E '^FAIL|mismatch' "$cross_out.log" | head -3 | sed 's/^/      /'
+  fi
+  rm -f "$cross_in" "$cross_out" "$cross_out.bad" "$cross_out.log"
 else
-  echo "dotnet not found; skipping gen4 parity vectors, the JS/C# timer cross-check, the C# gen5 checks and the JS/C# generator cross-check"
+  echo "dotnet not found; skipping gen4 parity vectors, the JS/C# timer cross-check, the C# gen5 checks, the JS/C# generator cross-check and the seedtime4 cross-check"
   node test-timers.cjs timer-vectors.json
   node test-gen5.cjs gen5-vectors.json gen5-random.json
   node test-generators.cjs generators-vectors.json
@@ -63,6 +86,34 @@ if node test-generators.cjs "$corrupted" > "$corrupted.out" 2>&1; then
 else
   echo "negative control (corrupted generator vectors): FAILED as required ->"
   grep -E '^FAIL|failed' "$corrupted.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
+# Gen 4 seed-to-time and reversal (core/seedtime4.js) against tests/seedtime4-vectors.json: PokeFinder's
+# seed-to-time / ID / LCRNG-reversal test data bit for bit, the design's two gate seeds (7B0448D1 -> frame 0,
+# 7B0459CB -> frame 3) run forward and found by the search, 500 IV and 200 PID round trips (soundness and the
+# generating seed present), roamer routes from the decomp tables, and the advance planner.
+node test-seedtime4.cjs seedtime4-vectors.json
+
+# Negative control: a corrupted vector (one PokeFinder delay, one reversal seed, one coin-flip letter, one
+# roamer route) must FAIL, and is shown failing.
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+v.seedToTimes[0].results[2].delay += 1;
+v.lcrngReverse.ivs[0].expected[1] ^= 1;
+const row = v.calibrate[0].rows[0]; row.sequence = (row.sequence[0] === "H" ? "T" : "H") + row.sequence.slice(1);
+v.roamer[0].expected.skips += 1;
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' seedtime4-vectors.json "$corrupted"
+if node test-seedtime4.cjs "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted seedtime4 vectors): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted seedtime4 vectors): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -5 | sed 's/^/      /'
 fi
 rm -f "$corrupted" "$corrupted.out"
 
@@ -270,6 +321,25 @@ else
   grep -E '^FAIL|failure' "$bundle.out" | head -3 | sed 's/^/      /'
 fi
 rm -f "$bundle.g2" "$bundle.out"
+
+# Negative control: a bundle whose seedtime4.js UMD line is renamed (the engine no longer registers as ShinySeedTime4) must
+# FAIL, and is shown failing, so the carry of core/seedtime4.js into the bundle is a checked fact.
+node -e '
+const fs = require("fs");
+const ts = fs.readFileSync(process.argv[1], "utf8");
+const needle = "root.ShinySeedTime4 = factory(root.ShinyCore, root.ShinyGen4)";
+if (!ts.includes(needle)) { console.error("negative control setup: the seedtime4.js UMD line was not found in the bundle"); process.exit(1); }
+fs.writeFileSync(process.argv[2], ts.split(needle).join("root.ShinySeedTimeGone = factory(root.ShinyCore, root.ShinyGen4)"));
+' "$bundle" "$bundle.s4"
+if node test-webapp.cjs "$bundle.s4" > "$bundle.out" 2>&1; then
+  echo "negative control (bundle with seedtime4.js renamed): DID NOT FAIL"
+  rm -f "$bundle" "$bundle.s4" "$bundle.out"
+  exit 1
+else
+  echo "negative control (bundle with seedtime4.js renamed): FAILED as required ->"
+  grep -E '^FAIL|failure' "$bundle.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$bundle.s4" "$bundle.out"
 
 # Negative control: a bundle without the tab's button (the string deleted) must FAIL, and is shown failing.
 node -e '

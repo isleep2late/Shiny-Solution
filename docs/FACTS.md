@@ -575,9 +575,11 @@ give-script after the briefcase choice. Shiny rule: `(SID^TID^PIDhi^PIDlo) < 8`
   without consuming any LCRNG advances, making it the perfect seed check.
 - HGSS Elm calls: each call is one LCRNG advance, `hi16 % 3` → E/K/P
   (`pokeheartgold/.../phone_scripts_prof_elm.c:84-86`) — but the 3-way E/K/P branch is
-  effectively **postgame only**: it requires ≥8 badges, game clear, the S.S. Ticket, a lead
-  holding an Everstone, AND the Pokérus flag. Before the Pokérus flag it is a **2-way E/K** on
-  the same draw, and active roamers eat advances first. Mid-game players will not see the 3-way
+  effectively **postgame only**: it requires ≥8 badges, game clear, the S.S. Ticket, the
+  Everstone received from Elm (`FLAG_GOT_EVERSTONE_FROM_ELM`, `:54,76`), AND the Pokérus flag. Before the Pokérus flag it is a **2-way E/K** on
+  the same draw (`:86`); the other 2-way draw, after the Everstone before 7 badges (`:59`), starts
+  at `PHONE_SCRIPT_014`, so its two calls are the egg-hatch-time and hatched-moves talks, not the
+  evolution/Kanto ones. Active roamers eat advances first. Mid-game players will not see the 3-way
   sequence, so use the Coin-Toss check (DPPt) or Chatot instead where possible.
 - Chatot: pitch derives from `rand16 % 8192` (`sound_chatot.c`), one advance per cry.
 - Journal "+2 per entry" is empirically documented by the community but has no LCRNG call in
@@ -598,6 +600,152 @@ itself rounds the calibrated second to whole frames and every frame→ms convers
 the 600/50/500/14 defaults, 8.044 ms max over 25 random NDS parameter sets, see the
 [Timer models](#timer-models-eontimer-port) section). The exact EonTimer arithmetic lives in
 `core/timers.js` / `app/Core/Timers.cs`; the webapp still runs `gen4.js` unchanged.
+
+## Gen 4 seed-to-time and reversal (`core/seedtime4.js` / `SeedTime4.cs`)
+
+The tool layer over the seed formula, for the reachability-first search the design asks for
+(RNG_GUIDE_DESIGN.md sections 5.3, 5.4, 6.2). Every function exists in both languages with
+the same ordering and return values; PokeFinder is the oracle for the tool conventions, the decomps
+for the mechanics, PKHeX for the reversal algorithm.
+
+### The inverse of `seed()` (STRUCTURAL from the formula; ordering EMPIRICAL from PokeFinder)
+
+- `seed = ((month*day + minute + second) << 24) + (hour << 16) + (year - 2000) + delay`
+  (`pokeplatinum/src/main.c:306-315`; `pokeheartgold/src/main.c:281-284` with
+  `include/gf_rtc.h:46-51`), `delay` = `gSystem.vblankCounter`, the VBlanks since boot
+  (`main.c:136-150`). So the top byte is `month*day + minute + second` mod 256, byte 2 is the hour,
+  and the low 16 bits are `delay + (year - 2000)`.
+- `seedToTimes(seed, year)` lists every (month, day, minute, second) whose sum matches the top byte,
+  in month/day/minute/second order (PokeFinder's `SeedToTimeCalculator4::calculateTimes`,
+  `Core/Gen4/Tools/SeedToTimeCalculator4.cpp:24-56`), with the hour and delay that decompose the
+  low 24 bits at the smallest non-negative delay: hour = the hour byte and
+  `delay = low16 - (year - 2000)` when that is >= 0. A year past `2000 + low16` means the console's
+  sum carried into the hour byte, so the real time is hour byte - 1 at delay + 65536 (`E80E0001` in
+  2018 is 13:57:59 at delay 65519, not 14:57:59 at delay -17); when the hour byte is 0 no clock hour
+  reaches the seed in that year and the list is empty. An hour byte above 23 is PokeFinder's rule and
+  the same decomposition: hour 23 with `(byte - 23) * 0x10000` moved into the delay (`:30-32`); the
+  strict option drops such seeds instead. PokeFinder itself keeps hour = byte in the carry case and
+  wraps the delay to a u32 (a delay no console reaches); `pokefinderDelay` reproduces that
+  convention, which three of its four `calculateTimes` cases are written in (hour byte 0 in
+  2025/2050/2075); all four (34 + 168 + 89 + 53 rows) reproduce bit for bit. The hardware
+  decomposition is checked against a brute force over every clock time with delay 0..65535 through
+  `gen4.seed` (6 cases in both harnesses, including the carry, the hour-byte-0 empty list and the
+  hour-overflow case that lies beyond the brute force's range).
+- The year is a delay knob: `+1 year = -1 delay` for the same seed, so a seed with low 16 bits
+  `efgh` is reachable at any delay in `efgh - 99 .. efgh` (years 2099..2000) down to 0; past that
+  the carry moves the time to the previous hour at delay + 65536 (`seedsToTimes` applies the same
+  rule), or to nothing when the hour byte is 0.
+
+### The neighbour table and its verification strings
+
+`calibrateRows(seed, k, s, game)` is PokeFinder's `calibrate` (`SeedToTimeCalculator4.cpp:58-105`):
+second offset `-s..+s` outer (a row whose date falls before 2000-01-01 is skipped; one past
+2099-12-31 wraps to 2000-01-01, `Core/Util/DateTime.cpp:196-208`), delay offset `-k..+k` inner,
+each row's seed from `Utilities4::calcSeed` (bytes truncated before the shift, u32 wrap; a delay
+offset below 0 keeps PokeFinder's u32 wrap, so the row re-seeds but is not a reachable event). A
+caller-supplied target is checked: a real date in 2000..2099, a clock hour, a delay 0..0xFFFFFF.
+Each row carries the game's check:
+
+- DPPt coin flips: 20 MT outputs, `& 1`, 1 = Heads, formatted `H, T, ...`
+  (`pokeplatinum/src/applications/poketch/coin_toss/main.c:158`, `MTRNG_Next() % 2`;
+  PokeFinder `Utilities4::coinFlips`). Drains the MT only: zero LCRNG advances.
+- HGSS Elm calls: one LCRNG advance each, `hi16 % 3` -> E/K/P
+  (`pokeheartgold/src/application/pokegear/phone/scripts/phone_scripts_prof_elm.c:84`). The 3-way
+  branch needs 8 badges, the game clear, the S.S. Ticket, the Everstone and the Pokerus flag
+  (`:66-84`); without the Pokerus flag it is `% 2` on the same draw (`:86`), as it is after the
+  Everstone before 7 badges (`:59`). `elmWays: 2` produces that string. The letters name the draw
+  (E = 0, K = 1, P = 2), not a fixed message: `:84`/`:86` start at `PHONE_SCRIPT_020`, whose
+  messages are evolution / Kanto / Pokerus (`phone_script_defs.c:190-240` maps the scripts to
+  `msgdata/msg/msg_0716.gmm` rows 27, 29, 31), while `:59` starts at `PHONE_SCRIPT_014`, whose two
+  messages are the egg-hatch-time and hatched-moves talks (rows 15, 17) - so before 7 badges E and K
+  mean those. `ELM_LEGEND` / `ElmLegend` carries both readings. PokeFinder's `getCalls` format
+  (skipped roamer calls in parentheses, 20 calls after them) is reproduced.
+- HGSS roamers: when a saved game is continued, every active roamer re-rolls its route from the
+  LCRNG before the player has control, in the order Raikou, Entei, Latias, Latios: the continue task
+  `FieldTask_ContinueGame_Normal` (`pokeheartgold/src/field_warp_tasks.c:355-379`, case 0) calls
+  `sub_02067BE8`, a thunk at `asm/unk_02067A60.s:212-220` (`Save_Roamers_Get`, then
+  `Save_RandomizeRoamersLocation`), which is `src/field_roamer.c:123-130` looping the active roamers
+  of `include/constants/roamer.h:4-7` (two more thunks re-roll on the warps at
+  `field_warp_tasks.c:633` and `:744`). The draw (`:236-254`): `LCRandom() % 16` into the Johto
+  table for Raikou/Entei, `% 25` into the Kanto table for Latias/Latios, retried while it equals the
+  roamer's current map or the player's last map (`:118-121` passes `PlayerLocationHistoryGetBack`);
+  tables `:24-69`: Johto 29-39, 42-46, Kanto 1-22, 24, 26, 28. Those calls come before the Elm
+  calls, so the row reports the routes and the number of skipped calls. PokeFinder's model (`Core/Gen4/HGSSRoamer.cpp`) retries against the
+  previous route only (the player is assumed to be off the roamer maps); the port does the same and
+  its routes are checked against the decomp's tables, not against PokeFinder's arithmetic.
+- Chatot: one LCRNG advance per cry, pitch from `hi16 % 8192` (`pokeplatinum/src/sound_chatot.c:80`,
+  `pokeheartgold/src/sound_chatot.c:59`). The five bands are PokeFinder's scale,
+  `(rand % 8192) * 100 >> 13` at 20/40/60/80 (`Core/Gen4/States/State4.hpp:49`,
+  `Core/Util/Utilities.cpp getPitch`): EMPIRICAL as a readout convention.
+
+### Advance costs (`planAdvances`)
+
+| Tool | Advances | Label | Where |
+|---|---|---|---|
+| Chatot cry | +1 | STRUCTURAL | `pokeplatinum/src/sound_chatot.c:80`; `pokeheartgold/src/sound_chatot.c:59` |
+| 128-step friendship cycle | +1 per party member | STRUCTURAL | step counter wraps at 128 then every party mon is updated (`pokeplatinum/src/overlay005/field_control.c:759-760,871`), one `LCRNG_Next() & 1` per mon (`src/pokemon.c:2637-2641`; `pokeheartgold/src/pokemon.c:2037`) |
+| Elm call | +1 | STRUCTURAL | `phone_scripts_prof_elm.c:59,84,86`, only on the story states that roll |
+| Poketch coin flip | 0 | STRUCTURAL | `coin_toss/main.c:158`, MT only |
+| Journal page flip (DPPt) | +2 | EMPIRICAL | community convention; no LCRNG call in `pokeplatinum/src/journal.c` |
+| Battle end | >= 1 | STRUCTURAL | the Pokerus roll (design 5.3); the per-battle count is not modelled |
+
+The planner is greedy in the caller's tool order (default walk, journal, Chatot) and reports the
+remainder no listed tool covers.
+
+### The reversal (PKHeX algorithm, GPL-3 compatible)
+
+- `ivsToSeeds(hp, atk, def, spa, spd, spe)`: `PKHeX.Core/Legality/RNG/Algorithms/LCRNGReversal.cs:36-41,
+  77-106` (constants `:14-23`, lattice bounds from StarfBerry's `LCG_Recovery.py`). Returns every
+  state R with `hi15(next(R))` = IV word 1 and `hi15(next(next(R)))` = IV word 2, i.e. the state one
+  call before the IV1 call (Method 1's PID-high state), each with its top-bit twin (bit 15 of an IV
+  word is never observed). `ivsToSeedsSkip` is `LCRNGReversalSkip.cs:34-39, 75-100` (a VBlank call
+  between the two IV words: Method 4), same return semantics. `pidToSeeds(pid)` is
+  `LCRNGReversal.cs:50-68` and returns the state before the PID-low call, i.e. the seed whose frame 0
+  has that PID (empty for about 10% of PIDs where the bounds disagree).
+- PokeFinder's `LCRNGReverse` returns the IV1 state / the PID-low state (one step later); its
+  `Test/RNG/lcrngreverse.json` cases (6 IV, 2 PID) reproduce through `prev()`.
+- Counts: with 30 of 32 bits fixed an IV set has 4 seeds on average; the flawless set has 6 Method 1
+  states and 4 Method 4 states (the design's numbers, RNG_GUIDE_DESIGN.md:781-782, reproduced).
+- The reversal is duplicated in `core/generators.js` (`seedsForIvWords`,
+  `gen4SeedsForTarget`); the two are to be merged onto this module.
+
+### The reachability search
+
+`reachableSeeds(origins, callsBefore, maxFrame)` steps each origin back to the seed of frame 0
+(`callsBefore` = 2 for IV origins, 0 for PID origins) and on to frame `maxFrame`, keeping the seeds
+whose hour byte is 0..23 (24 of 256 values, so about 9.4% of back-steps). `seedsToTimes` then picks
+the (year, delay) pairs inside the delay window nearest the target delay and lists the date/times;
+`wantedToTimes` chains the two from IVs, a PID, or (TID, SID, shiny, nature): the shiny path
+enumerates the 524,288 shiny PIDs (about 21k per nature) and reverses each. The design's gate seeds:
+the flawless Method 1 state `7FFF305A` is frame 0 from seed `7B0448D1` (hour 4, delay 18641 in
+2000, 2000-01-05 04:59:59) and `7FFFF961` is frame 3 from `7B0459CB` (hour 4, delay 22987 in
+2000); both are found by `wantedToTimes` and re-derived forward.
+
+`tidToSeeds(tid, year, delayMin, delayMax)` is PokeFinder's `IDSearcher4` (every hour and top byte
+over the delay range, `Core/Gen4/Searchers/IDSearcher4.cpp`), using only the second MT output
+(state built to word 398, one word twisted: `Core/RNG/MTFast.hpp`); PokeFinder's two `idsearcher4`
+cases (100 + 76 hits) and two `idgenerator4` cases reproduce bit for bit.
+
+### Verification
+
+`tests/seedtime4-vectors.json` (`tools/gen-seedtime4-vectors.cjs`): 4 PokeFinder seed-to-time
+cases (in PokeFinder's convention), 6 hardware-decomposition cases rebuilt by brute force over
+every clock time with delay 0..65535 (the carry into the hour byte, the hour-byte-0 empty list, the
+hour-overflow case beyond the brute force's range), 2 carry-through-the-search cases, 2 + 2
+PokeFinder ID cases, 6 + 2 PokeFinder reversal cases, the 2 gate seeds, 500 IV and 200 PID round
+trips (the generating seed present, every result regenerates the words, twins paired), 60 roamer
+cases against the decomp tables, 20 Chatot sequences, 7 calibrate tables (77 rows, each re-seeded
+and its string re-derived), 5 planner cases, 200 second-MT-output cases from the full generator,
+and the refusal of a target that is not a real date, clock hour or delay. JS 3,306 checks, C# 3,372
+checks, a JS/C# cross-check on 310 random inputs (10 of them carry cases), and negative controls
+(corrupted vectors, tampered cross-check answers, and the module with its carry, target check and
+legend line tampered) shown failing in both suites.
+
+### Not measured
+
+No DS session: the delay a console actually reaches, and whether a chosen (date, time, delay) lands
+its seed on hardware, remain the hardware gate for Gen 4 seed-to-time: one DS session. The roamer model inherits PokeFinder's
+assumption that the player is not standing on a roamer map at load.
 
 # Gen 3 (Game Boy Advance)
 
@@ -1162,7 +1310,7 @@ built by `tests/build-gen5-vectors.py` from PokeFinder's own `Test/` JSON, the n
 out of `Nazos.cpp`, the writeup's worked example, and Python `datetime` as an independent
 weekday oracle; `tests/gen5-random.json` holds 200 random inputs answered by the C# engine
 for the JS cross-check. Tests: `tests/test-gen5.cjs`, `app/Tests/Gen5Checks.cs`. Nothing here
-has been validated on a DS by us (the Phase 8 gate, a DS Lite calibration session, is pending).
+has been validated on a DS by us (the hardware gate for Gen 5, a DS Lite calibration session, is pending).
 
 ## The RNG (LCRNG64)
 
