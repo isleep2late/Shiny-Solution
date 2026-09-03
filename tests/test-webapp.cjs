@@ -53,6 +53,8 @@ assert("no unresolved script tag", !html.includes("<script src="));
   assert("no </ inside the inlined data script", start > 0 && stop > start && !html.slice(start, stop).includes("</"));
 }
 assert("the existing tabs are still there", ["g3timer", "g3check", "g4", "g12", "about"].every((t) => html.includes('data-tab="' + t + '"')));
+assert("the Gen 3 timer's Space handler is scoped to its tab", html.includes('document.getElementById("tab-g3timer").classList.contains("active")'));
+assert("the self-test keeps storage in memory", html.includes('root.location.search.indexOf("g1selftest") !== -1);') && html.includes("if (MEMORY_ONLY) return;"));
 
 // ---- 2. the pure module in node ---------------------------------------------------------------
 globalThis.ShinyCore = require(path.join(root, "core", "rng.js"));

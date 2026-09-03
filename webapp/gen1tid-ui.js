@@ -43,13 +43,17 @@
   }
 
   // ---- storage (localStorage in a browser, memory elsewhere) ---------------------------
+  // Under ?g1selftest (tests/run-tests.sh drives the tab headless) storage is memory-only, so the
+  // self-test's recorded sample never lands in a visitor's real calibration, pins or reset adjusts.
   var mem = {};
+  var MEMORY_ONLY = !!(root.location && typeof root.location.search === "string" && root.location.search.indexOf("g1selftest") !== -1);
   function storageGet(key) {
-    try { if (root.localStorage) return root.localStorage.getItem(key); } catch (e) { /* private mode */ }
+    if (!MEMORY_ONLY) { try { if (root.localStorage) return root.localStorage.getItem(key); } catch (e) { /* private mode */ } }
     return isNil(mem[key]) ? null : mem[key];
   }
   function storageSet(key, value) {
     mem[key] = value;
+    if (MEMORY_ONLY) return;
     try { if (root.localStorage) root.localStorage.setItem(key, value); } catch (e) { /* quota / private mode */ }
   }
   function loadJson(key, fallback) {
@@ -659,6 +663,11 @@
   //    correction absorbs).
   var audio = null;
   function ensureAudio() { if (!audio) audio = new (root.AudioContext || root.webkitAudioContext)(); return audio; }
+  // A context created before any gesture starts suspended (autoplay policy). Resuming it on the first
+  // gesture in the tab means it is already running at the anchor click; play() says so when it was not.
+  function warmAudio() {
+    try { var ctx = ensureAudio(); if (ctx.state === "suspended") ctx.resume(); } catch (e) { /* no audio here */ }
+  }
   var player = { running: false, source: null, raf: 0, t0: 0, sched: null, announced: 0, onDone: null, display: null, log: null, prepared: null };
 
   function prepare(sched) {
@@ -682,6 +691,7 @@
     player.running = true; player.sched = sched; player.announced = 0; player.onDone = onDone; player.display = displayEl; player.log = logEl;
     player.announce = announce || announceCue;
     player.t0 = performance.now();
+    var stateAtAnchor = ctx.state;
     logEl.textContent = "anchor at " + nowStamp().split(" ")[1] + "\n";
     Promise.resolve(ctx.state === "suspended" ? ctx.resume() : null).then(function () {
       if (!player.running || player.sched !== sched) return;
@@ -691,6 +701,11 @@
       src.connect(ctx.destination);
       src.start(ctx.currentTime + LEAD_S, elapsed + LEAD_S);
       player.source = src;
+      if (stateAtAnchor !== "running") {
+        logEl.textContent += "  audio was " + stateAtAnchor + " at the anchor: output began " + f(elapsed * 1000.0, 1) + " ms after the click (aligned by the buffer offset; if this attempt's ID is off, discard it rather than calibrate on it)\n";
+      }
+      var latency = ctx.outputLatency || ctx.baseLatency || 0;
+      if (latency > 0 && !player.latencyShown) { player.latencyShown = true; logEl.textContent += "  browser output latency " + f(latency * 1000.0, 1) + " ms (constant: the correction absorbs it)\n"; }
     });
     tick();
   }
@@ -934,7 +949,7 @@
       out = out.concat(pinLines(pinList, inp.m, tid));
       var kMin = $("sid-kmin").value === "" ? null : Math.round(numOr("sid-kmin", 0));
       var kMax = $("sid-kmax").value === "" ? null : Math.round(numOr("sid-kmax", 0));
-      var cued = st.sidCue && st.sidCue.forGame === inp.game ? st.sidCue : null;
+      var cued = st.sidCue && sidCueMatches(st.sidCue, inp) ? st.sidCue : null;
       if (cued && kMin === null && kMax === null) { kMin = cued.kMin; kMax = cued.kMax; }
       var tsv = $("sid-tsv").value === "" ? null : Math.round(numOr("sid-tsv", 0));
       var r = sidListing(inp.m, inp.gameName, tid, inp.nameLength, inp.speed, inp.path, kMin, kMax, pinList,
@@ -974,12 +989,20 @@
       sidRun();
     } catch (e) { setText("sid-pin-out", e.message); }
   }
+  // The cue's k window belongs to the model it was rendered for; changing the game, text speed,
+  // rival path, name length or margin drops it (sidDropCue), and sidRun uses it only when it matches.
+  function sidCueMatches(cue, inp) {
+    var c = cue.forInputs;
+    return !!c && c.game === inp.game && c.speed === inp.speed && c.path === inp.path && c.nameLength === inp.nameLength;
+  }
+  function sidDropCue() { st.sidCue = null; $("sid-cue-btn").disabled = true; setText("sid-protocol", ""); }
   function sidPrepareCue() {
     try {
       var inp = sidInputs();
       var margin = Math.max(0, Math.round(numOr("sid-margin", 30)));
       var cue = sidCue(inp.m, inp.nameLength, inp.speed, margin, 6, 20, inp.path);
       cue.forGame = inp.game;
+      cue.forInputs = { game: inp.game, speed: inp.speed, path: inp.path, nameLength: inp.nameLength, margin: margin };
       st.sidCue = cue;
       setText("sid-protocol", sidCueProtocolLines(inp.m, inp.gameName, inp.nameLength, inp.speed, margin, cue));
       $("sid-cue-btn").disabled = false;
@@ -1049,7 +1072,18 @@
   $("g1-reset-stop").addEventListener("click", function () { stop("cancel"); });
   $("g1-verify").addEventListener("click", verifyNow);
   fill($("sid-game"), SID_GAMES.map(function (k) { return { value: k, text: SID.games[k].name }; }), "emerald");
-  $("sid-game").addEventListener("change", function () { st.sidCue = null; $("sid-cue-btn").disabled = true; setText("sid-protocol", ""); sidRefresh(); });
+  $("sid-game").addEventListener("change", function () { sidDropCue(); sidRefresh(); });
+  ["sid-speed", "sid-namelen", "sid-rival", "sid-margin"].forEach(function (id) {
+    $(id).addEventListener("change", sidDropCue);
+    $(id).addEventListener("input", sidDropCue);
+  });
+  // (4) the AudioContext is resumed on the first gesture in the tab, before the anchor click
+  var tabEl = document.getElementById("tab-g1tid");
+  tabEl.addEventListener("pointerdown", warmAudio, true);
+  var tabBtn = document.querySelector("button[data-tab=g1tid]");
+  if (tabBtn) tabBtn.addEventListener("pointerdown", warmAudio);
+  document.addEventListener("keydown", function () { if (tabEl.classList.contains("active")) warmAudio(); }, true);
+  ["g1-anchor-btn", "sid-cue-btn", "g1-reset-start"].forEach(function (id) { $(id).addEventListener("mousedown", warmAudio); });
   $("sid-run").addEventListener("click", sidRun);
   $("sid-tid").addEventListener("keydown", function (e) { if (e.key === "Enter") sidRun(); });
   $("sid-pin-shiny").addEventListener("click", function () { sidPin(true); });
@@ -1099,6 +1133,40 @@
       sidRun();
       report.sidRows = $("sid-table").querySelectorAll("tr").length - 1;
       report.sidFirstLine = $("sid-out").textContent.split("\n")[0];
+      // one Space on this tab with a Gen 3 target loaded: the Gen 3 timer's handler (app.js) must stay quiet
+      var navBtn = document.querySelector("button[data-tab=g1tid]");
+      if (navBtn) navBtn.click();
+      report.g1TabActive = document.getElementById("tab-g1tid").classList.contains("active");
+      var g3Clicks = 0;
+      if ($("tid-target") && $("tid-search")) {
+        $("tid-target").value = "41191";                  // the TID at advance 1000 of the dead-battery seed: a hit inside 15 minutes
+        $("tid-search").click();
+        var g3row = document.querySelector("#tid-results tr.pick");
+        report.g3TargetLoaded = !!g3row;
+        if (g3row) g3row.click();
+        if ($("g3-start")) $("g3-start").addEventListener("click", function () { g3Clicks++; });
+      }
+      $("g1-game").value = "red"; $("g1-game").dispatchEvent(new Event("change"));
+      $("g1-platform").value = "gse"; $("g1-platform").dispatchEvent(new Event("change"));
+      setTarget(358);
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      document.dispatchEvent(new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true, cancelable: true }));
+      report.spaceAnchoredGen1 = $("g1-cue-log").textContent.indexOf("anchor at") === 0;
+      report.g3StartClicksOnSpace = g3Clicks;
+      stop("cancel");
+      // a prepared Secret ID cue is dropped when the model changes, and the listing then ignores it
+      $("sid-speed").value = "mid"; $("sid-namelen").value = "7"; $("sid-rival").value = "newname"; $("sid-margin").value = "30";
+      sidPrepareCue();
+      report.sidCueWindow = st.sidCue ? st.sidCue.kMin + "-" + st.sidCue.kMax : null;
+      $("sid-speed").value = "fast"; $("sid-speed").dispatchEvent(new Event("change"));
+      report.sidCueDroppedOnSpeedChange = st.sidCue === null && $("sid-cue-btn").disabled;
+      $("sid-kmin").value = ""; $("sid-kmax").value = "";
+      sidRun();
+      report.sidListingMentionsOldWindow = $("sid-out").textContent.indexOf("2240-2266") !== -1;
+      // nothing the self-test did reached the real localStorage
+      var real = {};
+      try { [STORE_KEY_CAL, STORE_KEY_PINS, STORE_KEY_RESET].forEach(function (k) { real[k] = root.localStorage ? root.localStorage.getItem(k) : null; }); } catch (e) { real.error = String(e); }
+      report.realStorage = real;
       var el = document.createElement("pre");
       el.id = "g1-selftest";
       el.textContent = JSON.stringify(report);

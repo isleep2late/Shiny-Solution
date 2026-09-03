@@ -487,7 +487,8 @@
       loadG3Target(g3state.mode, g3state.target, $("g3-info").textContent.split("  |")[0]);
     });
     document.addEventListener("keydown", function (e) {
-      if (e.code === "Space" && g3state.target && document.activeElement.tagName !== "INPUT") {
+      if (e.code === "Space" && g3state.target && document.activeElement.tagName !== "INPUT" &&
+          document.getElementById("tab-g3timer").classList.contains("active")) {
         e.preventDefault();
         if (g3timer.running) g3timer.cancel(core.fmtMs(g3TotalMs(g3state.mode, g3state.target.advance)));
         else $("g3-start").click();

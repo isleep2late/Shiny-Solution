@@ -3,7 +3,9 @@
 RNG manipulation for classic Pokémon, done for you: the exact frame that makes your target
 shiny, the exact Trainer ID you want, and the one timed press that decides a Gen 1 Trainer ID.
 One engine and one data set behind several heads: a Windows desktop app with mGBA scripts, a
-static web app (the tool page at [hackmons.com/rng-solution](https://hackmons.com/rng-solution)),
+static web app (the tool page at [hackmons.com/rng-solution](https://hackmons.com/rng-solution), in
+preview until it is promoted; the live [hackmons.com/shiny-solution](https://hackmons.com/shiny-solution)
+page carries the earlier tools),
 the Hackmons Hub mobile screen, Linux/macOS desktop builds, and a terminal front end
 ([RNG Solution](https://github.com/isleep2late/RNG-Solution)). Fully automatic on emulator
 where the games allow it, and a self-calibrating assistant everywhere else.
@@ -57,7 +59,7 @@ RNG Solution's registry and tables and embedded in every head.
 
 | Path | What |
 |---|---|
-| `webapp/` | The complete no-emulator toolset as a static web app: the Gen 3 timer and checker, Gen 4, Gen 1/2 DVs, and the **Gen 1 TID** tab (game -> console -> methodology and validity -> target -> anchor and correction -> protocol -> cue with count-in beeps, hold-window beeps, the A cue and a full-screen flash, all from one pre-rendered buffer on the audio clock -> "What did you get?" with P(hit) and drift kept in the browser; the RESET/A metronome; moderator verify; the Emerald / FRLG Secret ID branch). `sync-core.sh` copies the engines and the data in (`gen1-data.js` carries the JSON as globals, so no fetch is needed); `build-mobile-bundle.mjs` inlines everything into one HTML string for the Hackmons Hub mobile screen. It is the page at [hackmons.com/rng-solution](https://hackmons.com/rng-solution). |
+| `webapp/` | The complete no-emulator toolset as a static web app: the Gen 3 timer and checker, Gen 4, Gen 1/2 DVs, and the **Gen 1 TID** tab (game -> console -> methodology and validity -> target -> anchor and correction -> protocol -> cue with count-in beeps, hold-window beeps, the A cue and a full-screen flash, all from one pre-rendered buffer on the audio clock -> "What did you get?" with P(hit) and drift kept in the browser; the RESET/A metronome; moderator verify; the Emerald / FRLG Secret ID branch). `sync-core.sh` copies the engines and the data in (`gen1-data.js` carries the JSON as globals, so no fetch is needed); `build-mobile-bundle.mjs` inlines everything into one HTML string for the Hackmons Hub mobile screen. It is the page at [hackmons.com/rng-solution](https://hackmons.com/rng-solution) (in preview until it is promoted; [hackmons.com/shiny-solution](https://hackmons.com/shiny-solution) is the live page with the earlier tools). |
 | `app/` | **ShinySolution.exe**, the WinForms desktop app (.NET 10, self-contained single file): every searcher and timer, the **Gen 1 TID (R/B/Y)** tab (the same steps; one WAV rendered per schedule so every beep is sample-exact; calibration, pins and reset adjusts in the app's settings), plus the live TCP link that drives the mGBA scripts. |
 | `electron/` | Linux AppImage/tar.gz and macOS dmg/zip of the web toolset (`build.sh`, the `build-desktop` workflow). |
 | [RNG Solution](https://github.com/isleep2late/RNG-Solution) | The terminal front end: the same TARGET flow, the press trainer, dual-anchor fusion, `stats`, `verify`, `reset`, `sid`, and the practice-only PREDICT mode. It reads this repository's `core/data` in place of its own registry and CSVs with `--data-dir <Shiny Solution checkout>` (or `SHINY_SOLUTION_DATA`), so every head runs over one file. |

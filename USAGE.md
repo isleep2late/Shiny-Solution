@@ -110,7 +110,8 @@ retries with shifted timing until the roll is what you want:
 
 TARGET mode, human input only: you say which Trainer ID (or which table offset) you want, the
 tool says what to do, cues the one timed press, and learns from the ID you type afterwards. The
-same steps in the web app's **Gen 1 TID** tab (hackmons.com/rng-solution), the desktop app's
+same steps in the web app's **Gen 1 TID** tab (hackmons.com/rng-solution, in preview until it is
+promoted), the desktop app's
 **Gen 1 TID (R/B/Y)** tab, and RNG Solution's terminal (`./rng-solution.sh`).
 
 1. **Game and console.** Pick Red, Blue or Yellow and the console: GSE / gambatte-speedrun in
@@ -212,8 +213,9 @@ The tab gives you targets, a two-phase timer, and seed verification:
 The no-emulator toolset (all searchers, calculators, checkers, and both timers) is also
 available without installing anything:
 
-- **hackmons.com/rng-solution** — the full toolset in the browser, including the Gen 1 TID
-  tab and the Emerald / FRLG Secret ID search (no capture reading by design).
+- **hackmons.com/rng-solution** (in preview until it is promoted) — the full toolset in the
+  browser, including the Gen 1 TID tab and the Emerald / FRLG Secret ID search (no capture reading
+  by design). **hackmons.com/shiny-solution** is the live page with the earlier tools until then.
 - **Hackmons Hub app** — Fun → Shiny Solution (same tools, beeps included).
 - **Linux/macOS desktop** — the calculators-and-timers app from the releases page
   (Linux AppImage/tarball; macOS dmg/zip, unsigned — right-click → Open the first time).

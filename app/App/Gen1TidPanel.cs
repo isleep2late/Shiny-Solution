@@ -102,7 +102,7 @@ public sealed class Gen1TidPanel : UserControl
     Schedule? _sched;
     BeepPlayer.RenderedSchedule? _prepared;
     string? _attempt;
-    (int KExpected, int KMin, int KMax, Schedule Schedule, string Game)? _sidCue;
+    (int KExpected, int KMin, int KMax, Schedule Schedule, string Game, string Speed, string? Path, int NameLength)? _sidCue;
     BeepPlayer.RenderedSchedule? _sidPrepared;
     (ResetInterval Interval, double IntervalMs, Schedule Schedule, List<string> Lines)? _reset;
     BeepPlayer.RenderedSchedule? _resetPrepared;
@@ -202,7 +202,11 @@ public sealed class Gen1TidPanel : UserControl
         _resetAdjustN.ValueChanged += (_, _) => { if (!_loading) RefreshReset(); };
         _resetPairs.ValueChanged += (_, _) => { if (!_loading) RefreshReset(); };
         _resetCadence.ValueChanged += (_, _) => { if (!_loading) RefreshReset(); };
-        _sidGame.SelectedIndexChanged += (_, _) => { if (!_loading) { _sidCue = null; _sidCueBtn.Enabled = false; _sidProtocol.Text = ""; SidRefresh(); } };
+        _sidGame.SelectedIndexChanged += (_, _) => { if (!_loading) { SidDropCue(); SidRefresh(); } };
+        _sidSpeed.SelectedIndexChanged += (_, _) => { if (!_loading) SidDropCue(); };
+        _sidRival.SelectedIndexChanged += (_, _) => { if (!_loading) SidDropCue(); };
+        _sidNameLen.ValueChanged += (_, _) => { if (!_loading) SidDropCue(); };
+        _sidMargin.ValueChanged += (_, _) => { if (!_loading) SidDropCue(); };
         _sidTid.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SidRun(); } };
 
         _loading = true;
@@ -538,7 +542,8 @@ public sealed class Gen1TidPanel : UserControl
             lines.AddRange(Gen1TidText.PinLines(pinList, J.S(inp.M, "id"), tid));
             int? kMin = _sidKMin.Text.Trim() == "" ? null : (int)F(_sidKMin.Text, 0);
             int? kMax = _sidKMax.Text.Trim() == "" ? null : (int)F(_sidKMax.Text, 0);
-            (int, int, int)? cued = _sidCue is { } c && c.Game == inp.Game ? (c.KExpected, c.KMin, c.KMax) : null;
+            (int, int, int)? cued = _sidCue is { } c && c.Game == inp.Game && c.Speed == inp.Speed && c.Path == inp.Path && c.NameLength == inp.NameLength
+                ? (c.KExpected, c.KMin, c.KMax) : null;
             if (cued is not null && kMin is null && kMax is null) { kMin = cued.Value.Item2; kMax = cued.Value.Item3; }
             int? tsv = _sidTsv.Text.Trim() == "" ? null : (int)F(_sidTsv.Text, 0);
             var r = Gen1TidText.SidListing(model, tid, inp.NameLength, inp.Speed, kMin, kMax, pinList, ParsePids(_sidShinyPids.Text), ParsePids(_sidNonPids.Text), tsv, cued);
@@ -581,6 +586,14 @@ public sealed class Gen1TidPanel : UserControl
         }
         catch (ArgumentException e) { _sidPinOut.Text = e.Message; }
     }
+    // The cue's k window belongs to the model it was rendered for: changing the game, text speed, rival
+    // path, name length or margin drops it, and SidRun uses it only when it matches the inputs.
+    void SidDropCue()
+    {
+        _sidCue = null;
+        _sidCueBtn.Enabled = false;
+        _sidProtocol.Text = "";
+    }
     void SidPrepareCue()
     {
         _sidPrepared?.Dispose();
@@ -591,7 +604,7 @@ public sealed class Gen1TidPanel : UserControl
             var model = Gen1TidText.SidModelFor(_sid, J.S(inp.M, "id"), inp.Speed, inp.Path);
             int margin = (int)_sidMargin.Value;
             var (kExp, kMin, kMax, beeps, sched) = Gen1TidText.SidCue(model, inp.NameLength, inp.Speed, margin, 6, 20);
-            _sidCue = (kExp, kMin, kMax, sched, inp.Game);
+            _sidCue = (kExp, kMin, kMax, sched, inp.Game, inp.Speed, inp.Path, inp.NameLength);
             Set(_sidProtocol, Gen1TidText.SidCueProtocolLines(inp.M, inp.GameName, inp.NameLength, inp.Speed, margin, model, beeps, kExp, kMin, kMax));
             _sidPrepared = BeepPlayer.RenderSchedule(sched.Cues);
             _sidCueBtn.Enabled = true;
