@@ -101,6 +101,8 @@ public sealed class Gen3Panel : UserControl
         tabs.TabPages.Add(p1);
         tabs.TabPages.Add(p2);
         Controls.Add(tabs);
+        // a mode change swaps the store: the console timer's correction is re-read from the mode's own (AppMode.Scoped)
+        AppMode.Changed += _ => { _countdown.Refresh(); RefreshGrids(); AddLog($"{AppMode.Label} mode: the console timer uses its own calibration"); };
     }
 
     Control BuildEmulatorTab()
@@ -206,7 +208,7 @@ public sealed class Gen3Panel : UserControl
         _log.TopIndex = _log.Items.Count - 1;
     }
 
-    static double Cal(string key) => SettingsStore.Get("cal." + key);
+    static double Cal(string key) => SettingsStore.Get(AppMode.Scoped("cal." + key));
 
     void FindTidTargets()
     {
@@ -276,7 +278,7 @@ public sealed class Gen3Panel : UserControl
         long drift = hit.Value.Advance - center;
         _countdown.AdjustCalibration(-TimerMath.AdvancesToMs(drift));
         _calTidResult.Text = $"Landed at advance {hit.Value.Advance} ({(drift >= 0 ? "+" : "")}{drift} frames). Timer corrected. " +
-            $"That save's SID is {hit.Value.Sid} — keep it and use TID {got} / SID {hit.Value.Sid} for the starter search.";
+            $"That save's SID is {hit.Value.Sid} — keep it and use TID {got} / SID {hit.Value.Sid} for the starter search. [{AppMode.Label} mode]";
         RefreshGrids();
     }
 
@@ -329,7 +331,7 @@ public sealed class Gen3Panel : UserControl
         string note = haveStats
             ? $"{filtered.Count} stat-consistent candidate(s) in window."
             : $"WARNING: {candidates.Count} candidates matched on nature/gender alone — enter the six stats for a reliable fix.";
-        _calStarterResult.Text = $"Match at advance {hit.Value.Advance} ({(drift >= 0 ? "+" : "")}{drift} frames). {note} Try again with the same target.";
+        _calStarterResult.Text = $"Match at advance {hit.Value.Advance} ({(drift >= 0 ? "+" : "")}{drift} frames). {note} Try again with the same target. [{AppMode.Label} mode]";
         RefreshGrids();
     }
 }

@@ -19,6 +19,10 @@
   <button data-tab="g1tid">Gen 1 TID</button>
   <button data-tab="about">About</button>
 </nav>
+<div id="mode-bar">
+  <div id="mode-banner" hidden>PRACTICE / HUNT mode - tools that read the capture are enabled; not for submitted runs</div>
+  <label class="check" id="mode-toggle"><input id="mode-practice" type="checkbox"> PRACTICE / HUNT mode (off = RUN, the default: your own button press and the outcome you type, nothing reads the game; on = practice, calibration and hunting only, with its own calibration store)</label>
+</div>
 <main>
   <section id="tab-g3timer" class="tab active">
     <div class="card">
@@ -244,7 +248,7 @@
       <pre id="g1-outcome" class="text"></pre>
       <h3>Your timing: spread, P(hit), attempts per hit, drift</h3>
       <pre id="g1-stats" class="text"></pre>
-      <p class="hint">Samples are kept in this browser per console and anchor, each with its methodology id; only samples under the active methodology are averaged. The record is the same shape as RNG Solution's config.json "calibration" block.</p>
+      <p class="hint">Samples are kept in this browser per console and anchor, each with its methodology id and the mode it was made in (RUN or PRACTICE / HUNT, each mode in its own store); only samples under the active methodology made in the mode in force are averaged, the rest are listed as ignored. The record is the same shape as RNG Solution's config.json "calibration" block plus "mode".</p>
     </div>
     <div class="card">
       <h2>Save-corruption reset metronome (RESET then A, or A then power off)</h2>
@@ -333,6 +337,12 @@
       here was verified against the pret decompilations. This web version covers everything that
       needs no emulator: searchers, calculators, checkers and calibrated timers for real-hardware
       manipulation.</p>
+      <p>Modes: RUN is the default and is human input only (an anchor press, a typed outcome; run-legal).
+      PRACTICE / HUNT is turned on with the switch above the tabs and shows a banner on every tab while it is
+      on; it keeps its own calibration stores, and every record and cue log says which mode it was made in.
+      This page has no tool that reads a capture: those live only in <code>webapp/hunt/</code> (never bundled
+      into the site, the phone bundle or the desktop builds without an explicit <code>--with-hunt</code>) and
+      in RNG Solution's <code>watch --practice</code>.</p>
       <p>The full desktop version additionally drives the mGBA emulator for frame-perfect
       automatic manipulation (Gen 3) and automated savestate hunting (Gen 1/2):</p>
       <ul id="download-list">
@@ -357,6 +367,7 @@
 <script src="generators.js"></script>
 <script src="gen1-data.js"></script>
 <script src="downloads.js"></script>
+<script src="mode.js"></script>
 <script src="app.js"></script>
 <script src="gen1tid-ui.js"></script>
 </body>

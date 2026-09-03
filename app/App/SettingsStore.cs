@@ -2,9 +2,11 @@ using System.Text.Json;
 
 namespace ShinySolution.App;
 
-// Per-user settings in %APPDATA%\ShinySolution\settings.json: numbers (the timers' calibrations) and,
-// since the Gen 1 Trainer ID panel, whole objects (its calibration samples, pins and reset adjusts).
-// Older files hold only numbers and still load.
+// Per-user settings in %APPDATA%\ShinySolution\settings.json: numbers (the timers' calibrations),
+// since the Gen 1 Trainer ID panel whole objects (its calibration samples, pins and reset adjusts), and
+// the mode string (AppMode). Older files hold only numbers and still load. Calibration, pin and
+// reset-adjust keys go through AppMode.Scoped: RUN keys are the ones that always existed, PRACTICE /
+// HUNT keys end in ".practice".
 public static class SettingsStore
 {
     static readonly string Path = System.IO.Path.Combine(
@@ -28,6 +30,15 @@ public static class SettingsStore
         => _values.TryGetValue(key, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : fallback;
 
     public static void Set(string key, double value)
+    {
+        _values[key] = JsonSerializer.SerializeToElement(value);
+        Save();
+    }
+
+    public static string? GetString(string key)
+        => _values.TryGetValue(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+    public static void SetString(string key, string value)
     {
         _values[key] = JsonSerializer.SerializeToElement(value);
         Save();

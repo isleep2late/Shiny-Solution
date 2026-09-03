@@ -141,7 +141,9 @@ public sealed class Gen1Platform
     }
 }
 
-// One stored calibration sample: RNG Solution's config.json record (snake_case) plus 'when'.
+// One stored calibration sample: RNG Solution's config.json record (snake_case) plus 'when' and
+// 'mode' (the RUN / PRACTICE-HUNT mode it was made in; absent on records from before modes existed,
+// which Modes.Effective reads as RUN: no head could read a capture then).
 public sealed class CalSample
 {
     [JsonPropertyName("tid")] public int Tid { get; set; }
@@ -154,6 +156,7 @@ public sealed class CalSample
     [JsonPropertyName("player")] public string? Player { get; set; }
     [JsonPropertyName("methodology")] public string? Methodology { get; set; }
     [JsonPropertyName("when")] public string? When { get; set; }
+    [JsonPropertyName("mode")] public string? Mode { get; set; }
 
     public Sample ToSample() => new()
     {
@@ -161,10 +164,10 @@ public sealed class CalSample
         Attempt = Attempt, Note = Note, Player = Player, Methodology = Methodology
     };
 
-    public static CalSample From(Sample s, string? when) => new()
+    public static CalSample From(Sample s, string? when, string mode) => new()
     {
         Tid = s.Tid, Aimed = s.Aimed, Hit = s.Hit, CorrectionUsedMs = s.CorrectionUsedMs, ImpliedMs = s.ImpliedMs,
-        Attempt = s.Attempt, Note = s.Note, Player = s.Player, Methodology = s.Methodology, When = when
+        Attempt = s.Attempt, Note = s.Note, Player = s.Player, Methodology = s.Methodology, When = when, Mode = Modes.Check(mode)
     };
 }
 
@@ -173,12 +176,24 @@ public sealed class CalEntry
     [JsonPropertyName("samples")] public List<CalSample> Samples { get; set; } = new();
 }
 
+// One Secret ID pin, with the RUN / PRACTICE-HUNT mode it was made in (absent on pins from before
+// modes existed, which Modes.Effective reads as RUN).
 public sealed class PinRecord
 {
     [JsonPropertyName("pid")] public uint Pid { get; set; }
     [JsonPropertyName("shiny")] public bool Shiny { get; set; }
     [JsonPropertyName("note")] public string Note { get; set; } = "";
     [JsonPropertyName("when")] public string When { get; set; } = "";
+    [JsonPropertyName("mode")] public string? Mode { get; set; }
+}
+
+// One remembered reset-metronome adjustment (frames) for one console, with the mode it was made in;
+// a bare number in an older settings file is a RUN record from before modes existed (ParseResetAdjust).
+public sealed class ResetAdjustRecord
+{
+    [JsonPropertyName("frames")] public double Frames { get; set; }
+    [JsonPropertyName("mode")] public string? Mode { get; set; }
+    [JsonPropertyName("when")] public string? When { get; set; }
 }
 
 public sealed class OutcomeReport
@@ -370,28 +385,54 @@ public static class Gen1TidText
     };
 
     // ---- calibration records (rngsolution/config.py) ------------------------------------------
+    // Every record carries the mode it was made in and each mode has its own setting key
+    // (AppMode.Scoped); inside a store, a record under another methodology or made in the other mode
+    // is left out of the correction and named in a note (RNG Solution's per-methodology rule, applied
+    // to modes too), so a practice-derived correction is never in force in a run.
     public static string CalKey(string platformKey, string anchor) => platformKey + "/" + anchor;
     public static List<CalSample> AllSamples(Dictionary<string, CalEntry> cal, string platformKey, string anchor)
         => cal.TryGetValue(CalKey(platformKey, anchor), out var e) ? e.Samples.ToList() : new();
-    public static List<Sample> SamplesFor(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor)
-        => Gen1Tid.SplitByMethodology(AllSamples(cal, p.Key, anchor).Select(s => s.ToSample()), p.MethodologyId).Kept;
-    public static List<Sample> IgnoredSamples(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor)
-        => Gen1Tid.SplitByMethodology(AllSamples(cal, p.Key, anchor).Select(s => s.ToSample()), p.MethodologyId).Others;
-    public static double CorrectionInForce(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor)
-        => Gen1Tid.MeanCorrection(SamplesFor(cal, p, anchor), p.DefaultCorrection(anchor));
-    public static List<string> IgnoredSampleLines(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor)
+    static bool InScope(CalSample s, Gen1Platform p, string mode) => s.Methodology == p.MethodologyId && Modes.Effective(s.Mode) == mode;
+    public static List<CalSample> StoredFor(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor, string mode)
     {
-        var ign = IgnoredSamples(cal, p, anchor);
-        if (ign.Count == 0) return new();
-        var others = ign.Select(x => x.Methodology ?? "no methodology (recorded before methodology ids existed)").Distinct().OrderBy(x => x, StringComparer.Ordinal);
-        return new() { $"NOTE: {Plural(ign.Count, "stored sample")} for {p.Key}/{anchor} ignored: recorded under {string.Join(", ", others)}, not {p.MethodologyId}. Samples are never mixed across methodologies." };
+        Modes.Check(mode);
+        return AllSamples(cal, p.Key, anchor).Where(s => InScope(s, p, mode)).ToList();
+    }
+    public static List<Sample> SamplesFor(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor, string mode)
+        => StoredFor(cal, p, anchor, mode).Select(s => s.ToSample()).ToList();
+    // (under another methodology, under this methodology but made in the other mode)
+    public static (List<CalSample> Methodology, List<CalSample> Mode) IgnoredSamples(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor, string mode)
+    {
+        var all = AllSamples(cal, p.Key, anchor);
+        var (_, otherMode) = Modes.SplitByMode(all.Where(s => s.Methodology == p.MethodologyId), s => s.Mode, mode);
+        return (all.Where(s => s.Methodology != p.MethodologyId).ToList(), otherMode);
+    }
+    public static double CorrectionInForce(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor, string mode)
+        => Gen1Tid.MeanCorrection(SamplesFor(cal, p, anchor, mode), p.DefaultCorrection(anchor));
+    public static List<string> IgnoredSampleLines(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor, string mode)
+    {
+        var (byMethodology, byMode) = IgnoredSamples(cal, p, anchor, mode);
+        var lines = new List<string>();
+        if (byMethodology.Count > 0)
+        {
+            var others = byMethodology.Select(x => x.Methodology ?? "no methodology (recorded before methodology ids existed)").Distinct().OrderBy(x => x, StringComparer.Ordinal);
+            lines.Add($"NOTE: {Plural(byMethodology.Count, "stored sample")} for {p.Key}/{anchor} ignored: recorded under {string.Join(", ", others)}, not {p.MethodologyId}. Samples are never mixed across methodologies.");
+        }
+        if (byMode.Count > 0)
+        {
+            var modes = byMode.Select(x => Modes.Describe(x.Mode)).Distinct().OrderBy(x => x, StringComparer.Ordinal);   // a mode this head does not know is named, never thrown on
+            lines.Add($"NOTE: {Plural(byMode.Count, "stored sample")} for {p.Key}/{anchor} ignored: recorded in {string.Join(", ", modes)} mode, not {Modes.Label(mode)}. " +
+                      "Samples are never mixed across modes: a practice-derived correction is never in force in a run.");
+        }
+        return lines;
     }
 
     // The outcome of one attempt (rngsolution/cli.py report_outcome): the typed Trainer ID inverted to
     // the offset nearest the aim, the implied correction, and the sample recorded unless a guard refuses it.
     public static OutcomeReport RecordOutcome(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor, int aimed, double correctionUsed, int tid,
-        bool force, string? attempt)
+        bool force, string? attempt, string mode)
     {
+        Modes.Check(mode);                                  // the record must say which mode it was made in
         var r = new OutcomeReport { Tid = tid, Offsets = Gen1Tid.Invert(p.Table, tid) };
         r.Lines.Add($"You got {Gen1Tid.FormatTid(tid)}: {Gen1Tid.VerdictTextFor(tid, p.TargetSets)}.");
         if (r.Offsets.Length == 0)
@@ -432,23 +473,26 @@ public static class Gen1TidText
             r.Lines.Add("  Tick 'force' if it really was a new attempt.");
             return r;
         }
-        stored.Add(CalSample.From(sample, Now()));
+        stored.Add(CalSample.From(sample, Now(), mode));
         cal[CalKey(p.Key, anchor)] = new CalEntry { Samples = stored };
         r.Added = true;
-        int n = SamplesFor(cal, p, anchor).Count;
-        r.NewCorrection = CorrectionInForce(cal, p, anchor);
+        int n = SamplesFor(cal, p, anchor, mode).Count;
+        r.NewCorrection = CorrectionInForce(cal, p, anchor, mode);
         r.Lines.Add($"  Correction updated to {F(r.NewCorrection.Value, 1)} ms ({Plural(n, "sample")}, {anchor} anchor).");
         r.Lines.Add($"  Methodology: {p.MethodologyId} (recorded with the sample; only samples under it are averaged).");
-        r.Lines.AddRange(IgnoredSampleLines(cal, p, anchor).Select(l => "  " + l));
+        r.Lines.Add($"  Mode: {Modes.Label(mode)} (recorded with the sample; only samples made in this mode are averaged, from this mode's own store).");
+        r.Lines.AddRange(IgnoredSampleLines(cal, p, anchor, mode).Select(l => "  " + l));
         return r;
     }
 
-    public static CalSample? DropLastSample(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor)
+    // the newest sample under this methodology made in this mode; others stay where they are
+    public static CalSample? DropLastSample(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor, string mode)
     {
+        Modes.Check(mode);
         var stored = AllSamples(cal, p.Key, anchor);
         for (int i = stored.Count - 1; i >= 0; i--)
         {
-            if ((stored[i].Methodology ?? "") == p.MethodologyId)
+            if (InScope(stored[i], p, mode))
             {
                 var d = stored[i];
                 stored.RemoveAt(i);
@@ -459,10 +503,11 @@ public static class Gen1TidText
         return null;
     }
 
-    public static (int Removed, int Kept) ClearSamples(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor)
+    public static (int Removed, int Kept) ClearSamples(Dictionary<string, CalEntry> cal, Gen1Platform p, string anchor, string mode)
     {
+        Modes.Check(mode);
         var stored = AllSamples(cal, p.Key, anchor);
-        var kept = stored.Where(s => (s.Methodology ?? "") != p.MethodologyId).ToList();
+        var kept = stored.Where(s => !InScope(s, p, mode)).ToList();
         if (kept.Count > 0) cal[CalKey(p.Key, anchor)] = new CalEntry { Samples = kept }; else cal.Remove(CalKey(p.Key, anchor));
         return (stored.Count - kept.Count, kept.Count);
     }
@@ -490,10 +535,11 @@ public static class Gen1TidText
         }
         return (null, $"P(hit): no spread estimate yet. 2+ calibrated attempts on the {anchor} anchor under {methodologyId} give one.");
     }
-    public static List<string> StatsLines(IReadOnlyList<Sample> samples, IReadOnlyList<CalSample> stored, Gen1Platform p, string anchor)
+    public static List<string> StatsLines(IReadOnlyList<Sample> samples, IReadOnlyList<CalSample> stored, Gen1Platform p, string anchor, string mode)
     {
+        Modes.Check(mode);
         var st = Gen1Tid.AnchorStatsOf(samples.Select(s => s.ImpliedMs).ToList());
-        var lines = new List<string> { $"{p.Name} / {anchor} anchor  (methodology {p.MethodologyId})" };
+        var lines = new List<string> { $"{p.Name} / {anchor} anchor  (methodology {p.MethodologyId}, {Modes.Label(mode)} mode)" };
         if (st.N == 0)
         {
             lines.Add($"  n 0: no calibrated attempts; correction {FmtMs(p.DefaultCorrection(anchor))} (default)");
@@ -516,11 +562,43 @@ public static class Gen1TidText
         else lines.Add($"  drift: none ({dr.Reason}{welch})");
         var (code, text) = Gen1Tid.Recommendation(st, dr);
         lines.Add($"  recommendation [{code}]: {text}");
-        foreach (var x in stored.Where(x => (x.Methodology ?? "") == p.MethodologyId)) lines.Add(SampleLine(x));
+        foreach (var x in stored.Where(x => InScope(x, p, mode))) lines.Add(SampleLine(x));
         return lines;
     }
 
     // ---- the save-corruption reset metronome (rngsolution/cli.py cmd_reset) ------------------------
+    // The remembered adjustment per console follows the mode like the calibration samples: each mode has
+    // its own setting key (AppMode.Scoped), every record says which mode it was made in, and a record of
+    // the other mode that turns up in a store is not applied and said so.
+    public static Dictionary<string, ResetAdjustRecord> ParseResetAdjust(Dictionary<string, JsonElement>? stored)
+    {
+        var d = new Dictionary<string, ResetAdjustRecord>();
+        if (stored is null) return d;
+        foreach (var (key, v) in stored)
+        {
+            if (v.ValueKind == JsonValueKind.Number) d[key] = new ResetAdjustRecord { Frames = v.GetDouble() };   // before modes existed: a RUN record
+            else if (v.ValueKind == JsonValueKind.Object)
+            {
+                ResetAdjustRecord? r = null;
+                try { r = JsonSerializer.Deserialize<ResetAdjustRecord>(v.GetRawText()); } catch (JsonException) { }
+                if (r is not null) d[key] = r;
+            }
+        }
+        return d;
+    }
+    // (the adjustment in force: 0 when none, the stored record of another mode or null)
+    public static (double Frames, ResetAdjustRecord? Ignored) ResetAdjustFor(Dictionary<string, ResetAdjustRecord> adj, string platformKey, string mode)
+    {
+        Modes.Check(mode);
+        if (!adj.TryGetValue(platformKey, out var r)) return (0, null);
+        return Modes.Effective(r.Mode) == mode ? (r.Frames, null) : (0, r);
+    }
+    public static ResetAdjustRecord SetResetAdjust(Dictionary<string, ResetAdjustRecord> adj, string platformKey, double frames, string mode)
+        => adj[platformKey] = new ResetAdjustRecord { Frames = frames, Mode = Modes.Check(mode), When = Now() };
+    public static string ResetAdjustIgnoredLine(ResetAdjustRecord r, string platformKey, string mode)
+        => $"NOTE: the remembered adjustment for {platformKey} ({F(r.Frames, 2, true)} frames) ignored: recorded in {Modes.Describe(r.Mode)} mode, not {Modes.Label(mode)}. " +
+           "Adjustments are never mixed across modes: a practice-derived value is never in force in a run.";
+
     public static (ResetInterval Interval, double IntervalMs, Schedule Schedule, List<string> Lines) ResetPlan(Gen1Platform p, string preset,
         double adjustFrames, double? fadeFrames, double? intervalOverride, int pairs, double cadence)
     {
@@ -667,25 +745,48 @@ public static class Gen1TidText
         lines.Add($"  Constants: OK->seed {model.OkToSeed} frames, per-stage ready times and last press->roll {model.TextSpeed[speed].LastPressToSid} frames, {(model.Status != "" ? model.Status : "EMPIRICAL (libmgba)")}.");
         return lines;
     }
+    // Pins follow the mode like the calibration samples: each mode has its own setting key (AppMode.Scoped),
+    // every pin says which mode it was made in, and a pin of the other mode that turns up in a store never
+    // filters the listing and is said so.
     public static string PinKey(string methodologyId, int tid) => methodologyId + "/" + tid;
-    public static List<PinRecord> PinsFor(Dictionary<string, List<PinRecord>> pins, string methodologyId, int tid)
+    public static List<PinRecord> AllPins(Dictionary<string, List<PinRecord>> pins, string methodologyId, int tid)
         => pins.TryGetValue(PinKey(methodologyId, tid), out var l) ? l.ToList() : new();
-    public static void AddPin(Dictionary<string, List<PinRecord>> pins, string methodologyId, int tid, uint pid, bool shiny, string note)
+    // the pins made in this mode (the ones the listing uses)
+    public static List<PinRecord> PinsFor(Dictionary<string, List<PinRecord>> pins, string methodologyId, int tid, string mode)
+        => Modes.SplitByMode(AllPins(pins, methodologyId, tid), p => p.Mode, mode).Kept;
+    // the pins of another mode in the same store: never used, named in the listing
+    public static List<PinRecord> IgnoredPins(Dictionary<string, List<PinRecord>> pins, string methodologyId, int tid, string mode)
+        => Modes.SplitByMode(AllPins(pins, methodologyId, tid), p => p.Mode, mode).Others;
+    public static void AddPin(Dictionary<string, List<PinRecord>> pins, string methodologyId, int tid, uint pid, bool shiny, string note, string mode)
     {
-        var list = PinsFor(pins, methodologyId, tid);
-        foreach (var p in list)
+        Modes.Check(mode);                                  // the pin must say which mode it was made in
+        var all = AllPins(pins, methodologyId, tid);
+        foreach (var p in PinsFor(pins, methodologyId, tid, mode))
         {
             if (p.Pid == pid && p.Shiny != shiny) throw new ArgumentException($"PID {pid:X8} is already pinned as {(p.Shiny ? "shiny" : "not shiny")}");
             if (p.Pid == pid) return;
         }
-        list.Add(new PinRecord { Pid = pid, Shiny = shiny, Note = note, When = Now() });
-        pins[PinKey(methodologyId, tid)] = list;
+        all.Add(new PinRecord { Pid = pid, Shiny = shiny, Note = note, When = Now(), Mode = mode });
+        pins[PinKey(methodologyId, tid)] = all;
     }
-    public static List<string> PinLines(IReadOnlyList<PinRecord> list, string methodologyId, int tid)
+    // removes this mode's pins for the ID; pins of the other mode in the store stay where they are
+    public static (int Removed, int Kept) ClearPins(Dictionary<string, List<PinRecord>> pins, string methodologyId, int tid, string mode)
     {
-        if (list.Count == 0) return new() { $"Pins: none stored for {methodologyId} / Trainer ID {tid} (add one with a PID you can see is shiny or not)" };
-        var lines = new List<string> { $"Pins stored for {methodologyId} / Trainer ID {tid}:" };
+        var (mine, others) = Modes.SplitByMode(AllPins(pins, methodologyId, tid), p => p.Mode, mode);
+        if (others.Count > 0) pins[PinKey(methodologyId, tid)] = others; else pins.Remove(PinKey(methodologyId, tid));
+        return (mine.Count, others.Count);
+    }
+    public static List<string> PinLines(IReadOnlyList<PinRecord> list, string methodologyId, int tid, string mode, IReadOnlyList<PinRecord>? ignored = null)
+    {
+        var lines = list.Count == 0
+            ? new List<string> { $"Pins: none stored for {methodologyId} / Trainer ID {tid} in {Modes.Label(mode)} mode (add one with a PID you can see is shiny or not)" }
+            : new List<string> { $"Pins stored for {methodologyId} / Trainer ID {tid} ({Modes.Label(mode)} mode's store):" };
         foreach (var p in list) lines.Add($"  PID {p.Pid:X8}  {(p.Shiny ? "SHINY" : "not shiny")}{(p.Note != "" ? "  " + p.Note : "")}{(p.When != "" ? "  [" + p.When + "]" : "")}");
+        if (ignored is { Count: > 0 })
+        {
+            var modes = ignored.Select(p => Modes.Describe(p.Mode)).Distinct().OrderBy(x => x, StringComparer.Ordinal);
+            lines.Add($"  NOTE: {Plural(ignored.Count, "stored pin")} for {methodologyId} / Trainer ID {tid} ignored: recorded in {string.Join(", ", modes)} mode, not {Modes.Label(mode)}. Pins are never mixed across modes.");
+        }
         return lines;
     }
     public static (List<SidCandidate> Candidates, List<SidCandidate> Kept, List<string> Lines, SidCandidate? Single) SidListing(SidModel model, int tid, int nameLength, string speed,

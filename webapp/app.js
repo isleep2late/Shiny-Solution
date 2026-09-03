@@ -3,22 +3,29 @@
   var gen4 = window.ShinyGen4;
   var gen12 = window.ShinyGen12;
   var SEED = core.DEAD_BATTERY_SEED_RS;
+  var MODE = window.ShinyMode;                 // webapp/mode.js: RUN by default, PRACTICE / HUNT explicit
 
   function $(id) {
     return document.getElementById(id);
   }
 
-  function calKey(mode) {
-    return "shinySolution.cal." + mode;
+  // The Gen 3 timer's correction per kind ("tid" | "starter") and the Gen 4 calibrated delay are
+  // kept under the mode in force (mode.js storeKey: RUN keys unchanged, PRACTICE / HUNT keys end
+  // in ".practice"), so a value learned in PRACTICE / HUNT is never the one a run uses.
+  function calKey(kind) {
+    return MODE.storeKey("shinySolution.cal." + kind, MODE.get());
   }
+  var G4_CALD_KEY = "shinySolution.g4.cald";
+  function g4CaldKey() { return MODE.storeKey(G4_CALD_KEY, MODE.get()); }
+  function modeTag() { return " [" + MODE.label(MODE.get()) + " mode]"; }
 
-  function getCal(mode) {
-    var v = parseFloat(localStorage.getItem(calKey(mode)));
+  function getCal(kind) {
+    var v = parseFloat(localStorage.getItem(calKey(kind)));
     return isNaN(v) ? 0 : v;
   }
 
-  function setCal(mode, v) {
-    localStorage.setItem(calKey(mode), String(v));
+  function setCal(kind, v) {
+    localStorage.setItem(calKey(kind), String(v));
   }
 
   function fillNatures(sel, withAny) {
@@ -238,7 +245,7 @@
     var drift = hit.advance - center;
     setCal("tid", getCal("tid") - core.advancesToMs(drift));
     $("tid-cal-result").textContent = "Landed at advance " + hit.advance + " (" + (drift >= 0 ? "+" : "") + drift +
-      " frames). Timer corrected. That save's SID is " + hit.sid + ".";
+      " frames). Timer corrected. That save's SID is " + hit.sid + "." + modeTag();
     searchTidTargets();
     loadG3Target("tid", g3state.target, "TID " + g3state.target.tid + " / SID " + g3state.target.sid);
   }
@@ -284,7 +291,7 @@
     setCal("starter", getCal("starter") - core.advancesToMs(drift));
     var note = haveStats ? filtered.length + " stat-consistent candidate(s)." :
       "WARNING: " + candidates.length + " candidates on nature/gender alone — enter the six stats for a reliable fix.";
-    $("st-cal-result").textContent = "Match at advance " + hit.advance + " (" + (drift >= 0 ? "+" : "") + drift + " frames). " + note;
+    $("st-cal-result").textContent = "Match at advance " + hit.advance + " (" + (drift >= 0 ? "+" : "") + drift + " frames). " + note + modeTag();
     searchStarterTargets();
   }
 
@@ -416,8 +423,8 @@
     var hit = Number($("g4-hit").value);
     var next = gen4.calibrate(Number($("g4-cald").value), g4state.delay, hit);
     $("g4-cald").value = Math.round(next * 10) / 10;
-    localStorage.setItem("shinySolution.g4.cald", String(next));
-    $("g4-cal-result").textContent = "calibrated delay is now " + (Math.round(next * 10) / 10);
+    localStorage.setItem(g4CaldKey(), String(next));
+    $("g4-cal-result").textContent = "calibrated delay is now " + (Math.round(next * 10) / 10) + modeTag();
     g4Idle();
   }
 
@@ -518,8 +525,20 @@
   $("g4-match").addEventListener("click", g4Match);
   $("dv-check").addEventListener("click", dvCheck);
   g4timer = new Countdown($("g4-display"), $("g4-phase"));
-  var savedCald = parseFloat(localStorage.getItem("shinySolution.g4.cald"));
-  if (!isNaN(savedCald)) $("g4-cald").value = Math.round(savedCald * 10) / 10;
+  function loadG4Cald() {
+    var savedCald = parseFloat(localStorage.getItem(g4CaldKey()));
+    $("g4-cald").value = isNaN(savedCald) ? 500 : Math.round(savedCald * 10) / 10;
+  }
+  loadG4Cald();
+  // a mode change swaps every store: the Gen 3 correction and the Gen 4 delay are re-read from the mode's own
+  MODE.subscribe(function () {
+    loadG4Cald();
+    $("g4-cal-result").textContent = "";
+    if (g3state.target) {
+      if (g3state.mode === "tid") searchTidTargets(); else searchStarterTargets();
+      loadG3Target(g3state.mode, g3state.target, $("g3-info").textContent.split("  |")[0]);
+    }
+  });
   if (window.SHINY_SOLUTION_DOWNLOADS) {
     $("dl-win").href = window.SHINY_SOLUTION_DOWNLOADS.win;
     $("dl-linux").href = window.SHINY_SOLUTION_DOWNLOADS.linux;

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using ShinySolution.Core;
 
 namespace ShinySolution.App;
@@ -8,7 +9,9 @@ namespace ShinySolution.App;
 // pre-rendered buffer per schedule, so every beep is sample-exact; the display flashes with each)
 // -> "What did you get?" calibration with P(hit) and drift, the save-corruption reset metronome,
 // the moderators' verify, and the Emerald / FireRed / LeafGreen Secret ID branch. Calibration
-// samples, pins and reset adjusts live in the app's settings (SettingsStore).
+// samples, pins and reset adjusts live in the app's settings (SettingsStore); each of the three
+// stores follows the RUN / PRACTICE-HUNT mode (AppMode.Scoped), every record is stamped with the
+// mode it was made in, and the cue log names the mode of every attempt.
 public sealed class Gen1TidPanel : UserControl
 {
     const string CalKeySetting = "gen1tid.calibration";
@@ -19,7 +22,7 @@ public sealed class Gen1TidPanel : UserControl
     readonly Gen3SidData _sid = Gen3SidData.Load();
     Dictionary<string, CalEntry> _cal;
     Dictionary<string, List<PinRecord>> _pins;
-    Dictionary<string, double> _resetAdjust;
+    Dictionary<string, ResetAdjustRecord> _resetAdjust;
 
     // 1. game / console / methodology
     readonly ComboBox _game = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
@@ -111,9 +114,9 @@ public sealed class Gen1TidPanel : UserControl
 
     public Gen1TidPanel()
     {
-        _cal = SettingsStore.GetObject<Dictionary<string, CalEntry>>(CalKeySetting) ?? new();
-        _pins = SettingsStore.GetObject<Dictionary<string, List<PinRecord>>>(PinsSetting) ?? new();
-        _resetAdjust = SettingsStore.GetObject<Dictionary<string, double>>(ResetAdjustSetting) ?? new();
+        _cal = LoadCal();
+        _pins = LoadPins();
+        _resetAdjust = LoadResetAdjust();
         _anchorBtn = Ui.Btn("ANCHOR (Space)", (_, _) => AnchorNow(), 200);
         _anchorBtn.Font = new Font(_anchorBtn.Font.FontFamily, 12, FontStyle.Bold);
         _anchorBtn.Height = 44;
@@ -199,7 +202,7 @@ public sealed class Gen1TidPanel : UserControl
         _spacing.ValueChanged += (_, _) => { if (!_loading) RefreshAnchor(); };
         _got.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; Record(); } };
         _resetPreset.SelectedIndexChanged += (_, _) => { if (!_loading) RefreshReset(); };
-        _resetAdjustN.ValueChanged += (_, _) => { if (!_loading) RefreshReset(); };
+        _resetAdjustN.ValueChanged += (_, _) => { if (!_loading) { _resetAdjustN.Tag = "touched"; RefreshReset(); } };   // typed: the remembered value no longer overwrites it
         _resetPairs.ValueChanged += (_, _) => { if (!_loading) RefreshReset(); };
         _resetCadence.ValueChanged += (_, _) => { if (!_loading) RefreshReset(); };
         _sidGame.SelectedIndexChanged += (_, _) => { if (!_loading) { SidDropCue(); SidRefresh(); } };
@@ -208,6 +211,15 @@ public sealed class Gen1TidPanel : UserControl
         _sidNameLen.ValueChanged += (_, _) => { if (!_loading) SidDropCue(); };
         _sidMargin.ValueChanged += (_, _) => { if (!_loading) SidDropCue(); };
         _sidTid.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SidRun(); } };
+        // a mode change swaps the stores: the correction, the stats, the notes, the remembered reset adjustment and the
+        // Secret ID pins are re-read from the mode's own
+        AppMode.Changed += _ =>
+        {
+            _cal = LoadCal(); _pins = LoadPins(); _resetAdjust = LoadResetAdjust();
+            _correctionManual = false; _resetAdjustN.Tag = null;
+            RefreshAnchor(); RefreshStats(); RefreshReset();
+            if (_sidTid.Text.Trim() != "") SidRun();
+        };
 
         _loading = true;
         foreach (var g in Gen1Platform.SupportedGames(_data)) _game.Items.Add(new Item(g, J.S(_data.Root.GetProperty("games").GetProperty(g), "name", g)));
@@ -345,8 +357,8 @@ public sealed class Gen1TidPanel : UserControl
         var plat = _plat;
         _anchorKey = KeyOf(_anchor);
         if (_anchorKey == "") _anchorKey = plat.Anchors[0];
-        var samples = Gen1TidText.SamplesFor(_cal, plat, _anchorKey);
-        double inForce = Gen1TidText.CorrectionInForce(_cal, plat, _anchorKey);
+        var samples = Gen1TidText.SamplesFor(_cal, plat, _anchorKey, AppMode.Mode);
+        double inForce = Gen1TidText.CorrectionInForce(_cal, plat, _anchorKey, AppMode.Mode);
         if (!_correctionManual)
         {
             _loading = true;
@@ -356,9 +368,9 @@ public sealed class Gen1TidPanel : UserControl
         _correctionMs = (double)_correction.Value;
         var note = _correctionManual
             ? $"Correction: {Gen1TidText.FmtMs(_correctionMs)} (typed for this session; in force {Gen1TidText.FmtMs(inForce)})"
-            : $"Correction in force: {Gen1TidText.FmtMs(inForce)} ({(samples.Count == 0 ? "default, no calibration yet" : "mean of " + Gen1TidText.Plural(samples.Count, "calibrated attempt"))})";
-        var ign = Gen1TidText.IgnoredSampleLines(_cal, plat, _anchorKey);
-        _correctionNote.Text = note + (ign.Count > 0 ? "   " + ign[0] : "");
+            : $"Correction in force: {Gen1TidText.FmtMs(inForce)} ({(samples.Count == 0 ? "default, no calibration yet" : "mean of " + Gen1TidText.Plural(samples.Count, "calibrated attempt"))}, {AppMode.Label} mode's store)";
+        var ign = Gen1TidText.IgnoredSampleLines(_cal, plat, _anchorKey, AppMode.Mode);
+        _correctionNote.Text = note + (ign.Count > 0 ? "   " + string.Join("   ", ign) : "");
         _sched = null;
         _prepared?.Dispose();
         _prepared = null;
@@ -408,10 +420,10 @@ public sealed class Gen1TidPanel : UserControl
         if (_plat is null || _target is null) { _outcome.Text = "Load a target and play a cue first."; return; }
         int tid;
         try { tid = Gen1Tid.ParseTid(_got.Text); } catch (ArgumentException e) { _outcome.Text = "not a Trainer ID (" + e.Message + ")"; return; }
-        var r = Gen1TidText.RecordOutcome(_cal, _plat, _anchorKey, _target.Value, _correctionMs, tid, _force.Checked, _attempt);
+        var r = Gen1TidText.RecordOutcome(_cal, _plat, _anchorKey, _target.Value, _correctionMs, tid, _force.Checked, _attempt, AppMode.Mode);
         if (r.Added)
         {
-            SettingsStore.SetObject(CalKeySetting, _cal);
+            SaveCal();
             _force.Checked = false;
             _correctionManual = false;
         }
@@ -422,10 +434,10 @@ public sealed class Gen1TidPanel : UserControl
     void DropLast()
     {
         if (_plat is null) return;
-        var d = Gen1TidText.DropLastSample(_cal, _plat, _anchorKey);
-        SettingsStore.SetObject(CalKeySetting, _cal);
-        _outcome.Text = d is null ? $"no samples under {_plat.MethodologyId} for {_plat.Key}/{_anchorKey}"
-            : $"dropped the newest sample: aimed {d.Aimed}, hit {d.Hit}, {Gen1Tid.FormatTid(d.Tid)} (under {_plat.MethodologyId})";
+        var d = Gen1TidText.DropLastSample(_cal, _plat, _anchorKey, AppMode.Mode);
+        SaveCal();
+        _outcome.Text = d is null ? $"no samples under {_plat.MethodologyId} in {AppMode.Label} mode for {_plat.Key}/{_anchorKey}"
+            : $"dropped the newest sample: aimed {d.Aimed}, hit {d.Hit}, {Gen1Tid.FormatTid(d.Tid)} (under {_plat.MethodologyId}, {AppMode.Label} mode)";
         _correctionManual = false;
         RefreshAnchor();
         RefreshStats();
@@ -433,10 +445,10 @@ public sealed class Gen1TidPanel : UserControl
     void ClearSamples()
     {
         if (_plat is null) return;
-        var (removed, kept) = Gen1TidText.ClearSamples(_cal, _plat, _anchorKey);
-        SettingsStore.SetObject(CalKeySetting, _cal);
-        _outcome.Text = $"cleared calibration for {_plat.Key}/{_anchorKey} under {_plat.MethodologyId}: {Gen1TidText.Plural(removed, "sample")} removed" +
-            (kept > 0 ? $"; {Gen1TidText.Plural(kept, "sample")} under other methodologies kept, untouched" : "");
+        var (removed, kept) = Gen1TidText.ClearSamples(_cal, _plat, _anchorKey, AppMode.Mode);
+        SaveCal();
+        _outcome.Text = $"cleared calibration for {_plat.Key}/{_anchorKey} under {_plat.MethodologyId} ({AppMode.Label} mode): {Gen1TidText.Plural(removed, "sample")} removed" +
+            (kept > 0 ? $"; {Gen1TidText.Plural(kept, "sample")} under other methodologies or modes kept, untouched" : "");
         _correctionManual = false;
         RefreshAnchor();
         RefreshStats();
@@ -444,17 +456,27 @@ public sealed class Gen1TidPanel : UserControl
     void RefreshStats()
     {
         if (_plat is null) return;
-        Set(_stats, Gen1TidText.StatsLines(Gen1TidText.SamplesFor(_cal, _plat, _anchorKey), Gen1TidText.AllSamples(_cal, _plat.Key, _anchorKey), _plat, _anchorKey));
+        Set(_stats, Gen1TidText.StatsLines(Gen1TidText.SamplesFor(_cal, _plat, _anchorKey, AppMode.Mode), Gen1TidText.AllSamples(_cal, _plat.Key, _anchorKey), _plat, _anchorKey, AppMode.Mode));
     }
+
+    // the stores of the mode in force: RUN's keys are the ones that always existed, PRACTICE / HUNT's end in ".practice"
+    static Dictionary<string, CalEntry> LoadCal() => SettingsStore.GetObject<Dictionary<string, CalEntry>>(AppMode.Scoped(CalKeySetting)) ?? new();
+    void SaveCal() => SettingsStore.SetObject(AppMode.Scoped(CalKeySetting), _cal);
+    static Dictionary<string, List<PinRecord>> LoadPins() => SettingsStore.GetObject<Dictionary<string, List<PinRecord>>>(AppMode.Scoped(PinsSetting)) ?? new();
+    void SavePins() => SettingsStore.SetObject(AppMode.Scoped(PinsSetting), _pins);
+    static Dictionary<string, ResetAdjustRecord> LoadResetAdjust()
+        => Gen1TidText.ParseResetAdjust(SettingsStore.GetObject<Dictionary<string, JsonElement>>(AppMode.Scoped(ResetAdjustSetting)));
+    void PersistResetAdjust() => SettingsStore.SetObject(AppMode.Scoped(ResetAdjustSetting), _resetAdjust);
 
     // ---- the reset metronome ---------------------------------------------------------------------
     void RefreshReset()
     {
         if (_plat is null) return;
-        if (!_loading && _resetAdjustN.Tag is null && _resetAdjust.TryGetValue(_plat.Key, out var saved))
+        var ra = Gen1TidText.ResetAdjustFor(_resetAdjust, _plat.Key, AppMode.Mode);
+        if (!_loading && _resetAdjustN.Tag is null)
         {
             _loading = true;
-            _resetAdjustN.Value = (decimal)Math.Clamp(saved, (double)_resetAdjustN.Minimum, (double)_resetAdjustN.Maximum);
+            _resetAdjustN.Value = (decimal)Math.Clamp(ra.Frames, (double)_resetAdjustN.Minimum, (double)_resetAdjustN.Maximum);
             _loading = false;
         }
         string preset = _resetPreset.SelectedIndex == 1 ? "practice-save" : "route";
@@ -465,7 +487,9 @@ public sealed class Gen1TidPanel : UserControl
         try
         {
             _reset = Gen1TidText.ResetPlan(_plat, preset, (double)_resetAdjustN.Value, null, iv, (int)_resetPairs.Value, (double)_resetCadence.Value);
-            Set(_resetText, _reset.Value.Lines);
+            var resetLines = _reset.Value.Lines.ToList();
+            if (ra.Ignored is not null) { resetLines.Add(""); resetLines.Add(Gen1TidText.ResetAdjustIgnoredLine(ra.Ignored, _plat.Key, AppMode.Mode)); }
+            Set(_resetText, resetLines);
             _resetPrepared = BeepPlayer.RenderSchedule(_reset.Value.Schedule.Cues);
         }
         catch (ArgumentException e)
@@ -477,9 +501,10 @@ public sealed class Gen1TidPanel : UserControl
     void SaveResetAdjust()
     {
         if (_plat is null) return;
-        _resetAdjust[_plat.Key] = (double)_resetAdjustN.Value;
-        SettingsStore.SetObject(ResetAdjustSetting, _resetAdjust);
-        _resetNote.Text = $"Saved {Gen1TidText.F((double)_resetAdjustN.Value, 2, true)} frames as the default adjustment for {_plat.Key}.";
+        var saved = Gen1TidText.SetResetAdjust(_resetAdjust, _plat.Key, (double)_resetAdjustN.Value, AppMode.Mode);
+        PersistResetAdjust();
+        _resetNote.Text = $"Saved {Gen1TidText.F(saved.Frames, 2, true)} frames as the default adjustment for {_plat.Key} ({AppMode.Label} mode's store; recorded with the mode, never in force in the other).";
+        RefreshReset();
     }
     void StartReset()
     {
@@ -538,8 +563,9 @@ public sealed class Gen1TidPanel : UserControl
             lines.Add("  [TARGET] The Trainer ID is human input: read it off the Trainer Card and type it. Nothing reads the game.");
             lines.Add($"  input path: {(model.Name != "" ? model.Name : "the one measured path")}; text speed {inp.Speed}" +
                 (inp.Game != "emerald" && inp.Speed != "mid" ? " (carried over from an existing save: a fresh FireRed / LeafGreen save is MID)" : "") + $"; {inp.NameLength}-letter player name");
-            var pinList = _sidNoPins.Checked ? new List<PinRecord>() : Gen1TidText.PinsFor(_pins, J.S(inp.M, "id"), tid);
-            lines.AddRange(Gen1TidText.PinLines(pinList, J.S(inp.M, "id"), tid));
+            var pinList = _sidNoPins.Checked ? new List<PinRecord>() : Gen1TidText.PinsFor(_pins, J.S(inp.M, "id"), tid, AppMode.Mode);
+            var ignoredPins = _sidNoPins.Checked ? new List<PinRecord>() : Gen1TidText.IgnoredPins(_pins, J.S(inp.M, "id"), tid, AppMode.Mode);
+            lines.AddRange(Gen1TidText.PinLines(pinList, J.S(inp.M, "id"), tid, AppMode.Mode, ignoredPins));
             int? kMin = _sidKMin.Text.Trim() == "" ? null : (int)F(_sidKMin.Text, 0);
             int? kMax = _sidKMax.Text.Trim() == "" ? null : (int)F(_sidKMax.Text, 0);
             (int, int, int)? cued = _sidCue is { } c && c.Game == inp.Game && c.Speed == inp.Speed && c.Path == inp.Path && c.NameLength == inp.NameLength
@@ -564,9 +590,9 @@ public sealed class Gen1TidPanel : UserControl
             var inp = SidInputs();
             int tid = Gen1Tid.ParseTid(_sidTid.Text);
             uint pid = Gen1Tid.ParsePid(_sidPinPid.Text);
-            Gen1TidText.AddPin(_pins, J.S(inp.M, "id"), tid, pid, shiny, _sidPinNote.Text);
-            SettingsStore.SetObject(PinsSetting, _pins);
-            _sidPinOut.Text = $"pinned PID {pid:X8} as {(shiny ? "SHINY" : "not shiny")} for {J.S(inp.M, "id")} / Trainer ID {tid} (pins are kept per methodology and per Trainer ID; never shared)";
+            Gen1TidText.AddPin(_pins, J.S(inp.M, "id"), tid, pid, shiny, _sidPinNote.Text, AppMode.Mode);
+            SavePins();
+            _sidPinOut.Text = $"pinned PID {pid:X8} as {(shiny ? "SHINY" : "not shiny")} for {J.S(inp.M, "id")} / Trainer ID {tid} ({AppMode.Label} mode's store; pins are kept per methodology, per Trainer ID and per mode, never shared)";
             SidRun();
         }
         catch (ArgumentException e) { _sidPinOut.Text = "pin refused: " + e.Message; }
@@ -577,11 +603,10 @@ public sealed class Gen1TidPanel : UserControl
         {
             var inp = SidInputs();
             int tid = Gen1Tid.ParseTid(_sidTid.Text);
-            string key = Gen1TidText.PinKey(J.S(inp.M, "id"), tid);
-            int n = _pins.TryGetValue(key, out var l) ? l.Count : 0;
-            _pins.Remove(key);
-            SettingsStore.SetObject(PinsSetting, _pins);
-            _sidPinOut.Text = $"cleared {Gen1TidText.Plural(n, "pin")} for {J.S(inp.M, "id")} / Trainer ID {tid}";
+            var (removed, kept) = Gen1TidText.ClearPins(_pins, J.S(inp.M, "id"), tid, AppMode.Mode);
+            SavePins();
+            _sidPinOut.Text = $"cleared {Gen1TidText.Plural(removed, "pin")} for {J.S(inp.M, "id")} / Trainer ID {tid} ({AppMode.Label} mode)" +
+                (kept > 0 ? $"; {Gen1TidText.Plural(kept, "pin")} of the other mode kept, untouched" : "");
             SidRun();
         }
         catch (ArgumentException e) { _sidPinOut.Text = e.Message; }
@@ -652,7 +677,7 @@ public sealed class Gen1TidPanel : UserControl
             Running = true;
             _sched = sched; _rendered = rendered; _display = display; _log = log; _announce = announce; _onDone = onDone; _announced = 0;
             _base = display.BackColor;
-            log.Text = "anchor at " + DateTime.Now.ToString("HH:mm:ss") + Environment.NewLine;
+            log.Text = "anchor at " + DateTime.Now.ToString("HH:mm:ss") + "  [" + AppMode.Label + " mode]" + Environment.NewLine;
             _watch = Stopwatch.StartNew();
             rendered.Play();
             _ui = new System.Windows.Forms.Timer { Interval = 15 };

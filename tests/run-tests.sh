@@ -92,11 +92,130 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# The RUN / PRACTICE-HUNT wall in the webapp's Gen 1 TID tab (tests/test-mode-wall.cjs over mode-wall-fixture.json):
+# RUN's correction is the mean of the RUN samples only, the practice sample is listed as ignored, a practice record
+# is stamped and lands under the practice store key, which RUN never reads.
+node test-mode-wall.cjs mode-wall-fixture.json
+
+# Negative control: the practice sample restamped 'run' (a practice-derived value labelled as a run's) must FAIL the
+# RUN checks, and is shown failing: the wall rests on the stamp and the store split, and the check sees it.
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const s = v.store["gse/menu"].samples;
+if (s[2].mode !== "practice") { console.error("negative control setup: sample 2 is not the practice sample"); process.exit(1); }
+s[2].mode = "run";
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' mode-wall-fixture.json "$corrupted"
+if node test-mode-wall.cjs "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (a practice sample used in RUN mode): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (a practice sample used in RUN mode): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -4 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # The webapp's Gen 1 Trainer ID tab: the mobile bundle must carry the tab, the engine and the embedded data, and the
 # tab's pure module must agree with the engine and RNG Solution's numbers (tests/test-webapp.cjs, which builds the bundle).
 bundle=$(mktemp --suffix=.ts)
 node ../webapp/build-mobile-bundle.mjs "$bundle" > /dev/null
 node test-webapp.cjs "$bundle"
+
+# The wall in the bundle: webapp/hunt/ (capture-watching code) never ships without --with-hunt. The sentinel string
+# in webapp/hunt/sentinel.js must be absent from the plain bundle and present in a --with-hunt one; the absence check
+# is then run against the --with-hunt bundle and shown failing, as is test-webapp.cjs (its "no hunt code" assert).
+sentinel=$(node -e 'const m = require("fs").readFileSync(process.argv[1], "utf8").match(/SHINY_HUNT_SENTINEL = "([^"]+)"/); if (!m) { console.error("no sentinel string in webapp/hunt/sentinel.js"); process.exit(1); } console.log(m[1]);' ../webapp/hunt/sentinel.js)
+no_hunt_code() { if grep -qF -- "$sentinel" "$1"; then echo "FAIL: $2 carries webapp/hunt/ code (sentinel $sentinel found)"; return 1; fi; echo "$2: no hunt code (sentinel absent)"; }
+no_hunt_code "$bundle" "the plain mobile bundle" || exit 1
+hunt_bundle=$(mktemp --suffix=.ts)
+node ../webapp/build-mobile-bundle.mjs --with-hunt "$hunt_bundle" > /dev/null 2>&1
+if grep -qF -- "$sentinel" "$hunt_bundle" && grep -qF "SHINY_HUNT_BUNDLED" "$hunt_bundle"; then
+  echo "positive control (--with-hunt): the sentinel IS in the bundle and it is marked as a hunt build"
+else
+  echo "positive control (--with-hunt): the sentinel is NOT in the bundle: --with-hunt does not bundle webapp/hunt/"
+  exit 1
+fi
+if no_hunt_code "$hunt_bundle" "the --with-hunt bundle" > "$hunt_bundle.out" 2>&1; then
+  echo "negative control (bundle with the sentinel): DID NOT FAIL"
+  exit 1
+else
+  echo "negative control (bundle with the sentinel): FAILED as required -> $(head -1 "$hunt_bundle.out")"
+fi
+if node test-webapp.cjs "$hunt_bundle" > "$hunt_bundle.out" 2>&1; then
+  echo "negative control (test-webapp.cjs on the bundle with the sentinel): DID NOT FAIL"
+  exit 1
+else
+  echo "negative control (test-webapp.cjs on the bundle with the sentinel): FAILED as required ->"
+  grep -E '^FAIL|failure' "$hunt_bundle.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$hunt_bundle" "$hunt_bundle.out"
+
+# The builders refuse a page that asks for webapp/hunt/, and a stage or bundle that leaks its text: on a copy of the
+# tree (webapp/, core/, electron/build.sh) whose index.html references hunt/sentinel.js, both builders must refuse
+# without --with-hunt and build with it; with the reference removed but the sentinel pasted into app.js, both must
+# refuse again. The real tree's plain electron stage must carry no hunt/ directory and no sentinel.
+tree=$(mktemp -d)
+mkdir -p "$tree/electron"
+cp -r ../core "$tree/core"
+cp -r ../webapp "$tree/webapp"
+cp ../electron/build.sh "$tree/electron/build.sh"
+python3 - "$tree/webapp/index.html" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+old = '<script src="mode.js"></script>'
+assert s.count(old) == 1, "refusal setup: mode.js script tag not found once"
+open(p, "w").write(s.replace(old, old + '\n<script src="hunt/sentinel.js"></script>'))
+PY
+if node "$tree/webapp/build-mobile-bundle.mjs" "$tree/out.ts" > "$tree/mobile.log" 2>&1; then
+  echo "refusal (mobile bundle, page references hunt/): DID NOT REFUSE"; exit 1
+else
+  echo "refusal (mobile bundle, page references hunt/): refused as required -> $(grep -m1 refusing "$tree/mobile.log")"
+fi
+node "$tree/webapp/build-mobile-bundle.mjs" --with-hunt "$tree/out.ts" > /dev/null 2>&1 && grep -qF -- "$sentinel" "$tree/out.ts" \
+  && echo "refusal (mobile bundle, page references hunt/, --with-hunt): built, sentinel present" || { echo "mobile bundle --with-hunt on the referencing page: did not build with the sentinel"; exit 1; }
+if bash "$tree/electron/build.sh" --stage-only > "$tree/electron.log" 2>&1; then
+  echo "refusal (electron stage, page references hunt/): DID NOT REFUSE"; exit 1
+else
+  echo "refusal (electron stage, page references hunt/): refused as required -> $(grep -m1 refusing "$tree/electron.log")"
+fi
+bash "$tree/electron/build.sh" --stage-only --with-hunt > /dev/null 2>&1 && [ -f "$tree/electron/webapp/hunt/sentinel.js" ] \
+  && echo "refusal (electron stage, --with-hunt): staged, webapp/hunt/sentinel.js present" || { echo "electron --stage-only --with-hunt: hunt/ not staged"; exit 1; }
+cp ../webapp/index.html "$tree/webapp/index.html"
+cat ../webapp/hunt/sentinel.js >> "$tree/webapp/app.js"
+if node "$tree/webapp/build-mobile-bundle.mjs" "$tree/out.ts" > "$tree/mobile.log" 2>&1; then
+  echo "refusal (mobile bundle, hunt text pasted into app.js): DID NOT REFUSE"; exit 1
+else
+  echo "refusal (mobile bundle, hunt text pasted into app.js): refused as required -> $(grep -m1 refusing "$tree/mobile.log")"
+fi
+if bash "$tree/electron/build.sh" --stage-only > "$tree/electron.log" 2>&1; then
+  echo "refusal (electron stage, sentinel pasted into app.js): DID NOT REFUSE"; exit 1
+else
+  echo "refusal (electron stage, sentinel pasted into app.js): refused as required -> $(grep -m1 refusing "$tree/electron.log")"
+fi
+# ... and a hunt file that carries no sentinel line at all, its text pasted into gen1tid-ui.js: both builders compare the
+# whole text of every file under webapp/hunt/ with the staged files, so the marker is not what the leak check rests on.
+cp ../webapp/app.js "$tree/webapp/app.js"
+printf '// a hunt file without the sentinel line, for the leak check\nwindow.SHINY_HUNT_WATCHER = function () { return "reads the capture frame by frame"; };\n' > "$tree/webapp/hunt/watcher.js"
+cat "$tree/webapp/hunt/watcher.js" >> "$tree/webapp/gen1tid-ui.js"
+if node "$tree/webapp/build-mobile-bundle.mjs" "$tree/out.ts" > "$tree/mobile.log" 2>&1; then
+  echo "refusal (mobile bundle, a hunt file without the sentinel pasted into gen1tid-ui.js): DID NOT REFUSE"; exit 1
+else
+  echo "refusal (mobile bundle, a hunt file without the sentinel pasted into gen1tid-ui.js): refused as required -> $(grep -m1 refusing "$tree/mobile.log")"
+fi
+if bash "$tree/electron/build.sh" --stage-only > "$tree/electron.log" 2>&1; then
+  echo "refusal (electron stage, a hunt file without the sentinel pasted into gen1tid-ui.js): DID NOT REFUSE"; exit 1
+else
+  echo "refusal (electron stage, a hunt file without the sentinel pasted into gen1tid-ui.js): refused as required -> $(grep -m1 refusing "$tree/electron.log")"
+fi
+rm -rf "$tree"
+bash ../electron/build.sh --stage-only > /dev/null
+if [ -e ../electron/webapp/hunt ] || grep -rqF -- "$sentinel" ../electron/webapp; then
+  echo "FAIL: the plain electron stage carries webapp/hunt/"; exit 1
+fi
+echo "the plain electron stage: no hunt/ directory, no sentinel; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; })"
 
 # Negative control: a bundle without the tab's button (the string deleted) must FAIL, and is shown failing.
 node -e '
@@ -117,7 +236,8 @@ fi
 rm -f "$bundle" "$bundle.cut" "$bundle.out"
 
 # The tab in a real browser (headless Chrome, when installed): its self-test drives the DOM through the tab's own
-# handlers (targets, protocol, an outcome recorded and persisted, Blue / DMG, the metronome, the Secret ID listing).
+# handlers (targets, protocol, an outcome recorded and persisted, Blue / DMG, the metronome, the Secret ID listing,
+# the mode switch with the reset adjustment and the pins, records of the other mode planted in the RUN stores).
 if command -v google-chrome >/dev/null 2>&1; then
   bash ../webapp/sync-core.sh
   # One browser profile for three loads: a probe page seeds the origin's localStorage with a visitor's stand-in
@@ -157,6 +277,7 @@ const checks = [
   ["a Gen 3 target was loaded", r.g3TargetLoaded === true],
   ["Space anchored the Gen 1 cue", r.spaceAnchoredGen1 === true],
   ["Space did not start the Gen 3 timer", r.g3StartClicksOnSpace === 0],
+  ["the cue log anchor line names the mode of the attempt", r.cueLogNamesMode === true],
   ["FireRed mid / NEW NAME / 7 letters cue window 2240-2266", r.sidCueWindow === "2240-2266"],
   ["the cue is dropped when the text speed changes", r.sidCueDroppedOnSpeedChange === true],
   ["the listing after the change does not use the old window", r.sidListingMentionsOldWindow === false],
@@ -170,7 +291,40 @@ const checks = [
   ["blue/dmg targets", JSON.stringify(r.blueDmgTargets) === "[994,1513,2105]"],
   ["blue/dmg anchors", JSON.stringify(r.blueAnchors) === "[\"menu\",\"poweron\"]"],
   ["A then POWER OFF at 397.9 ms", /A first, then POWER OFF 397\.9 ms/.test(r.resetLine || "")],
-  ["firered SID rows", r.sidRows === 3]
+  ["firered SID rows", r.sidRows === 3],
+  // the RUN / PRACTICE-HUNT wall, driven through the switch on the page
+  ["RUN is the default mode", r.modeDefault === "run"],
+  ["the banner is hidden in RUN", r.bannerHiddenInRun === true],
+  ["PRACTICE / HUNT turned on explicitly through the switch", r.modeAfterToggle === "practice"],
+  ["the banner shows with the exact text", r.bannerShownInPractice === true],
+  ["the banner sits outside every tab section", r.bannerOutsideTabs === true],
+  ["the practice store starts empty (default correction 200.0)", r.correctionInPracticeBefore === "200.0"],
+  ["the practice attempt inverted to offset 364", /You hit offset 364, aimed 358: 6 frames late/.test(r.practiceOutcome || "")],
+  ["the practice sample is stamped and stored under the practice key", !!(r.practiceStored && r.practiceStored["gse/menu"] && r.practiceStored["gse/menu"].samples.length === 1 && r.practiceStored["gse/menu"].samples[0].mode === "practice")],
+  ["the RUN store is untouched by the practice record", r.runStoreUnchangedByPractice === true],
+  ["the practice correction is the practice sample alone (300.5)", r.correctionInPractice === "300.5"],
+  ["back in RUN", r.modeBack === "run"],
+  ["the banner is hidden again", r.bannerHiddenAgain === true],
+  ["back in RUN the practice sample is not in force (233.5 again)", r.correctionBackInRun === "233.5" && r.correctionInRunBefore === "233.5"],
+  ["the run store still holds only its own sample", !!(r.stored && r.stored["gse/menu"] && r.stored["gse/menu"].samples.length === 1 && r.stored["gse/menu"].samples[0].mode === "run")],
+  // the remembered reset adjustment and the Secret ID pins follow the mode too
+  ["the reset adjustment saved in PRACTICE / HUNT lands in the practice store, stamped", !!(r.practiceResetStored && r.practiceResetStored.gse && r.practiceResetStored.gse.frames === 2 && r.practiceResetStored.gse.mode === "practice")],
+  ["... and its note names the practice store", /PRACTICE \/ HUNT mode.s store/.test(r.practiceResetNote || "")],
+  ["the RUN reset store is untouched by it", r.runResetUnchangedByPractice === true],
+  ["the pin made in PRACTICE / HUNT lands in the practice store, stamped", r.practicePinKeyPresent === true],
+  ["... and its note names the practice store", /PRACTICE \/ HUNT mode.s store/.test(r.practicePinOut || "")],
+  ["the RUN pin store is untouched by it", r.runPinsUnchangedByPractice === true],
+  ["back in RUN the reset adjustment field shows the RUN value (0)", r.resetAdjustBackInRun === "0"],
+  ["back in RUN the listing does not carry the practice pin", r.runListingHasPracticePin === false],
+  // records of the other mode planted in the RUN stores, and one whose mode the page does not know
+  ["a practice sample planted in the RUN store is named in the note", r.runNoteAboutPractice === true],
+  ["a sample of a mode the page does not know is named as unknown, not thrown on", r.runNoteAboutUnknown === true],
+  ["neither planted sample is in force (233.5 still)", r.correctionWithPlanted === "233.5"],
+  ["recording an outcome with the planted samples present still works", /You hit offset 362, aimed 358: 4 frames late/.test(r.recordWithPlanted || "") && r.samplesInForceWithPlanted === 2],
+  ["a practice reset adjustment planted in the RUN store is ignored and said so", r.resetPlantedIgnored === true],
+  ["a practice pin planted in the RUN store is ignored and said so", r.pinPlantedIgnored === true],
+  ["the self-test never wrote the mode or a practice store to the origin", !!r.realStorage && r.realStorage["shinySolution.mode"] === null && r.realStorage["shinySolution.gen1tid.calibration.practice"] === null &&
+    r.realStorage["shinySolution.gen1tid.resetAdjust.practice"] === null && r.realStorage["shinySolution.gen1tid.sidPins.practice"] === null && r.realStorage["shinySolution.gen1tid.resetAdjust"] === null]
 ];
 let bad = 0;
 for (const [label, ok] of checks) if (!ok) { bad++; console.error("FAIL browser: " + label); }

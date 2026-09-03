@@ -42,7 +42,54 @@ input; reading the screen, VRAM or memory to identify RNG is not allowed in runs
   capture reading by design.
 * **PREDICT mode** (RNG Solution's `watch --practice` only): the tool reads an OBS capture and
   predicts the Trainer ID. Practice and hunting only, never in a submitted run; it refuses to
-  start without `--practice`.
+  start without `--practice`. The heads here carry the same wall as a mode setting (next section).
+
+## Modes: RUN (the default) and PRACTICE / HUNT
+
+Every head has one persisted mode setting, and it is RUN unless you turn PRACTICE / HUNT on
+yourself (the switch above the tabs in the web app, the Electron app and the mobile bundle, which
+are one page; the checkbox above the tabs in the desktop app; `--practice` on RNG Solution's
+`watch`). The wall between them is RNG Solution's, carried over unchanged
+(`docs/RNG_GUIDE_DESIGN.md` section 4.2 there; `rngsolution/watch.py` is the only capture-reading
+code that exists today):
+
+| | RUN | PRACTICE / HUNT |
+|---|---|---|
+| Purpose | Leaderboard runs; casual manips done the legal way | Learning, calibrating, shiny hunting, verifying |
+| Inputs | Your anchor press, beeps, the outcome you type | Everything in RUN plus, one day, the capture (video, audio), emulator memory, savestate retry |
+| Turned on by | Nothing: it is the default | The switch, explicitly; while it is on, a banner sits above every tab: *PRACTICE / HUNT mode - tools that read the capture are enabled; not for submitted runs* |
+| Calibration store | `shinySolution.gen1tid.calibration`, `shinySolution.gen1tid.resetAdjust`, `shinySolution.gen1tid.sidPins`, `shinySolution.cal.<kind>`, `shinySolution.g4.cald` (web); `gen1tid.calibration`, `gen1tid.resetAdjust`, `gen1tid.sidPins`, `cal.<key>`, `gen4.calibratedDelay` (desktop) | The same names with `.practice` appended: a separate namespace, never merged |
+| Records and logs | Every Gen 1 TID sample, remembered reset adjustment and Secret ID pin carries `mode: "run"`, every cue log's anchor line says `[RUN mode]`, every Gen 3 / Gen 4 calibration result is tagged | The same, stamped `practice` / `[PRACTICE / HUNT mode]` |
+| Where capture-watching code may live | Nowhere | `webapp/hunt/` (a `HuntPanel` in the desktop app when it exists) and RNG Solution's `watch.py` |
+
+Inside a store, a sample under another methodology or made in the other mode is left out of
+the correction and named in a note, the way RNG Solution names samples under another
+methodology: *N stored samples for gse/menu ignored: recorded in PRACTICE / HUNT mode, not RUN.
+Samples are never mixed across modes.* A sample without a mode was recorded before modes
+existed, by a head that had no capture-reading tool at all, so it is a RUN sample. A record whose
+mode is a value the head does not know (a typo, an empty string, a value a later hunt head writes)
+is in force in neither mode and is named as unknown in the note; it never breaks the tab. The
+remembered reset adjustment and the Secret ID pins follow the same rule: their own store per
+mode, every record stamped, a record of the other mode in a store never applied and named.
+
+The package boundary: `webapp/hunt/README.md` says what may live there. `webapp/index.html`
+loads nothing from it, `webapp/build-mobile-bundle.mjs` and `electron/build.sh` refuse a page
+that references it and a bundle or stage that turns out to contain the text of any file under it
+(both compare every hunt file's whole text with what they built; the sentinel is a marker for
+the tests, not what the check rests on), and both bundle it only with an explicit `--with-hunt`
+(a practice build, never the published one; the `build-desktop` workflow stages without the
+flag). `tests/run-tests.sh` greps the built bundle for the sentinel in `webapp/hunt/sentinel.js`
+(absent in the plain bundle, present with `--with-hunt`, and the absence check is shown failing
+on the `--with-hunt` bundle), exercises both refusals on a copy of the tree (a page that
+references `hunt/`, the sentinel pasted into `app.js`, and a hunt file with no sentinel line
+pasted into `gen1tid-ui.js`), and drives the page's switch headless: RUN by default, the banner
+outside every tab section, a sample, a reset adjustment and a pin made in PRACTICE / HUNT stored
+under the practice keys with the RUN stores untouched, the practice values gone once the switch
+is off, and records planted in the RUN stores (a practice sample, a sample of an unknown mode, a
+practice adjustment, a practice pin) never in force and named in the notes.
+`tests/test-mode-wall.cjs` and the C# `--mode-wall` check share `tests/mode-wall-fixture.json`
+(two RUN samples, one practice sample) and a corrupted copy with the practice sample restamped
+`run` is shown failing in both suites.
 
 A prediction is only valid under one specific, named input protocol: its **methodology**
 (`<game>/<console family>/<protocol>-v<version>`, e.g. `red/gba/hold-start-v1`: hold START
@@ -75,7 +122,13 @@ RNG Solution's registry and tables and embedded in every head.
 
 ## Verification
 
-- `tests/run-tests.sh`: the JS engine vs an algorithmically independent Python reference; the
+- `tests/run-tests.sh`: the RUN / PRACTICE-HUNT wall (`test-mode-wall.cjs` over
+  `mode-wall-fixture.json` with the restamped copy shown failing, plus a sample of an unknown
+  mode kept out of both modes without breaking the tab, and the reset adjustment and pin stores
+  split by mode; the mobile bundle's hunt sentinel absent, present with `--with-hunt`, and the
+  absence check shown failing on that bundle; both builders' refusals on a copy of the tree,
+  including a hunt file without the sentinel; the page's switch driven headless);
+  the JS engine vs an algorithmically independent Python reference; the
   JS Gen 4 / Gen 1-2 ports vs vectors emitted by the C# engine; `core/gen1tid.js` vs
   `tests/gen1tid-vectors.json` (emitted by RNG Solution's Python) with a corrupted vector shown
   failing; the webapp smoke test (`tests/test-webapp.cjs`: the mobile bundle carries the Gen 1
@@ -103,9 +156,12 @@ RNG Solution's registry and tables and embedded in every head.
   (`DATA_TEST_NEGATIVE=1` is its negative control); regeneration, the citation re-read and the PokeFinder diff
   are `tools/gen-guide-data.py` (`docs/DATA.md`).
 - `app/run-core-tests.sh`: the C# engine vs the same vectors, plus canonical MT19937 vectors,
-  the Gen 4 seed/timer model, the generator vectors, and `Gen1Tid.cs` vs the gen1tid vectors with
-  its own negative control. `dotnet build app/App -c Release -p:EnableWindowsTargeting=true` compiles the
-  desktop app on Linux.
+  the Gen 4 seed/timer model, the generator vectors, `Gen1Tid.cs` vs the gen1tid vectors with
+  its own negative control, and the wall over the mode-wall fixture with the restamped copy shown failing:
+  `Modes.cs` and the Gen 1 TID panel's pure part (`Gen1TidSupport.cs`, compiled into the test
+  project: the ignore notes, an unknown-mode record kept out without breaking the panel, the reset
+  adjustment and the pins by mode). `dotnet build app/App -c Release -p:EnableWindowsTargeting=true`
+  compiles the desktop app on Linux.
 - `tests/run-lua-sim.sh` and `tests/lua-sim-gb.py`: the mGBA scripts against stubbed APIs.
 - `tests/harness/`: ground truth against real Pokémon Ruby under libmgba's Python bindings.
 - RNG Solution's `tests/run-tests.sh` (196 tests plus negative controls) covers the terminal
@@ -119,8 +175,8 @@ export DOTNET_ROOT=$HOME/.dotnet PATH=$HOME/.dotnet:$PATH
 dotnet publish app/App/ShinySolution.App.csproj -c Release -r win-x64 \
   -p:PublishSingleFile=true --self-contained true -o <outdir>     # the Windows app
 bash webapp/sync-core.sh                                            # the static web app (serve webapp/)
-node webapp/build-mobile-bundle.mjs out.ts                          # the mobile bundle
-bash electron/build.sh                                              # Linux AppImage / tar.gz
+node webapp/build-mobile-bundle.mjs out.ts                          # the mobile bundle (never --with-hunt for the published one)
+bash electron/build.sh                                              # Linux AppImage / tar.gz (--stage-only stops after staging; never --with-hunt)
 python3 tools/gen-gen1-data.py ../RNG-Solution                      # regenerate core/data from the registry
 python3 tools/gen-guide-data.py                                     # regenerate core/data/{species,encounters,statics}-gen{3,4}.json from ~/AI/pret
 node tools/build-timer-vectors.js <eontimer-dist>                   # regenerate tests/timer-vectors.json (the header has the EonTimer build recipe)

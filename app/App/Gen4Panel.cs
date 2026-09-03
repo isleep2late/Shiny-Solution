@@ -57,10 +57,7 @@ public sealed class Gen4Panel : UserControl
 
     public Gen4Panel()
     {
-        _model.CalibratedDelay = SettingsStore.Get("gen4.calibratedDelay", 500);
-        _model.CalibratedSecond = SettingsStore.Get("gen4.calibratedSecond", 14);
-        _calDelay.Value = (decimal)Math.Round(_model.CalibratedDelay, 1);
-        _calSecond.Value = (decimal)_model.CalibratedSecond;
+        LoadCalibration();
 
         var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
         var groups = new Control[]
@@ -100,6 +97,8 @@ public sealed class Gen4Panel : UserControl
         };
         for (int i = groups.Length - 1; i >= 0; i--) scroll.Controls.Add(groups[i]);
         Controls.Add(scroll);
+        // a mode change swaps the store: the calibrated delay and second are re-read from the mode's own (AppMode.Scoped)
+        AppMode.Changed += _ => { LoadCalibration(); _calResult.Text = $"{AppMode.Label} mode: its own calibration"; UpdateIdleDisplay(); };
     }
 
     static DateTimePicker MakePicker(string format) => new()
@@ -258,13 +257,21 @@ public sealed class Gen4Panel : UserControl
         UpdateIdleDisplay();
     }
 
+    void LoadCalibration()
+    {
+        _model.CalibratedDelay = SettingsStore.Get(AppMode.Scoped("gen4.calibratedDelay"), 500);
+        _model.CalibratedSecond = SettingsStore.Get(AppMode.Scoped("gen4.calibratedSecond"), 14);
+        _calDelay.Value = (decimal)Math.Clamp(Math.Round(_model.CalibratedDelay, 1), (double)_calDelay.Minimum, (double)_calDelay.Maximum);
+        _calSecond.Value = (decimal)Math.Clamp(_model.CalibratedSecond, (double)_calSecond.Minimum, (double)_calSecond.Maximum);
+    }
+
     void SaveCalibration()
     {
         _model.CalibratedDelay = (double)_calDelay.Value;
         _model.CalibratedSecond = (double)_calSecond.Value;
-        SettingsStore.Set("gen4.calibratedDelay", _model.CalibratedDelay);
-        SettingsStore.Set("gen4.calibratedSecond", _model.CalibratedSecond);
-        _calResult.Text = "calibration saved";
+        SettingsStore.Set(AppMode.Scoped("gen4.calibratedDelay"), _model.CalibratedDelay);
+        SettingsStore.Set(AppMode.Scoped("gen4.calibratedSecond"), _model.CalibratedSecond);
+        _calResult.Text = $"calibration saved [{AppMode.Label} mode]";
         UpdateIdleDisplay();
     }
 
@@ -278,8 +285,8 @@ public sealed class Gen4Panel : UserControl
         _model.Calibrate((uint)_hitDelay.Value);
         _model.CalibratedDelay = Math.Clamp(_model.CalibratedDelay, (double)_calDelay.Minimum, (double)_calDelay.Maximum);
         _calDelay.Value = (decimal)Math.Round(_model.CalibratedDelay, 1);
-        SettingsStore.Set("gen4.calibratedDelay", _model.CalibratedDelay);
-        _calResult.Text = $"calibrated delay is now {_model.CalibratedDelay:F1}";
+        SettingsStore.Set(AppMode.Scoped("gen4.calibratedDelay"), _model.CalibratedDelay);
+        _calResult.Text = $"calibrated delay is now {_model.CalibratedDelay:F1} [{AppMode.Label} mode]";
         UpdateIdleDisplay();
     }
 
