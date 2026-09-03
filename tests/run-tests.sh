@@ -64,6 +64,32 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# The PRACTICE / HUNT head (webapp/hunt/hunt-panel.js): its Gen 1 menu-box pipeline over the shared fixtures must equal
+# RNG Solution's, frame for frame and event for event (tests/fixtures/hunt/gen1-parity.json, emitted by RNG Solution's
+# tests/fixtures/hunt/emit_parity.py; the PNG poll gen1-gba-hd-menu/ and the real GBA HD timeline gba-timeline.csv).
+node test-hunt.cjs fixtures/hunt/gen1-parity.json fixtures/hunt
+
+# Negative control: the vector with one timeline attempt's close moved by a sample (raw +2 frames) and the PNG prediction's
+# offset bumped must FAIL, and is shown failing: the parity check sees a frame's difference.
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const a = v.timeline.sessions[1].attempts[0];
+a.close += 0.0335; a.raw += 2.0;
+v.png.predictions[0].offset += 1;
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' fixtures/hunt/gen1-parity.json "$corrupted"
+if node test-hunt.cjs "$corrupted" fixtures/hunt > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted hunt parity vector): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted hunt parity vector): FAILED as required ->"
+  grep -E '^FAIL' "$corrupted.out" | head -3 | cut -c1-160 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # The webapp's Gen 1 Trainer ID tab: the mobile bundle must carry the tab, the engine and the embedded data, and the
 # tab's pure module must agree with the engine and RNG Solution's numbers (tests/test-webapp.cjs, which builds the bundle).
 bundle=$(mktemp --suffix=.ts)
@@ -78,8 +104,8 @@ no_hunt_code() { if grep -qF -- "$sentinel" "$1"; then echo "FAIL: $2 carries we
 no_hunt_code "$bundle" "the plain mobile bundle" || exit 1
 hunt_bundle=$(mktemp --suffix=.ts)
 node ../webapp/build-mobile-bundle.mjs --with-hunt "$hunt_bundle" > /dev/null 2>&1
-if grep -qF -- "$sentinel" "$hunt_bundle" && grep -qF "SHINY_HUNT_BUNDLED" "$hunt_bundle"; then
-  echo "positive control (--with-hunt): the sentinel IS in the bundle and it is marked as a hunt build"
+if grep -qF -- "$sentinel" "$hunt_bundle" && grep -qF "SHINY_HUNT_BUNDLED" "$hunt_bundle" && grep -qF "root.ShinyHunt = api" "$hunt_bundle"; then
+  echo "positive control (--with-hunt): the sentinel and the hunt panel ARE in the bundle and it is marked as a hunt build"
 else
   echo "positive control (--with-hunt): the sentinel is NOT in the bundle: --with-hunt does not bundle webapp/hunt/"
   exit 1
@@ -127,8 +153,9 @@ if bash "$tree/electron/build.sh" --stage-only > "$tree/electron.log" 2>&1; then
 else
   echo "refusal (electron stage, page references hunt/): refused as required -> $(grep -m1 refusing "$tree/electron.log")"
 fi
-bash "$tree/electron/build.sh" --stage-only --with-hunt > /dev/null 2>&1 && [ -f "$tree/electron/webapp/hunt/sentinel.js" ] \
-  && echo "refusal (electron stage, --with-hunt): staged, webapp/hunt/sentinel.js present" || { echo "electron --stage-only --with-hunt: hunt/ not staged"; exit 1; }
+bash "$tree/electron/build.sh" --stage-only --with-hunt > /dev/null 2>&1 && [ -f "$tree/electron/webapp/hunt/sentinel.js" ] && [ -f "$tree/electron/webapp/hunt/hunt.html" ] \
+  && [ -f "$tree/electron/webapp/hunt/hunt-panel.js" ] && [ -f "$tree/electron/webapp/hunt/preload.js" ] && [ -f "$tree/electron/webapp/hunt/electron-source.js" ] \
+  && echo "refusal (electron stage, --with-hunt): staged, webapp/hunt/{sentinel.js,hunt.html,hunt-panel.js,preload.js,electron-source.js} present" || { echo "electron --stage-only --with-hunt: hunt/ not staged"; exit 1; }
 cp ../webapp/index.html "$tree/webapp/index.html"
 cat ../webapp/hunt/sentinel.js >> "$tree/webapp/app.js"
 if node "$tree/webapp/build-mobile-bundle.mjs" "$tree/out.ts" > "$tree/mobile.log" 2>&1; then
@@ -158,7 +185,7 @@ else
 fi
 rm -rf "$tree"
 bash ../electron/build.sh --stage-only > /dev/null
-if [ -e ../electron/webapp/hunt ] || grep -rqF -- "$sentinel" ../electron/webapp; then
+if [ -e ../electron/webapp/hunt ] || grep -rqF -- "$sentinel" ../electron/webapp || grep -rqF "root.ShinyHunt = api" ../electron/webapp; then
   echo "FAIL: the plain electron stage carries webapp/hunt/"; exit 1
 fi
 echo "the plain electron stage: no hunt/ directory, no sentinel; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; })"

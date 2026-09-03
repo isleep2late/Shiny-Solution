@@ -113,7 +113,13 @@ and game code briefly maps other banks, so the bot only trusts a `0xD000`–`0xD
 > the constants and their validation, unchanged. The RUN / PRACTICE-HUNT wall the heads carry
 > (RUN by default, the explicit switch and banner, the split calibration stores, the
 > `webapp/hunt/` boundary the bundlers refuse) is the README's "Modes" section; it is a rule
-> about inputs and stores, not a constant, so it is not recorded here.
+> about inputs and stores, not a constant, so it is not recorded here. The PRACTICE / HUNT
+> watcher itself (`webapp/hunt/hunt-panel.js`, RNG Solution's `rngsolution/hunt/`) and the
+> capture constants it rests on (the box geometry and thresholds measured on the GBA HD, the
+> 18.28-frame border-strip lag and the -26.03-frame whole-box lag, the DMG's 38.83-frame
+> press-to-visible lag, the 2 samples-per-game-frame guard) are described in the README's
+> "Practice & Hunt window" paragraph and in RNG Solution's README ("PREDICT mode: the hunt
+> package") and `tests/fixtures/hunt/README.md`, where each fixture's provenance is listed.
 
 Copied from RNG Solution's `docs/FACTS.md` (the Gen 1 console tool; the text is its commit e105e84's,
 unchanged through bd47f98, the commit whose `tests/emit_vectors.py` emitted the vectors), which is

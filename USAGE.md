@@ -149,6 +149,16 @@ promoted), the desktop app's
    sample that turns up in the RUN store is listed as ignored), and the correction, P(hit) and
    drift you see are the practice ones until you switch back. The reset adjustment you remember
    (step 6) and the Secret ID pins (below) are kept the same way: per mode, stamped, never mixed.
+   **Practice & Hunt window (Electron, `bash electron/build.sh --with-hunt` builds only).** The
+   "Practice & Hunt" menu opens a window that watches a capture instead of asking you: pick
+   "Replay a PNG sequence" (the fixtures beside the app) or "Watch OBS" (obs-websocket
+   screenshots of the capture input; confirm the dialog; practice only). It prints "menu open"
+   when the NEW GAME box has persisted 0.6 s, then, when the box clears, the offset, the Trainer
+   ID and the verdict, "this prediction assumes methodology red/gba/hold-start-v1", the hold
+   verdict (`ok` / `unobserved` / a refusal when the hold was too close to the menu), and a
+   warning with the quantisation if the source was sampled too slowly. Type the true Trainer ID
+   of the last attempt and press "Calibrate" to store the implied lag under the practice key;
+   the RUN calibration is never touched. Nothing in this window runs while the switch is off.
 6. **Save-corruption reset.** The metronome beats RESET then A (GSE, Game Boy Player: 199.2 ms
    on the route path, 149.6 ms over a practice save) or A then power off (handhelds, DMG:
    397.9 ms). Calibrate from outcomes (does CONTINUE give the 255-Pokémon party?), never from

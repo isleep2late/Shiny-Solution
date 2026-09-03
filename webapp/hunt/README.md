@@ -22,4 +22,23 @@ Rules (README "Modes", RNG Solution's `docs/RNG_GUIDE_DESIGN.md` section 4.2):
   in force nowhere: the RUN side keeps only exact matches and names the rest as unknown.
 - It never touches LiveSplit, autosplit or reset logic.
 
-There is no capture-watching code here yet. `sentinel.js` is the marker the bundle tests use.
+What lives here (all of it staged and bundled only with `--with-hunt`):
+
+- `hunt-panel.js`: the Gen 1 menu-box watcher in JS, RNG Solution's `rngsolution/hunt` pipeline
+  for the GBA HD (the profiles' geometry and thresholds, the sample-rate guard, the
+  open -> close state machine with the overlay's hold check, the table lookup with the calibrated
+  lag, the practice-namespace calibration store `shinySolution.hunt.calibration.practice`
+  through `mode.js`'s `storeKey`). It exports the pure functions for node (`tests/test-hunt.cjs`
+  checks them against RNG Solution's `tests/fixtures/hunt/gen1-parity.json`, frame for frame on
+  the shared PNG poll and attempt for attempt on the real GBA HD timeline) and mounts the panel
+  into `#hunt-panel` when the page has one; it refuses to run while RUN mode is on.
+- `hunt.html`: the page the Electron app opens from its "Practice & Hunt" menu (present only
+  when this directory was staged), with the mode banner and switch above the panel.
+- `preload.js` and `electron-source.js`: the hunt window's bridge and its frame sources in the
+  Electron main process: a PNG-sequence replay (`tests/fixtures/hunt/<name>/frames.csv`), and
+  obs-websocket screenshots through the optional `ws` package, opened only after the renderer's
+  confirmation dialog and never by any test.
+- `sentinel.js`: the marker the bundle tests use.
+
+Every prediction the panel prints says which methodology it assumes and, when the source was
+undersampled, the quantisation it was measured with.

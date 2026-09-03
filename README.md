@@ -60,7 +60,7 @@ code that exists today):
 | Turned on by | Nothing: it is the default | The switch, explicitly; while it is on, a banner sits above every tab: *PRACTICE / HUNT mode - tools that read the capture are enabled; not for submitted runs* |
 | Calibration store | `shinySolution.gen1tid.calibration`, `shinySolution.gen1tid.resetAdjust`, `shinySolution.gen1tid.sidPins`, `shinySolution.cal.<kind>`, `shinySolution.g4.cald` (web); `gen1tid.calibration`, `gen1tid.resetAdjust`, `gen1tid.sidPins`, `cal.<key>`, `gen4.calibratedDelay` (desktop) | The same names with `.practice` appended: a separate namespace, never merged |
 | Records and logs | Every Gen 1 TID sample, remembered reset adjustment and Secret ID pin carries `mode: "run"`, every cue log's anchor line says `[RUN mode]`, every Gen 3 / Gen 4 calibration result is tagged | The same, stamped `practice` / `[PRACTICE / HUNT mode]` |
-| Where capture-watching code may live | Nowhere | `webapp/hunt/` (a `HuntPanel` in the desktop app when it exists) and RNG Solution's `watch.py` |
+| Where capture-watching code may live | Nowhere | `webapp/hunt/` (the Electron "Practice & Hunt" window in a `--with-hunt` build; a `HuntPanel` in the desktop app when it exists) and RNG Solution's `rngsolution/hunt/` behind `watch --practice` / `hunt --practice` |
 
 Inside a store, a sample under another methodology or made in the other mode is left out of
 the correction and named in a note, the way RNG Solution names samples under another
@@ -90,6 +90,27 @@ practice adjustment, a practice pin) never in force and named in the notes.
 `tests/test-mode-wall.cjs` and the C# `--mode-wall` check share `tests/mode-wall-fixture.json`
 (two RUN samples, one practice sample) and a corrupted copy with the practice sample restamped
 `run` is shown failing in both suites.
+
+**The Practice & Hunt window (Electron, `--with-hunt` builds only).** `webapp/hunt/hunt-panel.js`
+is RNG Solution's Gen 1 menu-box watcher in JS (its `rngsolution/hunt/`, design section 7): a
+frame source (a PNG-sequence replay from `tests/fixtures/hunt/`, or live obs-websocket
+screenshots through the main process's optional `ws` package, opened only after a confirmation
+dialog and never by a test), the extractor for the GBA HD profile (the NEW GAME box's dark
+fraction and the screen below it, geometry measured on the owner's capture), the sample-rate
+guard (below 2 samples per game frame the source is refused and every prediction names its
+quantisation), the open -> close state machine with the overlay's START-hold check, and the
+table lookup with the lag calibrated from typed true Trainer IDs. It runs only while PRACTICE /
+HUNT is on, keeps its samples under `shinySolution.hunt.calibration.practice` (never a RUN key),
+stamps every record `practice`, and prints "this prediction assumes methodology
+red/gba/hold-start-v1" with every offset. `tests/test-hunt.cjs` replays the shared fixtures and
+must reproduce RNG Solution's committed parity vector (`tests/fixtures/hunt/gen1-parity.json`:
+every frame's features on the PNG poll; the attempts, hold events, guard verdict and predictions
+on the real GBA HD timeline, including the hardware-measured offset-13 sample); a corrupted
+vector is shown failing. The plain bundle, the static page and the plain desktop stage carry
+none of it (the sentinel checks above now also look for the panel's own text). What it cannot
+do is exactly what RNG Solution's cannot: it never sees the START press itself, it reports a
+hold the overlay did not show as `unobserved`, and a menu that follows a hold too closely is a
+refusal, not a prediction.
 
 A prediction is only valid under one specific, named input protocol: its **methodology**
 (`<game>/<console family>/<protocol>-v<version>`, e.g. `red/gba/hold-start-v1`: hold START

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shiny-Solution: Practice &amp; Hunt</title>
+<link rel="stylesheet" href="../app.css">
+<style>
+  .hunt-banner { background: #5a1f1f; color: #ffd9d9; padding: 0.6em 1em; border-radius: 6px; font-weight: bold; }
+  #hunt-log { max-height: 24em; overflow: auto; background: #0d1014; padding: 0.6em; border-radius: 6px; }
+</style>
+</head>
+<body>
+<!-- This page ships only in a --with-hunt build (electron/build.sh, webapp/build-mobile-bundle.mjs): webapp/index.html
+     never references anything under webapp/hunt/. It is opened by the Electron app's "Practice & Hunt" menu item, which
+     exists only when the hunt directory was staged. -->
+<header>
+  <h1>Shiny-Solution: Practice &amp; Hunt</h1>
+  <p>The capture-watching side of the wall (RNG Solution's PREDICT mode): a state machine over screenshots or a
+  recording times the NEW GAME menu and the A press and predicts the Trainer ID. Practice, calibration and hunting only.</p>
+</header>
+<div id="mode-bar">
+  <div id="mode-banner" hidden>PRACTICE / HUNT mode - tools that read the capture are enabled; not for submitted runs</div>
+  <label class="check" id="mode-toggle"><input id="mode-practice" type="checkbox"> PRACTICE / HUNT mode (this panel does nothing while it is off)</label>
+</div>
+<main>
+  <section class="tab active">
+    <div class="card">
+      <h2>Gen 1 Trainer ID watcher (GBA HD, hold-START methodology)</h2>
+      <div id="hunt-panel"></div>
+      <p class="hint">Sources: a PNG-sequence replay from tests/fixtures/hunt (frames.csv timestamps, fed by the Electron main
+      process), or live obs-websocket screenshots (never connected by any test; confirm the dialog first). Every prediction names
+      the methodology it assumes and the sampling quantisation it was measured with; calibration samples are kept under the
+      practice store key only.</p>
+    </div>
+  </section>
+</main>
+<script src="../rng.js"></script>
+<script src="../gen1tid.js"></script>
+<script src="../gen1-data.js"></script>
+<script src="../mode.js"></script>
+<script src="hunt-panel.js"></script>
+<script>
+  // re-mount the panel when the mode switch changes (it refuses to run in RUN mode)
+  window.ShinyMode.subscribe(function () { window.ShinyHunt.mount(); });
+</script>
+</body>
+</html>
