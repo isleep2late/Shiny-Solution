@@ -871,7 +871,7 @@
    "rse/fossil/anorith|Anorith L20 - Rustboro City, Devon Corp. 2F [fossil, Method 1]|M1|random|0||20|347|decomp|1",
    "rse/gift/castform|Castform L25 - Route 119, Weather Institute 2F [gift, Method 1]|M1|random|0||25|351|decomp|1",
    "rse/gift/beldum|Beldum L5 - Mossdeep City, Steven's house [gift, Method 1]|M1|random|0||5|374|decomp|1",
-   "rse/egg/wynaut|Wynaut L5 - Lavaridge Town (hot spring old lady) [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|5|360|decomp|1",
+   "rse/egg/wynaut|Wynaut L5 - Lavaridge Town (hot spring old lady) [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3), not a Method 1 creation; the egg generators are engine-only here|5|360|decomp|1",
    "rse/static/kecleon|Kecleon L30 - Route 119 / Route 120 (Devon Scope) [stationary, Method 1]|M1|random|0||30|352|decomp|1",
    "rse/static/voltorb|Voltorb L25 - New Mauville (three item balls) [stationary, Method 1]|M1|random|0||25|100|decomp|1",
    "rse/static/electrode|Electrode L30 - Magma Hideout (Ruby) / Aqua Hideout (Sapphire, Emerald) item balls [stationary, Method 1]|M1|random|0||30|101|decomp|1",
@@ -891,7 +891,7 @@
    "rse/fossil/anorith|Anorith L20 - Rustboro City, Devon Corp. 2F [fossil, Method 1]|M1|random|0||20|347|decomp|1",
    "rse/gift/castform|Castform L25 - Route 119, Weather Institute 2F [gift, Method 1]|M1|random|0||25|351|decomp|1",
    "rse/gift/beldum|Beldum L5 - Mossdeep City, Steven's house [gift, Method 1]|M1|random|0||5|374|decomp|1",
-   "rse/egg/wynaut|Wynaut L5 - Lavaridge Town (hot spring old lady) [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|5|360|decomp|1",
+   "rse/egg/wynaut|Wynaut L5 - Lavaridge Town (hot spring old lady) [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3), not a Method 1 creation; the egg generators are engine-only here|5|360|decomp|1",
    "rse/static/kecleon|Kecleon L30 - Route 119 / Route 120 (Devon Scope) [stationary, Method 1]|M1|random|0||30|352|decomp|1",
    "rse/static/voltorb|Voltorb L25 - New Mauville (three item balls) [stationary, Method 1]|M1|random|0||25|100|decomp|1",
    "rse/static/electrode|Electrode L30 - Magma Hideout (Ruby) / Aqua Hideout (Sapphire, Emerald) item balls [stationary, Method 1]|M1|random|0||30|101|decomp|1",
@@ -914,8 +914,8 @@
    "rse/fossil/anorith|Anorith L20 - Rustboro City, Devon Corp. 2F [fossil, Method 1]|M1|random|0||20|347|decomp|1",
    "rse/gift/castform|Castform L25 - Route 119, Weather Institute 2F [gift, Method 1]|M1|random|0||25|351|decomp|1",
    "rse/gift/beldum|Beldum L5 - Mossdeep City, Steven's house [gift, Method 1]|M1|random|0||5|374|decomp|1",
-   "rse/egg/wynaut|Wynaut L5 - Lavaridge Town (hot spring old lady) [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|5|360|decomp|1",
-   "e/event/pichu-egg|Pichu L5 - Mystery Gift (Surfing Pichu egg) [event, Method 1]|M1|random|0||5|172|decomp|1",
+   "rse/egg/wynaut|Wynaut L5 - Lavaridge Town (hot spring old lady) [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3), not a Method 1 creation; the egg generators are engine-only here|5|360|decomp|1",
+   "e/event/pichu-egg|Pichu L5 - Mystery Gift (Surfing Pichu egg) [event, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3), not a Method 1 creation; the egg generators are engine-only here|5|172|decomp|1",
    "rse/static/kecleon|Kecleon L30 - Route 119 / Route 120 (Devon Scope) [stationary, Method 1]|M1|random|0||30|352|decomp|1",
    "rse/static/voltorb|Voltorb L25 - New Mauville (three item balls) [stationary, Method 1]|M1|random|0||25|100|decomp|1",
    "rse/static/electrode|Electrode L30 - Magma Hideout (Ruby) / Aqua Hideout (Sapphire, Emerald) item balls [stationary, Method 1]|M1|random|0||30|101|decomp|1",
@@ -947,7 +947,7 @@
    "frlg/gift/magikarp|Magikarp L5 - Route 4, Pokemon Center (Magikarp salesman) [gift, Method 1]|M1|random|0||5|129|decomp|1",
    "frlg/gift/lapras|Lapras L25 - Silph Co. 7F [gift, Method 1]|M1|random|0||25|131|decomp|1",
    "frlg/gift/eevee|Eevee L25 - Celadon City, Celadon Condominiums roof [gift, Method 1]|M1|random|0||25|133|decomp|1",
-   "frlg/egg/togepi|Togepi L5 - Five Island, Water Labyrinth [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|5|175|decomp|1",
+   "frlg/egg/togepi|Togepi L5 - Five Island, Water Labyrinth [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3), not a Method 1 creation; the egg generators are engine-only here|5|175|decomp|1",
    "fr/game-corner/abra|Abra L9 - Celadon City, Game Corner prize room [game_corner, Method 1]|M1|random|0||9|63|decomp|1",
    "fr/game-corner/clefairy|Clefairy L8 - Celadon City, Game Corner prize room [game_corner, Method 1]|M1|random|0||8|35|decomp|1",
    "fr/game-corner/dratini|Dratini L18 - Celadon City, Game Corner prize room [game_corner, Method 1]|M1|random|0||18|147|decomp|1",
@@ -980,7 +980,7 @@
    "frlg/gift/magikarp|Magikarp L5 - Route 4, Pokemon Center (Magikarp salesman) [gift, Method 1]|M1|random|0||5|129|decomp|1",
    "frlg/gift/lapras|Lapras L25 - Silph Co. 7F [gift, Method 1]|M1|random|0||25|131|decomp|1",
    "frlg/gift/eevee|Eevee L25 - Celadon City, Celadon Condominiums roof [gift, Method 1]|M1|random|0||25|133|decomp|1",
-   "frlg/egg/togepi|Togepi L5 - Five Island, Water Labyrinth [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|5|175|decomp|1",
+   "frlg/egg/togepi|Togepi L5 - Five Island, Water Labyrinth [egg, Method 1]|M1|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3), not a Method 1 creation; the egg generators are engine-only here|5|175|decomp|1",
    "lg/game-corner/abra|Abra L7 - Celadon City, Game Corner prize room [game_corner, Method 1]|M1|random|0||7|63|decomp|1",
    "lg/game-corner/clefairy|Clefairy L12 - Celadon City, Game Corner prize room [game_corner, Method 1]|M1|random|0||12|35|decomp|1",
    "lg/game-corner/dratini|Dratini L24 - Celadon City, Game Corner prize room [game_corner, Method 1]|M1|random|0||24|147|decomp|1",
@@ -1002,7 +1002,7 @@
    "frlg/roamer/suicune|Suicune L50 - roaming Kanto (depends on the starter) [roamer, Method 1, roamer IV bug]|M1|random|1||50|245|decomp|1"
   ],
   "diamond": [
-   "dppt/egg/riolu|Riolu L1 - Iron Island (Riley) [egg, Method J]|J|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|447|decomp|1",
+   "dppt/egg/riolu|Riolu L1 - Iron Island (Riley) [egg, Method J]|J|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|447|decomp|1",
    "dppt/static/spiritomb|Spiritomb L25 - Route 209, Hallowed Tower [stationary, Method J]|J|random|0||25|442|decomp|1",
    "dppt/legend/uxie|Uxie L50 - Acuity Cavern [legendary, Method J]|J|random|0||50|480|decomp|1",
    "dppt/legend/azelf|Azelf L50 - Valor Cavern [legendary, Method J]|J|random|0||50|482|decomp|1",
@@ -1019,17 +1019,17 @@
    "dp/fossil/cranidos|Cranidos L20 - Oreburgh City, Mining Museum [fossil, Method 1]|M1|random|0||20|408|pokefinder|0",
    "dp/fossil/shieldon|Shieldon L20 - Oreburgh City, Mining Museum [fossil, Method 1]|M1|random|0||20|410|pokefinder|0",
    "dp/gift/eevee|Eevee L5 - Hearthome City, Bebe's house [gift, Method 1]|M1|random|0||5|133|pokefinder|0",
-   "dp/egg/happiny|Happiny L1 - Hearthome City (traveling man) [egg, Method J]|J|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|440|pokefinder|0",
+   "dp/egg/happiny|Happiny L1 - Hearthome City (traveling man) [egg, Method J]|J|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|440|pokefinder|0",
    "dp/static/drifloon|Drifloon L22 - Valley Windworks (Fridays) [stationary, Method J]|J|random|0||22|425|pokefinder|0",
    "dp/static/rotom|Rotom L15 - Old Chateau (TV at night) [stationary, Method J]|J|random|0||15|479|pokefinder|0",
    "d/legend/dialga|Dialga L47 - Spear Pillar [legendary, Method J]|J|random|0||47|483|pokefinder|0",
    "dp/legend/heatran|Heatran L70 - Stark Mountain [legendary, Method J]|J|random|0||70|485|pokefinder|0",
    "dp/legend/regigigas|Regigigas L70 - Snowpoint Temple B5F [legendary, Method J]|J|random|0||70|486|pokefinder|0",
    "dp/legend/giratina|Giratina L70 - Turnback Cave [legendary, Method J]|J|random|0||70|487|pokefinder|0",
-   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0||1|490|pokefinder|0"
+   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|490|pokefinder|0"
   ],
   "pearl": [
-   "dppt/egg/riolu|Riolu L1 - Iron Island (Riley) [egg, Method J]|J|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|447|decomp|1",
+   "dppt/egg/riolu|Riolu L1 - Iron Island (Riley) [egg, Method J]|J|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|447|decomp|1",
    "dppt/static/spiritomb|Spiritomb L25 - Route 209, Hallowed Tower [stationary, Method J]|J|random|0||25|442|decomp|1",
    "dppt/legend/uxie|Uxie L50 - Acuity Cavern [legendary, Method J]|J|random|0||50|480|decomp|1",
    "dppt/legend/azelf|Azelf L50 - Valor Cavern [legendary, Method J]|J|random|0||50|482|decomp|1",
@@ -1046,14 +1046,14 @@
    "dp/fossil/cranidos|Cranidos L20 - Oreburgh City, Mining Museum [fossil, Method 1]|M1|random|0||20|408|pokefinder|0",
    "dp/fossil/shieldon|Shieldon L20 - Oreburgh City, Mining Museum [fossil, Method 1]|M1|random|0||20|410|pokefinder|0",
    "dp/gift/eevee|Eevee L5 - Hearthome City, Bebe's house [gift, Method 1]|M1|random|0||5|133|pokefinder|0",
-   "dp/egg/happiny|Happiny L1 - Hearthome City (traveling man) [egg, Method J]|J|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|440|pokefinder|0",
+   "dp/egg/happiny|Happiny L1 - Hearthome City (traveling man) [egg, Method J]|J|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|440|pokefinder|0",
    "dp/static/drifloon|Drifloon L22 - Valley Windworks (Fridays) [stationary, Method J]|J|random|0||22|425|pokefinder|0",
    "dp/static/rotom|Rotom L15 - Old Chateau (TV at night) [stationary, Method J]|J|random|0||15|479|pokefinder|0",
    "p/legend/palkia|Palkia L47 - Spear Pillar [legendary, Method J]|J|random|0||47|484|pokefinder|0",
    "dp/legend/heatran|Heatran L70 - Stark Mountain [legendary, Method J]|J|random|0||70|485|pokefinder|0",
    "dp/legend/regigigas|Regigigas L70 - Snowpoint Temple B5F [legendary, Method J]|J|random|0||70|486|pokefinder|0",
    "dp/legend/giratina|Giratina L70 - Turnback Cave [legendary, Method J]|J|random|0||70|487|pokefinder|0",
-   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0||1|490|pokefinder|0"
+   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|490|pokefinder|0"
   ],
   "platinum": [
    "pt/starter/turtwig|Turtwig L5 - Route 201 / Lake Verity (Rowan's briefcase) [starter, Method 1]|M1|random|0||5|387|decomp|1",
@@ -1068,8 +1068,8 @@
    "pt/fossil/shieldon|Shieldon L20 - Oreburgh City, Mining Museum [fossil, Method 1]|M1|random|0||20|410|decomp|1",
    "pt/gift/eevee|Eevee L20 - Hearthome City, Bebe's house [gift, Method 1]|M1|random|0||20|133|decomp|1",
    "pt/gift/porygon|Porygon L25 - Veilstone City (north-east house) [gift, Method 1]|M1|random|0||25|137|decomp|1",
-   "pt/egg/togepi|Togepi L1 - Eterna City (Cynthia) [egg, Method J]|J|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|175|decomp|1",
-   "dppt/egg/riolu|Riolu L1 - Iron Island (Riley) [egg, Method J]|J|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|447|decomp|1",
+   "pt/egg/togepi|Togepi L1 - Eterna City (Cynthia) [egg, Method J]|J|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|175|decomp|1",
+   "dppt/egg/riolu|Riolu L1 - Iron Island (Riley) [egg, Method J]|J|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|447|decomp|1",
    "pt/static/rotom|Rotom L20 - Old Chateau (TV at night) [stationary, Method J]|J|random|0||20|479|decomp|1",
    "dppt/static/spiritomb|Spiritomb L25 - Route 209, Hallowed Tower [stationary, Method J]|J|random|0||25|442|decomp|1",
    "pt/static/drifloon|Drifloon L15 - Valley Windworks (Fridays) [stationary, Method J]|J|random|0||15|425|decomp|1",
@@ -1092,10 +1092,10 @@
    "pt/roamer/articuno|Articuno L60 - roaming Sinnoh [roamer, Method 1]|M1|random|0||60|144|decomp|1",
    "pt/roamer/zapdos|Zapdos L60 - roaming Sinnoh [roamer, Method 1]|M1|random|0||60|145|decomp|1",
    "pt/roamer/moltres|Moltres L60 - roaming Sinnoh [roamer, Method 1]|M1|random|0||60|146|decomp|1",
-   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0||1|490|pokefinder|0"
+   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|490|pokefinder|0"
   ],
   "heartgold": [
-   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0||1|490|pokefinder|0",
+   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|490|pokefinder|0",
    "hgss/starter/chikorita|Chikorita L5 - New Bark Town, Elm's Lab [starter, Method 1]|M1|random|0||5|152|decomp|1",
    "hgss/starter/cyndaquil|Cyndaquil L5 - New Bark Town, Elm's Lab [starter, Method 1]|M1|random|0||5|155|decomp|1",
    "hgss/starter/totodile|Totodile L5 - New Bark Town, Elm's Lab [starter, Method 1]|M1|random|0||5|158|decomp|1",
@@ -1116,10 +1116,10 @@
    "hgss/gift/dratini|Dratini L15 - Dragon's Den shrine (Extreme Speed quiz) [gift, Method 1]|M1|random|0||15|147|decomp|1",
    "hgss/gift/tentacool|Tentacool L15 - Cianwood City, Pokemon Center [gift, Method 1]|M1|random|0||15|72|decomp|1",
    "hgss/gift/eevee|Eevee L5 - Goldenrod City, Bill's house [gift, Method 1]|M1|random|0||5|133|decomp|1",
-   "hgss/egg/togepi|Togepi L1 - New Bark Town, Elm's Lab (Mystery Egg) [egg, Method K]|K|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|175|decomp|1",
-   "hgss/egg/mareep|Mareep L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|179|decomp|1",
-   "hgss/egg/wooper|Wooper L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|194|decomp|1",
-   "hgss/egg/slugma|Slugma L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|218|decomp|1",
+   "hgss/egg/togepi|Togepi L1 - New Bark Town, Elm's Lab (Mystery Egg) [egg, Method K]|K|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|175|decomp|1",
+   "hgss/egg/mareep|Mareep L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|179|decomp|1",
+   "hgss/egg/wooper|Wooper L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|194|decomp|1",
+   "hgss/egg/slugma|Slugma L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|218|decomp|1",
    "hgss/event/dialga-sinjoh|Dialga L1 - Sinjoh Ruins (Arceus event) [event, Method 1]|M1|random|0||1|483|decomp|1",
    "hgss/event/palkia-sinjoh|Palkia L1 - Sinjoh Ruins (Arceus event) [event, Method 1]|M1|random|0||1|484|decomp|1",
    "hgss/event/giratina-sinjoh|Giratina L1 - Sinjoh Ruins (Arceus event) [event, Method 1]|M1|random|0||1|487|decomp|1",
@@ -1153,7 +1153,7 @@
    "hg/roamer/latias|Latias L35 - roaming Kanto (released by Steven in Vermilion City) [roamer, Method 1]|M1|random|0||35|380|decomp|1"
   ],
   "soulsilver": [
-   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0||1|490|pokefinder|0",
+   "gen4/event/manaphy-egg|Manaphy L1 - Pokemon Ranger egg (Mystery Gift) [event, Method 1]|M1|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|490|pokefinder|0",
    "hgss/starter/chikorita|Chikorita L5 - New Bark Town, Elm's Lab [starter, Method 1]|M1|random|0||5|152|decomp|1",
    "hgss/starter/cyndaquil|Cyndaquil L5 - New Bark Town, Elm's Lab [starter, Method 1]|M1|random|0||5|155|decomp|1",
    "hgss/starter/totodile|Totodile L5 - New Bark Town, Elm's Lab [starter, Method 1]|M1|random|0||5|158|decomp|1",
@@ -1174,10 +1174,10 @@
    "hgss/gift/dratini|Dratini L15 - Dragon's Den shrine (Extreme Speed quiz) [gift, Method 1]|M1|random|0||15|147|decomp|1",
    "hgss/gift/tentacool|Tentacool L15 - Cianwood City, Pokemon Center [gift, Method 1]|M1|random|0||15|72|decomp|1",
    "hgss/gift/eevee|Eevee L5 - Goldenrod City, Bill's house [gift, Method 1]|M1|random|0||5|133|decomp|1",
-   "hgss/egg/togepi|Togepi L1 - New Bark Town, Elm's Lab (Mystery Egg) [egg, Method K]|K|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|175|decomp|1",
-   "hgss/egg/mareep|Mareep L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|179|decomp|1",
-   "hgss/egg/wooper|Wooper L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|194|decomp|1",
-   "hgss/egg/slugma|Slugma L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here|1|218|decomp|1",
+   "hgss/egg/togepi|Togepi L1 - New Bark Town, Elm's Lab (Mystery Egg) [egg, Method K]|K|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|175|decomp|1",
+   "hgss/egg/mareep|Mareep L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|179|decomp|1",
+   "hgss/egg/wooper|Wooper L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|194|decomp|1",
+   "hgss/egg/slugma|Slugma L1 - Violet City, Pokemon Center (Primo) [egg, Method K]|K|random|0|an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here|1|218|decomp|1",
    "hgss/event/dialga-sinjoh|Dialga L1 - Sinjoh Ruins (Arceus event) [event, Method 1]|M1|random|0||1|483|decomp|1",
    "hgss/event/palkia-sinjoh|Palkia L1 - Sinjoh Ruins (Arceus event) [event, Method 1]|M1|random|0||1|484|decomp|1",
    "hgss/event/giratina-sinjoh|Giratina L1 - Sinjoh Ruins (Arceus event) [event, Method 1]|M1|random|0||1|487|decomp|1",
@@ -3237,12 +3237,12 @@
    ],
    "procedure": [
     "Procedure (rs/gba/boot-seed-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand where the encounter starts (Groudon L45 - Cave of Origin B4F [legendary, Method 1]) and save; the last A that starts the battle or the gift is the timed press.",
-    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds 00000000 at frame 0 (rs/gba/boot-seed-v0).",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:05.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:00.050 = frame 3 x 16.7427 ms + 0 ms calibration: press A on the last beep. Target 00:00.050 after the seed.",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand where the encounter starts (Groudon L45 - Cave of Origin B4F [legendary, Method 1]) and save; the last A that starts the battle or the gift is the timed press. [rs/gba/boot-seed-v0]",
+    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds 00000000 at frame 0 (rs/gba/boot-seed-v0). [rs/gba/boot-seed-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [rs/gba/boot-seed-v0]",
+    "4. Timer: phase 1 00:05.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:00.050 = frame 3 x 16.7427 ms + 0 ms calibration: press A on the last beep. Target 00:00.050 after the seed. [rs/gba/boot-seed-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [rs/gba/boot-seed-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [rs/gba/boot-seed-v0]"
    ],
    "phases": [
     5000,
@@ -3537,12 +3537,12 @@
    ],
    "procedure": [
     "Procedure (emerald/gba/boot-seed-0-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand on the grass / cave (land) tile of Route 111 (MAP_ROUTE111) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash).",
-    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds 1C71C71C at frame 0 (emerald/gba/boot-seed-0-v0).",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:05.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:00.105 = frame 7 x 16.7427 ms - 12.3 ms calibration: press A on the last beep. Target 00:00.117 after the seed.",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand on the grass / cave (land) tile of Route 111 (MAP_ROUTE111) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash). [emerald/gba/boot-seed-0-v0]",
+    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds 1C71C71C at frame 0 (emerald/gba/boot-seed-0-v0). [emerald/gba/boot-seed-0-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [emerald/gba/boot-seed-0-v0]",
+    "4. Timer: phase 1 00:05.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:00.105 = frame 7 x 16.7427 ms - 12.3 ms calibration: press A on the last beep. Target 00:00.117 after the seed. [emerald/gba/boot-seed-0-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [emerald/gba/boot-seed-0-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [emerald/gba/boot-seed-0-v0]"
    ],
    "phases": [
     5000,
@@ -3667,12 +3667,12 @@
    ],
    "procedure": [
     "Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: in front of Turtwig L5 - Route 201 / Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (3 members).",
-    "2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute (the countdown spans that long); target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0).",
-    "3. Timer: start it as the clock confirms; phase 1 00:41.964 ends on the first long beep: press A to load the game from the DS menu; phase 2 05:17.236 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js).",
-    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.",
-    "5. Advance to frame 0: no advance needed from frame 10. Then trigger the encounter.",
-    "6. Read the nature and stats: the card above says what frame 0 of seed 7B0448D1 creates."
+    "1. Prepare the save: in front of Turtwig L5 - Route 201 / Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (3 members). [dppt/nds/seed-to-time-v0]",
+    "2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute (the countdown spans that long); target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0). [dppt/nds/seed-to-time-v0]",
+    "3. Timer: start it as the clock confirms; phase 1 00:41.964 ends on the first long beep: press A to load the game from the DS menu; phase 2 05:17.236 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js). [dppt/nds/seed-to-time-v0]",
+    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target. [dppt/nds/seed-to-time-v0]",
+    "5. Advance to frame 0: no advance needed from frame 10. Then trigger the encounter. [dppt/nds/seed-to-time-v0]",
+    "6. Read the nature and stats: the card above says what frame 0 of seed 7B0448D1 creates. [dppt/nds/seed-to-time-v0]"
    ],
    "phases": [
     41964,
@@ -3966,12 +3966,12 @@
    ],
    "procedure": [
     "Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: on the grass / cave (land) tile of Route 222 (encounters_route_222), lead magnet pull. Save with the party you will advance with (1 member).",
-    "2. DS clock: set 2099-02-21 23:59 and confirm it 0 minutes before the target minute (the countdown spans that long); target second 59, target delay 811 -> seed A017038E (dppt/nds/seed-to-time-v0).",
-    "3. Timer: start it as the clock confirms; phase 1 00:39.994 ends on the first long beep: press A to load the game from the DS menu; phase 2 00:19.206 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js).",
-    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.",
-    "5. Advance to frame 42: 42 x walk128 (+1 each, STRUCTURAL) from frame 0 (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers). Then trigger the encounter.",
-    "6. Read the nature and stats: the card above says what frame 42 of seed A017038E creates."
+    "1. Prepare the save: on the grass / cave (land) tile of Route 222 (encounters_route_222), lead magnet pull. Save with the party you will advance with (1 member). [dppt/nds/seed-to-time-v0]",
+    "2. DS clock: set 2099-02-21 23:59 and confirm it 0 minutes before the target minute (the countdown spans that long); target second 59, target delay 811 -> seed A017038E (dppt/nds/seed-to-time-v0). [dppt/nds/seed-to-time-v0]",
+    "3. Timer: start it as the clock confirms; phase 1 00:39.994 ends on the first long beep: press A to load the game from the DS menu; phase 2 00:19.206 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js). [dppt/nds/seed-to-time-v0]",
+    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target. [dppt/nds/seed-to-time-v0]",
+    "5. Advance to frame 42: 42 x walk128 (+1 each, STRUCTURAL) from frame 0 (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers). Then trigger the encounter. [dppt/nds/seed-to-time-v0]",
+    "6. Read the nature and stats: the card above says what frame 42 of seed A017038E creates. [dppt/nds/seed-to-time-v0]"
    ],
    "phases": [
     39994,
@@ -4212,12 +4212,12 @@
    ],
    "procedure": [
     "Procedure (rs/gba/boot-seed-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand where the encounter starts (Groudon L45 - Cave of Origin B4F [legendary, Method 1]) and save; the last A that starts the battle or the gift is the timed press.",
-    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds D3259444 at frame 0 (rs/gba/boot-seed-v0).",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:03.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:04.203 = frame 250 x 16.7427 ms + 16.742725372314453 ms calibration: press A on the last beep. Target 00:04.186 after the seed.",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand where the encounter starts (Groudon L45 - Cave of Origin B4F [legendary, Method 1]) and save; the last A that starts the battle or the gift is the timed press. [rs/gba/boot-seed-v0]",
+    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds D3259444 at frame 0 (rs/gba/boot-seed-v0). [rs/gba/boot-seed-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [rs/gba/boot-seed-v0]",
+    "4. Timer: phase 1 00:03.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:04.203 = frame 250 x 16.7427 ms + 16.742725372314453 ms calibration: press A on the last beep. Target 00:04.186 after the seed. [rs/gba/boot-seed-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [rs/gba/boot-seed-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [rs/gba/boot-seed-v0]"
    ],
    "phases": [
     3000,
@@ -4320,12 +4320,12 @@
    ],
    "procedure": [
     "Procedure (emerald/gba/boot-seed-0-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand on the Good Rod tile of Route 122 (MAP_ROUTE122) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash); lead static.",
-    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds 00000000 at frame 0 (emerald/gba/boot-seed-0-v0).",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:08.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:26.033 = frame 1553 x 16.7629 ms + 0 ms calibration: press A on the last beep. Target 00:26.033 after the seed.",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand on the Good Rod tile of Route 122 (MAP_ROUTE122) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash); lead static. [emerald/gba/boot-seed-0-v0]",
+    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds 00000000 at frame 0 (emerald/gba/boot-seed-0-v0). [emerald/gba/boot-seed-0-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [emerald/gba/boot-seed-0-v0]",
+    "4. Timer: phase 1 00:08.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:26.033 = frame 1553 x 16.7629 ms + 0 ms calibration: press A on the last beep. Target 00:26.033 after the seed. [emerald/gba/boot-seed-0-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [emerald/gba/boot-seed-0-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [emerald/gba/boot-seed-0-v0]"
    ],
    "phases": [
     8000,
@@ -4445,12 +4445,12 @@
    ],
    "procedure": [
     "Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: in front of Azelf L50 - Valor Cavern [legendary, Method J], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (5 members).",
-    "2. DS clock: set 2031-01-07 15:59 and confirm it 0 minutes before the target minute (the countdown spans that long); target second 59, target delay 937 -> seed 7D0F03C8 (dppt/nds/seed-to-time-v0).",
-    "3. Timer: start it as the clock confirms; phase 1 00:36.902 ends on the first long beep: press A to load the game from the DS menu; phase 2 00:22.298 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 15; EonTimer's delay model, core/timers.js).",
-    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.",
-    "5. Advance to frame 259: 50 x walk128 (+5 each, STRUCTURAL), 1 x chatot (+1 each, STRUCTURAL) from frame 8 (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers). Then trigger the encounter.",
-    "6. Read the nature and stats: the card above says what frame 259 of seed 7D0F03C8 creates."
+    "1. Prepare the save: in front of Azelf L50 - Valor Cavern [legendary, Method J], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (5 members). [dppt/nds/seed-to-time-v0]",
+    "2. DS clock: set 2031-01-07 15:59 and confirm it 0 minutes before the target minute (the countdown spans that long); target second 59, target delay 937 -> seed 7D0F03C8 (dppt/nds/seed-to-time-v0). [dppt/nds/seed-to-time-v0]",
+    "3. Timer: start it as the clock confirms; phase 1 00:36.902 ends on the first long beep: press A to load the game from the DS menu; phase 2 00:22.298 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 15; EonTimer's delay model, core/timers.js). [dppt/nds/seed-to-time-v0]",
+    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target. [dppt/nds/seed-to-time-v0]",
+    "5. Advance to frame 259: 50 x walk128 (+5 each, STRUCTURAL), 1 x chatot (+1 each, STRUCTURAL) from frame 8 (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers). Then trigger the encounter. [dppt/nds/seed-to-time-v0]",
+    "6. Read the nature and stats: the card above says what frame 259 of seed 7D0F03C8 creates. [dppt/nds/seed-to-time-v0]"
    ],
    "phases": [
     36902,
@@ -4697,12 +4697,12 @@
    ],
    "procedure": [
     "Procedure (frlg/gba/typed-seed-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand on the Good Rod tile of Viridian City (MAP_VIRIDIAN_CITY) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash).",
-    "2. The seed: the typed seed 535167D5 must be the one in force (frlg/gba/typed-seed-v0: FireRed / LeafGreen seed the RNG from a Timer1 count at the title-screen press (pokefirered/src/naming_screen.c:717-722 for the naming exit; the title press is the same kind of count): there is no fixed seed. Type the seed you already know (from a frame hit you identified, or a community seed table); without one this game is stated unavailable here.)",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:08.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:00.938 = frame 54 x 16.7629 ms + 33.4 ms calibration: press A on the last beep. Target 00:00.905 after the seed.",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand on the Good Rod tile of Viridian City (MAP_VIRIDIAN_CITY) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash). [frlg/gba/typed-seed-v0]",
+    "2. The seed: the typed seed 535167D5 must be the one in force (frlg/gba/typed-seed-v0: FireRed / LeafGreen seed the RNG from a Timer1 count at the title-screen press (pokefirered/src/naming_screen.c:717-722 for the naming exit; the title press is the same kind of count): there is no fixed seed. Type the seed you already know (from a frame hit you identified, or a community seed table); without one this game is stated unavailable here.) [frlg/gba/typed-seed-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [frlg/gba/typed-seed-v0]",
+    "4. Timer: phase 1 00:08.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:00.938 = frame 54 x 16.7629 ms + 33.4 ms calibration: press A on the last beep. Target 00:00.905 after the seed. [frlg/gba/typed-seed-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [frlg/gba/typed-seed-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [frlg/gba/typed-seed-v0]"
    ],
    "phases": [
     8000,
@@ -4719,7 +4719,7 @@
     "game": "diamond",
     "console": "NDS_SLOT1",
     "kind": "static",
-    "staticId": "dp/fossil/lileep",
+    "staticId": "dp/fossil/aerodactyl",
     "method": "M1",
     "leadKey": "",
     "leadNature": 9,
@@ -4745,95 +4745,44 @@
      "nature": null,
      "gender": null,
      "ability": null,
-     "shiny": false,
-     "tid": 34774,
-     "sid": 55535,
+     "shiny": true,
+     "tid": 55535,
+     "sid": 48488,
      "species": null
     },
-    "maxFrame": 2000,
-    "yearMin": 2000,
-    "yearMax": 2005,
+    "maxFrame": 100,
+    "yearMin": 2010,
+    "yearMax": 2015,
     "delayMin": 500,
-    "delayMax": 5000,
+    "delayMax": 20000,
     "targetDelay": 18641,
-    "current": 16,
-    "party": 1,
-    "calibratedDelay": 500,
-    "calibratedSecond": 15
+    "current": 2,
+    "party": 2,
+    "calibratedDelay": 480,
+    "calibratedSecond": 14
    },
    "lines": [
     "Seed model: dppt/nds/seed-to-time-v0 (PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate)).",
-    "1 IV combination -> 6 IV origin states after the PID filter -> 1102 seeds a clock can produce within 2000 frames (hour byte 0-23) -> 1102 candidates confirmed by the static generator frame by frame.",
-    "30 date / time / delay rows inside the delay and year windows, nearest the target delay first (the year is a delay knob: +1 year = -1 delay for the same seed).",
-    "Feasibility: about 0.000140 matching frames per 100,000 (IV count exact over the 2^32 LCRNG cycle: 0.0001397 per 100,000).",
-    "  Expected first hit near frame 715827883 on average.",
+    "1 IV combination -> 0 IV origin states after the PID filter -> 0 seeds a clock can produce within 100 frames (hour byte 0-23) -> 0 candidates confirmed by the static generator frame by frame.",
+    "No row inside the delay and year windows: widen the delay window or the years, or raise the frame limit; the design's flawless case, 7B0448D1 -> frame 0, needs delay 18641 in 2000.",
+    "Feasibility: about 1.71e-8 matching frames per 100,000 (IV count exact over the 2^32 LCRNG cycle: 0.0001397 per 100,000; x shiny 8/65536).",
+    "  Expected first hit near frame 5864062014805 on average.",
     "  A reachable seed exists for about 9.4 % of back-steps (the hour byte), so the search is exact within its windows, not a promise that a low frame exists."
    ],
-   "rows": [
-    "1B081385|1785|2000-01-01 08:00:26|4997|13644|537AB5D6|1785|537AFA30|11/1/26/13/13/1|18|0|0|20|58/21/41/32/42/14|4|-1|0|DRAGON|33",
-    "1B081385|1785|2000-01-01 08:01:25|4997|13644|537AB5D6|1785|537AFA30|11/1/26/13/13/1|18|0|0|20|58/21/41/32/42/14|4|-1|0|DRAGON|33",
-    "9B081385|1785|2000-02-19 08:58:59|4997|13644|D37AB5D6|1785|D37A7A30|11/1/26/13/13/1|23|0|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "9B081385|1785|2000-02-19 08:59:58|4997|13644|D37AB5D6|1785|D37A7A30|11/1/26/13/13/1|23|0|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "16111359|281|2000-01-01 17:00:21|4953|13688|C36FCB5A|281|C36F6506|11/1/26/13/13/1|3|1|0|20|58/23/41/28/42/14|4|-1|0|DRAGON|33",
-    "16111359|281|2000-01-01 17:01:20|4953|13688|C36FCB5A|281|C36F6506|11/1/26/13/13/1|3|1|0|20|58/23/41/28/42/14|4|-1|0|DRAGON|33",
-    "96111359|281|2000-02-16 17:59:59|4953|13688|436FCB5A|281|436FE506|11/1/26/13/13/1|23|1|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "96111359|281|2000-02-17 17:57:59|4953|13688|436FCB5A|281|436FE506|11/1/26/13/13/1|23|1|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "74081315|749|2000-01-01 08:56:59|4885|13756|C36FCB5A|749|C36F6506|11/1/26/13/13/1|3|1|0|20|58/23/41/28/42/14|4|-1|0|DRAGON|33",
-    "74081315|749|2000-01-01 08:57:58|4885|13756|C36FCB5A|749|C36F6506|11/1/26/13/13/1|3|1|0|20|58/23/41/28/42/14|4|-1|0|DRAGON|33",
-    "F4081315|749|2000-05-26 08:55:59|4885|13756|436FCB5A|749|436FE506|11/1/26/13/13/1|23|1|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "F4081315|749|2000-05-26 08:56:58|4885|13756|436FCB5A|749|436FE506|11/1/26/13/13/1|23|1|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "050212F4|1409|2000-01-01 02:00:04|4852|13789|D4627299|1409|D46242D0|11/1/26/13/13/1|24|0|0|20|58/21/41/32/42/14|4|-1|0|DRAGON|33",
-    "050212F4|1409|2000-01-01 02:01:03|4852|13789|D4627299|1409|D46242D0|11/1/26/13/13/1|24|0|0|20|58/21/41/32/42/14|4|-1|0|DRAGON|33",
-    "850212F4|1409|2000-01-15 02:59:59|4852|13789|54627299|1409|5462C2D0|11/1/26/13/13/1|19|0|0|20|58/21/41/35/37/14|4|-1|0|DRAGON|33",
-    "850212F4|1409|2000-01-16 02:58:59|4852|13789|54627299|1409|5462C2D0|11/1/26/13/13/1|19|0|0|20|58/21/41/35/37/14|4|-1|0|DRAGON|33",
-    "5F0D12C7|555|2000-01-01 13:35:59|4807|13834|436FCB5A|555|436FE506|11/1/26/13/13/1|23|1|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "5F0D12C7|555|2000-01-01 13:36:58|4807|13834|436FCB5A|555|436FE506|11/1/26/13/13/1|23|1|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "DF0D12C7|555|2000-04-27 13:56:59|4807|13834|C36FCB5A|555|C36F6506|11/1/26/13/13/1|3|1|0|20|58/23/41/28/42/14|4|-1|0|DRAGON|33",
-    "DF0D12C7|555|2000-04-27 13:57:58|4807|13834|C36FCB5A|555|C36F6506|11/1/26/13/13/1|3|1|0|20|58/23/41/28/42/14|4|-1|0|DRAGON|33",
-    "7012127C|1657|2000-01-01 18:52:59|4732|13909|D4627299|1657|D46242D0|11/1/26/13/13/1|24|0|0|20|58/21/41/32/42/14|4|-1|0|DRAGON|33",
-    "7012127C|1657|2000-01-01 18:53:58|4732|13909|D4627299|1657|D46242D0|11/1/26/13/13/1|24|0|0|20|58/21/41/32/42/14|4|-1|0|DRAGON|33",
-    "F012127C|1657|2000-05-25 18:56:59|4732|13909|54627299|1657|5462C2D0|11/1/26/13/13/1|19|0|0|20|58/21/41/35/37/14|4|-1|0|DRAGON|33",
-    "F012127C|1657|2000-05-25 18:57:58|4732|13909|54627299|1657|5462C2D0|11/1/26/13/13/1|19|0|0|20|58/21/41/35/37/14|4|-1|0|DRAGON|33",
-    "6F0A11CF|1667|2000-01-01 10:51:59|4559|14082|C36FCB5A|1667|C36F6506|11/1/26/13/13/1|3|1|0|20|58/23/41/28/42/14|4|-1|0|DRAGON|33",
-    "6F0A11CF|1667|2000-01-01 10:52:58|4559|14082|C36FCB5A|1667|C36F6506|11/1/26/13/13/1|3|1|0|20|58/23/41/28/42/14|4|-1|0|DRAGON|33",
-    "EF0A11CF|1667|2000-05-25 10:55:59|4559|14082|436FCB5A|1667|436FE506|11/1/26/13/13/1|23|1|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "EF0A11CF|1667|2000-05-25 10:56:58|4559|14082|436FCB5A|1667|436FE506|11/1/26/13/13/1|23|1|0|20|58/21/41/28/46/14|4|-1|0|DRAGON|33",
-    "4909112B|1427|2000-01-01 09:13:59|4395|14246|537AB5D6|1427|537AFA30|11/1/26/13/13/1|18|0|0|20|58/21/41/32/42/14|4|-1|0|DRAGON|33",
-    "4909112B|1427|2000-01-01 09:14:58|4395|14246|537AB5D6|1427|537AFA30|11/1/26/13/13/1|18|0|0|20|58/21/41/32/42/14|4|-1|0|DRAGON|33"
-   ],
+   "rows": [],
    "combos": 1,
-   "origins": 6,
-   "candidates": 1102,
-   "verified": 1102,
-   "maxFrame": 2000,
+   "origins": 0,
+   "candidates": 0,
+   "verified": 0,
+   "maxFrame": 100,
    "feasibility": {
     "ivPer100k": 0.00013969838619232178,
     "ivExact": true,
-    "per100k": 0.00013969838619232178,
-    "parts": []
-   },
-   "card": [
-    "Result card (EMPIRICAL / model output)",
-    "  Lileep L20  PID 537AFA30  nature Bashful  gender M  ability SUCTION_CUPS (slot 1)",
-    "  IVs 11/1/26/13/13/1 (HP/Atk/Def/SpA/SpD/Spe)  Hidden Power Dragon 33  stats at L20 58/21/41/32/42/14",
-    "  shiny: no for TID 34774 / SID 55535",
-    "  frame 1785  seed 1B081385  2000-01-01 08:00:26 delay 4997  calls used 4",
-    "  seed model dppt/nds/seed-to-time-v0: PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate)"
-   ],
-   "procedure": [
-    "Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: in front of Lileep L20 - Oreburgh City, Mining Museum [fossil, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (1 member).",
-    "2. DS clock: set 2000-01-01 08:00 and confirm it 2 minutes before the target minute (the countdown spans that long); target second 26, target delay 4997 -> seed 1B081385 (dppt/nds/seed-to-time-v0).",
-    "3. Timer: start it as the clock confirms; phase 1 00:56.039 ends on the first long beep: press A to load the game from the DS menu; phase 2 01:30.161 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 15; EonTimer's delay model, core/timers.js).",
-    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.",
-    "5. Advance to frame 1785: 1769 x walk128 (+1 each, STRUCTURAL) from frame 16 (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers). Then trigger the encounter.",
-    "6. Read the nature and stats: the card above says what frame 1785 of seed 1B081385 creates."
-   ],
-   "phases": [
-    56039,
-    90161
-   ],
-   "minutesBefore": 2
+    "per100k": 1.7053025658242404e-8,
+    "parts": [
+     "shiny 8/65536"
+    ]
+   }
   },
   {
    "n": 7,
@@ -4841,27 +4790,27 @@
     "game": "soulsilver",
     "console": "NDS_SLOT1",
     "kind": "wild",
-    "tableIndex": 42,
-    "encounter": "old_rod",
+    "tableIndex": 46,
+    "encounter": "surf",
     "time": null,
-    "dex": 129,
+    "dex": 116,
     "method": "K",
-    "leadKey": "SYNCHRONIZE",
-    "leadNature": 1,
-    "leadGender": "M",
-    "leadLevel": 37,
+    "leadKey": "",
+    "leadNature": 3,
+    "leadGender": "F",
+    "leadLevel": 26,
     "wanted": {
      "ivMin": [
-      13,
-      21,
+      28,
+      16,
       12,
       30,
       17,
       4
      ],
      "ivMax": [
-      13,
-      23,
+      28,
+      16,
       12,
       30,
       17,
@@ -4871,71 +4820,44 @@
      "gender": "M",
      "ability": null,
      "shiny": false,
-     "tid": null,
-     "sid": null,
-     "species": 129
+     "tid": 56307,
+     "sid": 19667,
+     "species": 116
     },
-    "maxFrame": 50,
-    "yearMin": 2026,
-    "yearMax": 2026,
+    "maxFrame": 100,
+    "yearMin": 2000,
+    "yearMax": 2099,
     "delayMin": 0,
-    "delayMax": 65535,
-    "targetDelay": 1500,
-    "current": 6,
-    "party": 5,
-    "calibratedDelay": 503,
+    "delayMax": 5000,
+    "targetDelay": 600,
+    "current": 2,
+    "party": 3,
+    "calibratedDelay": 500,
     "calibratedSecond": 14
    },
    "lines": [
     "Seed model: hgss/nds/seed-to-time-v0 (PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate)).",
-    "3 IV combinations -> 10 IV origin states after the PID filter -> 778 seeds a clock can produce within 50 frames (hour byte 0-23) -> 2 candidates confirmed by the wild generator frame by frame.",
-    "4 date / time / delay rows inside the delay and year windows, nearest the target delay first (the year is a delay knob: +1 year = -1 delay for the same seed).",
-    "Feasibility: about 0.0000997 matching frames per 100,000 (IV count exact over the 2^32 LCRNG cycle: 0.0002328 per 100,000; x gender 50.4 % x slot share 85.0 %).",
-    "  Expected first hit near frame 1002746583 on average.",
+    "1 IV combination -> 2 IV origin states after the PID filter -> 194 seeds a clock can produce within 100 frames (hour byte 0-23) -> 0 candidates confirmed by the wild generator frame by frame.",
+    "No row inside the delay and year windows: widen the delay window or the years, or raise the frame limit; the design's flawless case, 7B0448D1 -> frame 0, needs delay 18641 in 2000.",
+    "Feasibility: about 0.0000282 matching frames per 100,000 (IV count exact over the 2^32 LCRNG cycle: 0.00009313 per 100,000; x gender 50.4 % x slot share 60.0 %).",
+    "  Expected first hit near frame 3551394147 on average.",
     "  A reachable seed exists for about 9.4 % of back-steps (the hour byte), so the search is exact within its windows, not a promise that a low frame exists."
    ],
-   "rows": [
-    "1A0202A2|44|2026-01-01 02:00:25|648|852|49D91439|44|49D90D9B|13/21/12/30/17/4|13|0|0|10|25/9/17/9/10/23|20|0|0|FIRE|40",
-    "1A0202A2|44|2026-01-01 02:01:24|648|852|49D91439|44|49D90D9B|13/21/12/30/17/4|13|0|0|10|25/9/17/9/10/23|20|0|0|FIRE|40",
-    "DA158737|49|2026-04-25 21:59:59|34589|33089|49D91439|49|49D90D9B|13/21/12/30/17/4|13|0|0|10|25/9/17/9/10/23|20|0|0|FIRE|40",
-    "DA158737|49|2026-04-26 21:55:59|34589|33089|49D91439|49|49D90D9B|13/21/12/30/17/4|13|0|0|10|25/9/17/9/10/23|20|0|0|FIRE|40"
-   ],
-   "combos": 3,
-   "origins": 10,
-   "candidates": 778,
-   "verified": 2,
-   "maxFrame": 50,
+   "rows": [],
+   "combos": 1,
+   "origins": 2,
+   "candidates": 194,
+   "verified": 0,
+   "maxFrame": 100,
    "feasibility": {
-    "ivPer100k": 0.00023283064365386963,
+    "ivPer100k": 0.00009313225746154785,
     "ivExact": true,
-    "per100k": 0.00009972609404940157,
+    "per100k": 0.000028157955966889855,
     "parts": [
      "gender 50.4 %",
-     "slot share 85.0 %"
+     "slot share 60.0 %"
     ]
-   },
-   "card": [
-    "Result card (EMPIRICAL / model output)",
-    "  Magikarp L10  PID 49D90D9B  nature Jolly  gender M  ability SWIFT_SWIM (slot 1)",
-    "  IVs 13/21/12/30/17/4 (HP/Atk/Def/SpA/SpD/Spe)  Hidden Power Fire 40  stats at L10 25/9/17/9/10/23",
-    "  shiny: unknown (type your Trainer ID and Secret ID to know)  slot 0",
-    "  frame 44  seed 1A0202A2  2026-01-01 02:00:25 delay 648  calls used 20",
-    "  seed model hgss/nds/seed-to-time-v0: PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate)"
-   ],
-   "procedure": [
-    "Procedure (hgss/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: on the Old Rod tile of Route 41 (W41), lead synchronize. Save with the party you will advance with (5 members).",
-    "2. DS clock: set 2026-01-01 02:00 and confirm it 0 minutes before the target minute (the countdown spans that long); target second 25, target delay 648 -> seed 1A0202A2 (hgss/nds/seed-to-time-v0).",
-    "3. Timer: start it as the clock confirms; phase 1 01:08.769 ends on the first long beep: press A to load the game from the DS menu; phase 2 00:16.431 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 503, calibrated second 14; EonTimer's delay model, core/timers.js).",
-    "4. Verify the seed: call Elm (each call is one LCRNG advance: count them) and type the E/K/P letters below, with the roamers active on the save: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.",
-    "5. Advance to frame 44: 7 x walk128 (+5 each, STRUCTURAL), 3 x elmCall (+1 each, STRUCTURAL) from frame 6 (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers). Then trigger the encounter.",
-    "6. Read the nature and stats: the card above says what frame 44 of seed 1A0202A2 creates."
-   ],
-   "phases": [
-    68769,
-    16431
-   ],
-   "minutesBefore": 0
+   }
   },
   {
    "n": 8,
@@ -4943,30 +4865,30 @@
     "game": "emerald",
     "console": "GBA",
     "kind": "static",
-    "staticId": "rse/starter/mudkip",
-    "method": "M2",
+    "staticId": "rse/gift/beldum",
+    "method": "M1",
     "leadKey": "",
-    "leadNature": 8,
+    "leadNature": 0,
     "leadGender": "M",
-    "leadLevel": 58,
+    "leadLevel": 6,
     "wanted": {
      "ivMin": [
-      15,
-      7,
-      19,
+      8,
+      0,
       0,
       16,
-      17
+      17,
+      5
      ],
      "ivMax": [
-      15,
-      7,
+      31,
+      31,
       31,
       31,
       31,
       31
      ],
-     "nature": 6,
+     "nature": null,
      "gender": null,
      "ability": null,
      "shiny": true,
@@ -4982,32 +4904,25 @@
    "lines": [
     "Seed model: emerald/gba/boot-seed-0-v0 (decomp-derived; EMPIRICAL / model output: no hardware session); seed 00000000, frames counted from the seed at 59.7275 fps.",
     "No matching frame within the first 3584 frames (01:00.006): the honest limit of this seed model is stated, not promised away.",
-    "Feasibility: about 0.0000454 matching frames per 100,000 (IV count exact over the 2^32 LCRNG cycle: 9.298 per 100,000; x nature 1/25 x shiny 8/65536).",
-    "  Expected first hit near frame 2202712799 (426.8 days at 59.7275 fps) on average.",
-    "  Exact over the whole cycle: 399330 IV states pass the IV ranges; the first one that also passes the PID filter is frame 3905705487 from this seed = 756.9 days (PID 632DC0AF)."
+    "Feasibility: about 1.81 matching frames per 100,000 (IV part estimated as independent uniform draws: 1.483e+4 per 100,000; x shiny 8/65536).",
+    "  Expected first hit near frame 55234 (15:24.760 at 59.7275 fps) on average."
    ],
    "hits": [],
    "maxFrame": 3584,
    "limit": 20,
    "feasibility": {
-    "ivPer100k": 9.297626093029976,
-    "ivExact": true,
-    "wordsA": 26,
-    "wordsB": 15360,
-    "odds": 0.0000048828125,
+    "ivPer100k": 14831.54296875,
+    "ivExact": false,
+    "wordsA": 49152,
+    "wordsB": 12960,
+    "odds": 0.0001220703125,
     "parts": [
-     "nature 1/25",
      "shiny 8/65536"
     ],
-    "per100k": 0.00004539856490737293,
-    "expectedFrames": 2202712799.4911475
+    "per100k": 1.8104910850524902,
+    "expectedFrames": 55233.6329218107
    },
-   "exactFirst": {
-    "states": 399330,
-    "frame": 3905705487,
-    "pid": "632DC0AF",
-    "state": "5CEF1AE5"
-   }
+   "exactFirst": null
   },
   {
    "n": 9,
@@ -5108,12 +5023,12 @@
    ],
    "procedure": [
     "Procedure (frlg/gba/typed-seed-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand on the grass / cave (land) tile of Mt Ember Ruby Path B 2f Stairs (MAP_MT_EMBER_RUBY_PATH_B2F_STAIRS) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash).",
-    "2. The seed: the typed seed 944EFAC9 must be the one in force (frlg/gba/typed-seed-v0: FireRed / LeafGreen seed the RNG from a Timer1 count at the title-screen press (pokefirered/src/naming_screen.c:717-722 for the naming exit; the title press is the same kind of count): there is no fixed seed. Type the seed you already know (from a frame hit you identified, or a community seed table); without one this game is stated unavailable here.)",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:05.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:08.008 = frame 479 x 16.7427 ms - 12.3 ms calibration: press A on the last beep. Target 00:08.020 after the seed.",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand on the grass / cave (land) tile of Mt Ember Ruby Path B 2f Stairs (MAP_MT_EMBER_RUBY_PATH_B2F_STAIRS) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash). [frlg/gba/typed-seed-v0]",
+    "2. The seed: the typed seed 944EFAC9 must be the one in force (frlg/gba/typed-seed-v0: FireRed / LeafGreen seed the RNG from a Timer1 count at the title-screen press (pokefirered/src/naming_screen.c:717-722 for the naming exit; the title press is the same kind of count): there is no fixed seed. Type the seed you already know (from a frame hit you identified, or a community seed table); without one this game is stated unavailable here.) [frlg/gba/typed-seed-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [frlg/gba/typed-seed-v0]",
+    "4. Timer: phase 1 00:05.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:08.008 = frame 479 x 16.7427 ms - 12.3 ms calibration: press A on the last beep. Target 00:08.020 after the seed. [frlg/gba/typed-seed-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [frlg/gba/typed-seed-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [frlg/gba/typed-seed-v0]"
    ],
    "phases": [
     5000,
@@ -5212,12 +5127,12 @@
    ],
    "procedure": [
     "Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: in front of Chimchar L5 - Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (6 members).",
-    "2. DS clock: set 2000-01-01 18:00 and confirm it 2 minutes before the target minute (the countdown spans that long); target second 19, target delay 4154 -> seed 1412103A (dppt/nds/seed-to-time-v0).",
-    "3. Timer: start it as the clock confirms; phase 1 01:04.165 ends on the first long beep: press A to load the game from the DS menu; phase 2 01:15.035 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 503, calibrated second 14; EonTimer's delay model, core/timers.js).",
-    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.",
-    "5. Advance to frame 6: 1 x walk128 (+6 each, STRUCTURAL) from frame 0 (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers). Then trigger the encounter.",
-    "6. Read the nature and stats: the card above says what frame 6 of seed 1412103A creates."
+    "1. Prepare the save: in front of Chimchar L5 - Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (6 members). [dppt/nds/seed-to-time-v0]",
+    "2. DS clock: set 2000-01-01 18:00 and confirm it 2 minutes before the target minute (the countdown spans that long); target second 19, target delay 4154 -> seed 1412103A (dppt/nds/seed-to-time-v0). [dppt/nds/seed-to-time-v0]",
+    "3. Timer: start it as the clock confirms; phase 1 01:04.165 ends on the first long beep: press A to load the game from the DS menu; phase 2 01:15.035 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 503, calibrated second 14; EonTimer's delay model, core/timers.js). [dppt/nds/seed-to-time-v0]",
+    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target. [dppt/nds/seed-to-time-v0]",
+    "5. Advance to frame 6: 1 x walk128 (+6 each, STRUCTURAL) from frame 0 (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers). Then trigger the encounter. [dppt/nds/seed-to-time-v0]",
+    "6. Read the nature and stats: the card above says what frame 6 of seed 1412103A creates. [dppt/nds/seed-to-time-v0]"
    ],
    "phases": [
     64165,
@@ -5306,7 +5221,7 @@
     "game": "emerald",
     "console": "NDS_SLOT2",
     "kind": "static",
-    "staticId": "rse/static/voltorb",
+    "staticId": "rse/static/electrode",
     "method": "M2",
     "leadKey": "",
     "leadNature": 22,
@@ -5464,12 +5379,12 @@
    ],
    "procedure": [
     "Procedure (rs/gba/boot-seed-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand on the grass / cave (land) tile of Cave Of Origin B 2f (MAP_CAVE_OF_ORIGIN_B2F) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash).",
-    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds 000005A0 at frame 0 (rs/gba/boot-seed-v0).",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:03.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:01.238 = frame 72 x 16.7427 ms + 33.4 ms calibration: press A on the last beep. Target 00:01.205 after the seed.",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand on the grass / cave (land) tile of Cave Of Origin B 2f (MAP_CAVE_OF_ORIGIN_B2F) and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash). [rs/gba/boot-seed-v0]",
+    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds 000005A0 at frame 0 (rs/gba/boot-seed-v0). [rs/gba/boot-seed-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [rs/gba/boot-seed-v0]",
+    "4. Timer: phase 1 00:03.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:01.238 = frame 72 x 16.7427 ms + 33.4 ms calibration: press A on the last beep. Target 00:01.205 after the seed. [rs/gba/boot-seed-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [rs/gba/boot-seed-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [rs/gba/boot-seed-v0]"
    ],
    "phases": [
     3000,
@@ -5724,12 +5639,12 @@
    ],
    "procedure": [
     "Procedure (frlg/gba/typed-seed-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand where the encounter starts (Scyther L25 - Celadon City, Game Corner prize room [game_corner, Method 1]) and save; the last A that starts the battle or the gift is the timed press.",
-    "2. The seed: the typed seed 4B121967 must be the one in force (frlg/gba/typed-seed-v0: FireRed / LeafGreen seed the RNG from a Timer1 count at the title-screen press (pokefirered/src/naming_screen.c:717-722 for the naming exit; the title press is the same kind of count): there is no fixed seed. Type the seed you already know (from a frame hit you identified, or a community seed table); without one this game is stated unavailable here.)",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:08.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:01.495 = frame 90 x 16.7427 ms - 12.3 ms calibration: press A on the last beep. Target 00:01.507 after the seed.",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand where the encounter starts (Scyther L25 - Celadon City, Game Corner prize room [game_corner, Method 1]) and save; the last A that starts the battle or the gift is the timed press. [frlg/gba/typed-seed-v0]",
+    "2. The seed: the typed seed 4B121967 must be the one in force (frlg/gba/typed-seed-v0: FireRed / LeafGreen seed the RNG from a Timer1 count at the title-screen press (pokefirered/src/naming_screen.c:717-722 for the naming exit; the title press is the same kind of count): there is no fixed seed. Type the seed you already know (from a frame hit you identified, or a community seed table); without one this game is stated unavailable here.) [frlg/gba/typed-seed-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [frlg/gba/typed-seed-v0]",
+    "4. Timer: phase 1 00:08.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:01.495 = frame 90 x 16.7427 ms - 12.3 ms calibration: press A on the last beep. Target 00:01.507 after the seed. [frlg/gba/typed-seed-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [frlg/gba/typed-seed-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [frlg/gba/typed-seed-v0]"
    ],
    "phases": [
     8000,
@@ -5821,7 +5736,7 @@
     "game": "emerald",
     "console": "GBA",
     "kind": "static",
-    "staticId": "e/event/pichu-egg",
+    "staticId": "rse/static/kecleon",
     "method": "M2",
     "leadKey": "",
     "leadNature": 15,
@@ -5864,26 +5779,26 @@
     "  Expected first hit near frame 47 (00:00.788 at 59.7275 fps) on average."
    ],
    "hits": [
-    "66|68FB20F3|15/27/19/31/28/20|10|0|0|5|17/9/7/10/9/13|5|-1|0|BUG|44",
-    "70|04E5F3F4|20/19/17/17/28/26|10|0|0|5|18/8/7/9/9/13|5|-1|0|BUG|36",
-    "72|C674E093|9/19/27/3/5/18|10|0|0|5|17/8/7/8/8/12|5|-1|0|ICE|49",
-    "93|C2F7685A|28/7/9/13/17/19|10|1|0|5|18/8/6/9/9/12|5|-1|0|DRAGON|36",
-    "144|F8AEEAAE|28/29/16/21/20/31|10|0|0|5|18/9/7/9/9/13|5|-1|0|GHOST|35",
-    "152|55863C42|18/17/15/18/20/17|10|1|0|5|17/8/7/9/9/12|5|-1|0|GROUND|43",
-    "154|3E328E42|27/27/3/10/23/27|10|1|0|5|18/9/6/9/9/13|5|-1|0|ELECTRIC|70",
-    "217|0E9EB53E|31/28/6/15/10/25|10|1|0|5|18/9/6/9/9/13|5|-1|0|BUG|63",
-    "280|FC3F20A8|5/4/19/21/29/24|10|0|0|5|17/8/7/9/9/13|5|-1|0|PSYCHIC|32",
-    "317|75E62BE1|12/13/18/22/21/22|10|0|0|5|17/8/7/9/9/13|5|-1|0|FIRE|47",
-    "454|1B42106A|4/11/6/2/10/24|10|1|0|5|17/8/6/8/9/13|5|-1|0|FIGHTING|64",
-    "471|A81F0C54|18/27/10/0/15/21|10|1|0|5|17/9/7/8/9/13|5|-1|0|GRASS|54",
-    "500|4F1D9EFE|30/18/25/30/5/22|10|0|0|5|18/8/7/10/8/13|5|-1|0|FIRE|47",
-    "578|A7CCFD4C|4/3/29/11/8/19|10|1|0|5|17/8/7/9/8/12|5|-1|0|STEEL|46",
-    "748|B318840F|25/31/12/3/4/26|10|1|0|5|18/9/7/8/8/13|5|-1|0|ROCK|46",
-    "770|78784A7E|7/13/24/15/25/20|10|1|0|5|17/8/7/9/9/13|5|-1|0|PSYCHIC|40",
-    "814|EF5CBB7F|21/12/11/0/14/25|10|0|0|5|18/8/7/8/9/13|5|-1|0|GROUND|52",
-    "869|42F1D5FA|25/0/30/18/4/29|10|0|0|5|18/8/8/9/8/13|5|-1|0|POISON|42",
-    "1040|2880A6A6|16/27/0/5/22/31|10|0|0|5|17/9/6/8/9/13|5|-1|0|GHOST|56",
-    "1289|88DF46A1|19/17/2/23/27/27|10|0|0|5|17/8/6/9/9/13|5|-1|0|DRAGON|68"
+    "66|68FB20F3|15/27/19/31/28/20|10|0|0|30|80/60/52/50/85/38|5|-1|0|BUG|44",
+    "70|04E5F3F4|20/19/17/17/28/26|10|0|0|30|82/57/52/46/85/39|5|-1|0|BUG|36",
+    "72|C674E093|9/19/27/3/5/18|10|0|0|30|78/57/55/41/78/37|5|-1|0|ICE|49",
+    "93|C2F7685A|28/7/9/13/17/19|10|1|0|30|84/54/49/44/82/37|5|-1|0|DRAGON|36",
+    "144|F8AEEAAE|28/29/16/21/20/31|10|0|0|30|84/60/51/47/83/41|5|-1|0|GHOST|35",
+    "152|55863C42|18/17/15/18/20/17|10|1|0|30|81/57/51/46/83/37|5|-1|0|GROUND|43",
+    "154|3E328E42|27/27/3/10/23/27|10|1|0|30|84/60/47/44/83/40|5|-1|0|ELECTRIC|70",
+    "217|0E9EB53E|31/28/6/15/10/25|10|1|0|30|85/60/48/45/80/39|5|-1|0|BUG|63",
+    "280|FC3F20A8|5/4/19/21/29/24|10|0|0|30|77/54/52/47/85/39|5|-1|0|PSYCHIC|32",
+    "317|75E62BE1|12/13/18/22/21/22|10|0|0|30|79/55/52/47/83/38|5|-1|0|FIRE|47",
+    "454|1B42106A|4/11/6/2/10/24|10|1|0|30|77/55/48/41/80/39|5|-1|0|FIGHTING|64",
+    "471|A81F0C54|18/27/10/0/15/21|10|1|0|30|81/60/50/41/81/38|5|-1|0|GRASS|54",
+    "500|4F1D9EFE|30/18/25/30/5/22|10|0|0|30|85/57/54/50/78/38|5|-1|0|FIRE|47",
+    "578|A7CCFD4C|4/3/29/11/8/19|10|1|0|30|77/53/55/44/79/37|5|-1|0|STEEL|46",
+    "748|B318840F|25/31/12/3/4/26|10|1|0|30|83/61/50/41/78/39|5|-1|0|ROCK|46",
+    "770|78784A7E|7/13/24/15/25/20|10|1|0|30|78/55/54/45/84/38|5|-1|0|PSYCHIC|40",
+    "814|EF5CBB7F|21/12/11/0/14/25|10|0|0|30|82/55/50/41/81/39|5|-1|0|GROUND|52",
+    "869|42F1D5FA|25/0/30/18/4/29|10|0|0|30|83/53/56/46/78/40|5|-1|0|POISON|42",
+    "1040|2880A6A6|16/27/0/5/22/31|10|0|0|30|80/60/47/42/83/41|5|-1|0|GHOST|56",
+    "1289|88DF46A1|19/17/2/23/27/27|10|0|0|30|81/57/47/47/85/40|5|-1|0|DRAGON|68"
    ],
    "maxFrame": 17918,
    "limit": 20,
@@ -5902,20 +5817,20 @@
    "exactFirst": null,
    "card": [
     "Result card (EMPIRICAL / model output)",
-    "  Pichu L5  PID 68FB20F3  nature Timid  gender M  ability STATIC (slot 1)",
-    "  IVs 15/27/19/31/28/20 (HP/Atk/Def/SpA/SpD/Spe)  Hidden Power Bug 44  stats at L5 17/9/7/10/9/13",
+    "  Kecleon L30  PID 68FB20F3  nature Timid  gender M  ability COLOR_CHANGE (slot 1)",
+    "  IVs 15/27/19/31/28/20 (HP/Atk/Def/SpA/SpD/Spe)  Hidden Power Bug 44  stats at L30 80/60/52/50/85/38",
     "  shiny: no for TID 25307 / SID 33839",
     "  frame 66  seed BFD41969  00:01.105 after the seed  calls used 5",
     "  seed model emerald/gba/boot-seed-0-v0: decomp-derived; EMPIRICAL / model output: no hardware session"
    ],
    "procedure": [
     "Procedure (emerald/gba/boot-seed-0-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: stand where the encounter starts (Pichu L5 - Mystery Gift (Surfing Pichu egg) [event, Method 1]) and save; the last A that starts the battle or the gift is the timed press.",
-    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds BFD41969 at frame 0 (emerald/gba/boot-seed-0-v0).",
-    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.",
-    "4. Timer: phase 1 00:03.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:01.122 = frame 66 x 16.7427 ms + 16.742725372314453 ms calibration: press A on the last beep. Target 00:01.105 after the seed (Emerald in battle advances twice per frame: the count here is up to the press that starts it).",
-    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).",
-    "6. Repeat until the frame hit equals the target; then the card above is what the game creates."
+    "1. Prepare the save: stand where the encounter starts (Kecleon L30 - Route 119 / Route 120 (Devon Scope) [stationary, Method 1]) and save; the last A that starts the battle or the gift is the timed press. [emerald/gba/boot-seed-0-v0]",
+    "2. The seed: power on (or A+B+Start+Select soft reset) and the game seeds BFD41969 at frame 0 (emerald/gba/boot-seed-0-v0). [emerald/gba/boot-seed-0-v0]",
+    "3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not. [emerald/gba/boot-seed-0-v0]",
+    "4. Timer: phase 1 00:03.000 (the pre-timer: power on at its end, the first long beep), phase 2 00:01.122 = frame 66 x 16.7427 ms + 16.742725372314453 ms calibration: press A on the last beep. Target 00:01.105 after the seed (Emerald in battle advances twice per frame: the count here is up to the press that starts it). [emerald/gba/boot-seed-0-v0]",
+    "5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3). [emerald/gba/boot-seed-0-v0]",
+    "6. Repeat until the frame hit equals the target; then the card above is what the game creates. [emerald/gba/boot-seed-0-v0]"
    ],
    "phases": [
     3000,
@@ -6038,12 +5953,12 @@
    ],
    "procedure": [
     "Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)",
-    "1. Prepare the save: on the grass / cave (land) tile of Solaceon Ruins Maniac Tunnel Room (encounters_solaceon_ruins_maniac_tunnel_room), lead magnet pull. Save with the party you will advance with (5 members).",
-    "2. DS clock: set 2000-01-17 05:59 and confirm it 4 minutes before the target minute (the countdown spans that long); target second 59, target delay 14165 -> seed 87053755 (dppt/nds/seed-to-time-v0).",
-    "3. Timer: start it as the clock confirms; phase 1 00:56.830 ends on the first long beep: press A to load the game from the DS menu; phase 2 04:02.370 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 503, calibrated second 14; EonTimer's delay model, core/timers.js).",
-    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.",
-    "5. Advance to frame 11: no advance needed from frame 12. Then trigger the encounter.",
-    "6. Read the nature and stats: the card above says what frame 11 of seed 87053755 creates."
+    "1. Prepare the save: on the grass / cave (land) tile of Solaceon Ruins Maniac Tunnel Room (encounters_solaceon_ruins_maniac_tunnel_room), lead magnet pull. Save with the party you will advance with (5 members). [dppt/nds/seed-to-time-v0]",
+    "2. DS clock: set 2000-01-17 05:59 and confirm it 4 minutes before the target minute (the countdown spans that long); target second 59, target delay 14165 -> seed 87053755 (dppt/nds/seed-to-time-v0). [dppt/nds/seed-to-time-v0]",
+    "3. Timer: start it as the clock confirms; phase 1 00:56.830 ends on the first long beep: press A to load the game from the DS menu; phase 2 04:02.370 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 503, calibrated second 14; EonTimer's delay model, core/timers.js). [dppt/nds/seed-to-time-v0]",
+    "4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target. [dppt/nds/seed-to-time-v0]",
+    "5. Advance to frame 11: no advance needed from frame 12. Then trigger the encounter. [dppt/nds/seed-to-time-v0]",
+    "6. Read the nature and stats: the card above says what frame 11 of seed 87053755 creates. [dppt/nds/seed-to-time-v0]"
    ],
    "phases": [
     56830,

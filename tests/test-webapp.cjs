@@ -438,7 +438,7 @@ const treecko = W.staticEntries("emerald").find((e) => e.id === "rse/starter/tre
 const cfgF = { game: "emerald", console: "GBA", seed: 0, kind: "static", method: "M1", species: treecko.species, level: 5, wanted: { ivMin: ivObj([31, 31, 31, 31, 31, 31]), ivMax: ivObj([31, 31, 31, 31, 31, 31]) }, maxFrame: 215019, limit: 20 };
 const rF = W.searchGen3(cfgF);
 const linesF = W.gen3SearchLines(rF, cfgF).join("\n");
-assert("flawless Emerald: no hit in an hour, the limit stated", rF.hits.length === 0 && linesF.includes("No matching frame within the first 215019 frames (60:00.000)"));
+assert("flawless Emerald: no hit in an hour, the limit stated", rF.hits.length === 0 && linesF.includes("No matching frame within the first 215019 frames (60:00.000): the honest limit of this seed model is stated, not promised away."));
 assert("flawless Emerald: 6 states, first frame 176562488 = 34.2 days", rF.exactFirst.states === SV.collisions[0].count && rF.exactFirst.first.frame === 176562488 && linesF.includes("frame 176562488 from this seed = 34.2 days"));
 assert("flawless Emerald: the feasibility is the exact count", rF.feasibility.ivExact && near(rF.feasibility.ivPer100k, 6 / 4294967296 * 100000));
 // refusals: a shiny target without IDs, an IV range out of order, FRLG without a seed
@@ -450,6 +450,10 @@ assert("an IV range out of order is refused", /HP IV range/.test(msg));
 try { W.searchGen3({ game: "firered", console: "GBA", seed: null, kind: "static", species: treecko.species, level: 5, wanted: { ivMin: {}, ivMax: {} }, maxFrame: 10 }); } catch (e) { msg = e.message; }
 assert("FRLG without a typed seed is stated unavailable", /no seed: FireRed \/ LeafGreen seed the RNG from a Timer1 count/.test(msg));
 assert("eggs and the fixed-PID Pichu are listed as refused with the reason", W.staticEntries("emerald").some((e) => e.id === "rse/egg/wynaut" && /an egg/.test(e.refused)) && W.staticEntries("heartgold").some((e) => e.id === "hgss/gift/pichu-spiky-eared" && /not RNG-manipulable/.test(e.refused)));
+// the gift eggs the catalogue files under their event are eggs all the same: refused by their id / creation chain, not offered as Method 1 statics
+assert("the Surfing Pichu egg (Emerald) and the Manaphy egg (every Gen 4 game) are refused as eggs", /an egg/.test(W.staticEntries("emerald").find((e) => e.id === "e/event/pichu-egg").refused || "") && ["diamond", "pearl", "platinum", "heartgold", "soulsilver"].every((g) => /an egg/.test(W.staticEntries(g).find((e) => e.id === "gen4/event/manaphy-egg").refused || "")));
+assert("no offered static names an egg in its id or its creation chain", W.GAME_ORDER.every((g) => W.staticEntries(g).every((e) => e.refused || !(/egg/i.test(e.id) || /\begg\b/i.test(e.entry.creation || "")))));
+assert("the Gen 4 egg refusal states the Gen 4 creation, the Gen 3 one the split PID", /one MT output at the trigger/.test(W.staticEntries("platinum").find((e) => e.id === "pt/egg/togepi").refused) && /split between the trigger and the pickup/.test(W.staticEntries("firered").find((e) => e.id === "frlg/egg/togepi").refused));
 assert("Gen 4 statics resolve their method from the creation chain", W.staticEntries("platinum").find((e) => e.id === "dppt/legend/uxie").method === "J" && W.staticEntries("heartgold").find((e) => e.id === "hg/legend/lugia").method === "K" && W.staticEntries("heartgold").find((e) => e.id === "hg/legend/lugia").level === 70 && W.staticEntries("diamond").find((e) => e.id === "dp/starter/turtwig").method === "M1" && W.staticEntries("diamond").find((e) => e.id === "d/legend/dialga").method === "J" && W.staticEntries("heartgold").find((e) => e.id === "hgss/static/gyarados").shinyMode === "always");
 assert("RS / FRLG roamers carry the IV bug, Emerald's do not", W.staticEntries("ruby").find((e) => e.category === "roamer").buggedRoamer === true && W.staticEntries("emerald").find((e) => e.category === "roamer").buggedRoamer === false);
 // C: the design's gate seed (seedtime4-vectors gate[0]): flawless Method 1 -> 7B0448D1 at frame 0, hour 4, delay 18641 in 2000
@@ -488,6 +492,16 @@ const rD = W.searchGen4(cfgD);
 const rowD = rD.rows.find((r) => r.seed === w4.seed && r.frame === 0);
 assert("D: the Magnet Pull vector's seed is reached at frame 0 with its PID, slot and level", !!rowD && rowD.mon.pid === vD.pid && rowD.mon.encounterSlot === vD.encounterSlot && rowD.mon.level === vD.level && JSON.stringify(rowD.mon.ivArray) === JSON.stringify(vD.ivs));
 assert("D: the wild candidates were verified by the wild generator, not assumed", rD.verified < rD.candidates && rD.verified >= 1);
+// a forced-shiny static (the Lake of Rage Gyarados, shiny always: the creation spends 17 calls, the back-step looks 15 calls
+// before the IV words): a (seed, frame) pair the static generator makes is found again from its IVs alone
+const gyarados = W.staticEntries("heartgold").find((e) => e.id === "hgss/static/gyarados");
+const cfgG = { game: "heartgold", console: "NDS_SLOT1", kind: "static", staticMethod: "M1", species: gyarados.species, level: gyarados.level, shinyMode: "always", wanted: { tid: GV.meta.tid, sid: GV.meta.sid }, maxFrame: 50, yearMin: 2000, yearMax: 2099, delayMin: 0, delayMax: 65535, targetDelay: 600, limit: 30 };
+[[0x7b0448d1, 3], [0x5d1745d0, 7]].forEach(([seed, frame]) => {
+  const made = W.gen4Run(seed, cfgG, {}, frame, 1)[0];
+  const rG = W.searchGen4(Object.assign({}, cfgG, { wanted: { ivMin: ivObj(made.ivArray), ivMax: ivObj(made.ivArray), tid: GV.meta.tid, sid: GV.meta.sid } }));
+  const rowG = rG.rows.find((r) => r.seed === seed && r.frame === frame);
+  assert(`forced-shiny Gyarados: seed ${W.hex8(seed)} frame ${frame} is found again from its IVs, shiny, 17 calls, every candidate verified`, made.shiny && made.callsUsed === 17 && !!rowG && rowG.mon.pid === made.pid && rowG.mon.shiny && rG.verified === rG.candidates && rG.verified > 0);
+});
 assert("D: Cute Charm is not offered for Gen 4 wild and the note says why", !W.leadOptions("platinum", "wild").some((l) => l.key === "CUTE_CHARM") && /arithmetic/.test(W.GEN4_CUTE_CHARM_NOTE) && W.leadOptions("emerald", "wild").some((l) => l.key === "CUTE_CHARM") && W.leadOptions("ruby", "wild").length === 1);
 const hgLand = W.wildTables("heartgold").find((t) => t.kinds.includes("grass"));
 assert("HGSS land tables pick the species by time of day (Route 29: Hoothoot at night)", hgLand.name.startsWith("Route 29") && W.slotsFor("heartgold", hgLand.index, "grass", { time: "night" }).slots[0].species.dex === 163 && W.slotsFor("heartgold", hgLand.index, "grass", { time: "day" }).slots[0].species.dex === 16);

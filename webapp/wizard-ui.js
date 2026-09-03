@@ -127,6 +127,14 @@
     if (M1_CATEGORIES[e.category]) return "M1";
     return game.method;
   }
+  // An egg is refused however the data files it: by its category, or a gift egg filed under its event (Emerald's
+  // Surfing Pichu egg, the Gen 4 Manaphy egg) named by its id or its creation chain. Neither Method 1 nor J / K
+  // creates an egg, so a frame or a seed searched under them would be for a Pokemon the game never makes that way.
+  function isEggEntry(e) { return e.category === "egg" || /(^|\/|-)egg(\/|-|$)/.test(e.id) || /\begg\b/i.test(e.creation || ""); }
+  function eggRefusal(gen) {
+    return gen === 3 ? "an egg: its PID is split between the trigger and the pickup (design 5.3), not a Method 1 creation; the egg generators are engine-only here"
+      : "an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here";
+  }
   function staticEntries(gameKey) {
     var game = GAMES[gameKey];
     var d = dataFor(game.gen);
@@ -134,11 +142,11 @@
     d.statics.entries.forEach(function (e) {
       if (e.games.indexOf(gameKey) === -1) return;
       var refused = null;
-      if (e.category === "egg") refused = "an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here";
+      if (isEggEntry(e)) refused = eggRefusal(game.gen);
       else if (e.shiny === "never") refused = "not RNG-manipulable: " + (e.notes || "its personality is fixed");
       else if (e.catchable === false) refused = "not catchable";
       var shinyMode = e.shiny === "always" ? "always" : e.shiny === "never" ? "never" : "random";
-      var method = e.id === "hgss/static/gyarados" || e.id === "gen4/event/manaphy-egg" ? "M1" : staticMethod(game, e);
+      var method = e.id === "hgss/static/gyarados" ? "M1" : staticMethod(game, e);
       var bugged = game.gen === 3 && e.category === "roamer" && game.family !== "e";
       out.push({
         id: e.id, entry: e, category: e.category, species: speciesRec(game.gen, e.species), level: e.level, method: method, shinyMode: shinyMode,
@@ -546,7 +554,11 @@
     return lines;
   }
 
-  // ---- procedures (design 5.1 step 6), numbered, every step under the seed model id ---------------------
+  // ---- procedures (design 5.1 step 6), numbered, every step labelled with the seed model id it runs under ----
+  function labelSteps(lines, id) {
+    for (var i = 1; i < lines.length; i++) lines[i] += " [" + id + "]";
+    return lines;
+  }
   function gen3Procedure(cfg, hit, timerModel) {
     var model = modelOf(cfg.game), game = GAMES[cfg.game];
     var ms = frameToMs(hit.frame, cfg.console);
@@ -559,7 +571,7 @@
     lines.push("4. Timer: phase 1 " + core.fmtMs(phases[0]) + " (the pre-timer: power on at its end, the first long beep), phase 2 " + core.fmtMs(phases[1]) + " = frame " + hit.frame + " x " + (1000 / fpsOf(cfg.console)).toFixed(4) + " ms " + (timerModel.calibration >= 0 ? "+ " : "- ") + Math.abs(timerModel.calibration) + " ms calibration: press A on the last beep. Target " + core.fmtMs(ms) + " after the seed" + (game.family === "e" && cfg.kind === "static" ? " (Emerald in battle advances twice per frame: the count here is up to the press that starts it)" : "") + ".");
     lines.push("5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).");
     lines.push("6. Repeat until the frame hit equals the target; then the card above is what the game creates.");
-    return lines;
+    return labelSteps(lines, model.id);
   }
   function gen4Procedure(cfg, row, timerModel, plan) {
     var model = modelOf(cfg.game), game = GAMES[cfg.game];
@@ -574,7 +586,7 @@
     lines.push("4. Verify the seed: " + (game.family === "dppt" ? "open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below" : "call Elm (each call is one LCRNG advance: count them) and type the E/K/P letters below, with the roamers active on the save") + ": the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.");
     lines.push("5. Advance to frame " + row.frame + ": " + (plan.needed <= 0 ? "no advance needed from frame " + plan.current + "." : plan.plan.map(function (p) { return p.uses + " x " + p.tool + " (+" + p.perUse + " each, " + p.label + ")"; }).join(", ") + (plan.remainder ? " and " + plan.remainder + " left that no listed tool covers" : "") + " from frame " + plan.current + " (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers).") + " Then trigger the encounter.");
     lines.push("6. Read the nature and stats: the card above says what frame " + row.frame + " of seed " + hex8(row.seed) + " creates.");
-    return lines;
+    return labelSteps(lines, model.id);
   }
 
   // ---- the typed outcome: Gen 3 frame hit and Gen 4 delay hit ----------------------------------------
@@ -1033,10 +1045,14 @@
   }
 
   // -- wiring
+  // The tables are appended when the tab is first opened (or at once when it is the active tab, and under
+  // ?wizselftest), not at page load: a visitor who never opens the wizard never fetches data/wizard-gen3.js.
+  var setupDone = false;
+  function ensureSetup() { if (setupDone) return; setupDone = true; refreshSetup(); }
   st.store = loadStore(mode());
   fillGames();
-  $("wz-game").addEventListener("change", function () { st.game = $("wz-game").value; st.console = consolesFor(st.game)[0].key; refreshSetup(); });
-  $("wz-console").addEventListener("change", function () { st.console = $("wz-console").value; refreshSetup(); });
+  $("wz-game").addEventListener("change", function () { st.game = $("wz-game").value; st.console = consolesFor(st.game)[0].key; setupDone = true; refreshSetup(); });
+  $("wz-console").addEventListener("change", function () { st.console = $("wz-console").value; setupDone = true; refreshSetup(); });
   $("wz-kind").addEventListener("change", refreshEncounter);
   $("wz-static").addEventListener("change", refreshEncounter);
   $("wz-table").addEventListener("change", function () { $("wz-enc-kind").value = ""; refreshEncounter(); });
@@ -1077,7 +1093,10 @@
     setText("wz-outcome", "");
     refreshTimer();
   });
-  refreshSetup();
+  var tabButton = document.querySelector("button[data-tab=wizard]");
+  if (tabButton) tabButton.addEventListener("click", ensureSetup);
+  if ($("tab-wizard").classList.contains("active") || (root.location && root.location.search.indexOf("wizselftest") !== -1)) ensureSetup();
+  else setText("wz-status", "the species, encounter and static tables load when this tab is opened");
 
   // ?wizselftest: three end-to-end scenarios with known answers (tests/generators-vectors.json and
   // tests/seedtime4-vectors.json) driven through the tab's own handlers once the tables have loaded; the

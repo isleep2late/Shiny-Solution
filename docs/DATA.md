@@ -17,9 +17,10 @@ Gen 2 TID tab as `window.ShinyGen2TidData`, so the plain mobile bundle is about 
 also writes `webapp/data/wizard-gen3.js` (1.26 MB: `window.ShinyWizardData3 = {species, encounters,
 statics}`) and `webapp/data/wizard-gen4.js` (3.41 MB, `ShinyWizardData4`). The choice made for the
 4.7 MB: **lazy load per generation on first use, as a script element**, not a fetch and not an
-inline. The tab appends `<script src="data/wizard-genN.js">` when a game of generation N is
-picked, so the static site and the Electron `file://` page (`electron/build.sh` copies both files
-into `electron/webapp/data/`) pay for the tables only when the wizard is used, and a script element
+inline. The tab appends `<script src="data/wizard-genN.js">` when it is first opened (Emerald is
+the default game, so the Gen 3 file) and when a game of the other generation is picked; nothing is
+appended at page load, so the static site and the Electron `file://` page (`electron/build.sh`
+copies both files into `electron/webapp/data/`) pay for the tables only when the wizard is used, and a script element
 works over `file://` where `fetch` would be refused (the headless self-test `?wizselftest` in
 `tests/run-tests.sh` loads them that way). The mobile bundle (`webapp/build-mobile-bundle.mjs`)
 inlines neither file: it is one HTML string with no file beside it, so it sets

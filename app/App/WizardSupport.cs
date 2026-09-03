@@ -514,6 +514,14 @@ public static class Wizard
         if (M1Categories.Contains(WJ.S(e, "category"))) return "M1";
         return game.Method!;
     }
+    // An egg is refused however the data files it: by its category, or a gift egg filed under its event (Emerald's
+    // Surfing Pichu egg, the Gen 4 Manaphy egg) named by its id or its creation chain. Neither Method 1 nor J / K
+    // creates an egg, so a frame or a seed searched under them would be for a Pokemon the game never makes that way.
+    static bool IsEggEntry(JsonElement e) =>
+        WJ.S(e, "category") == "egg" || Regex.IsMatch(WJ.S(e, "id"), "(^|/|-)egg(/|-|$)") || Regex.IsMatch(WJ.SN(e, "creation") ?? "", @"\begg\b", RegexOptions.IgnoreCase);
+    static string EggRefusal(int gen) => gen == 3
+        ? "an egg: its PID is split between the trigger and the pickup (design 5.3), not a Method 1 creation; the egg generators are engine-only here"
+        : "an egg: its PID is one MT output at the trigger and its IVs come from the LCRNG at the pickup (design 5.3), not a Method 1 / J / K creation; the egg generators are engine-only here";
     public static List<WizardStaticEntry> StaticEntries(string gameKey)
     {
         var game = Game(gameKey);
@@ -525,12 +533,12 @@ public static class Wizard
             string category = WJ.S(e, "category");
             string? shiny = WJ.SN(e, "shiny");
             string? refused = null;
-            if (category == "egg") refused = "an egg: its PID is split between the trigger and the pickup (design 5.3); the egg generators are engine-only here";
+            if (IsEggEntry(e)) refused = EggRefusal(game.Gen);
             else if (shiny == "never") refused = "not RNG-manipulable: " + (WJ.SN(e, "notes") is { Length: > 0 } notes ? notes : "its personality is fixed");
             else if (e.TryGetProperty("catchable", out var c) && c.ValueKind == JsonValueKind.False) refused = "not catchable";
             string shinyMode = shiny == "always" ? "always" : shiny == "never" ? "never" : "random";
             string id = WJ.S(e, "id");
-            string method = id == "hgss/static/gyarados" || id == "gen4/event/manaphy-egg" ? "M1" : StaticMethod(game, e);
+            string method = id == "hgss/static/gyarados" ? "M1" : StaticMethod(game, e);
             bool bugged = game.Gen == 3 && category == "roamer" && game.Family != "e";
             var species = d.Species(WJ.Int(e, "species"));
             int level = WJ.Int(e, "level");
@@ -1009,6 +1017,12 @@ public static class Wizard
         => CardLines(mon, Game(cfg.Game).Gen, cfg.Kind == "static" ? cfg.Species : null, cfg.Wanted.Tid, cfg.Wanted.Sid, seed, ModelOf(cfg.Game), timeText);
 
     // ---- procedures (design 5.1 step 6), numbered, every step under the seed model id ---------------------
+    // every numbered step carries the seed model id it runs under (the header line names it first)
+    static List<string> LabelSteps(List<string> lines, string id)
+    {
+        for (int i = 1; i < lines.Count; i++) lines[i] += " [" + id + "]";
+        return lines;
+    }
     public static List<string> Gen3Procedure(WizardCfg cfg, GenResult hit, Gen3Model timerModel)
     {
         var model = ModelOf(cfg.Game); var game = Game(cfg.Game);
@@ -1023,7 +1037,7 @@ public static class Wizard
         lines.Add("4. Timer: phase 1 " + Js.FmtMs(phases[0]) + " (the pre-timer: power on at its end, the first long beep), phase 2 " + Js.FmtMs(phases[1]) + " = frame " + hit.Frame + " x " + Js.Fixed(1000 / FpsOf(cfg.Console), 4) + " ms " + (timerModel.Calibration >= 0 ? "+ " : "- ") + Js.Num(Math.Abs(timerModel.Calibration)) + " ms calibration: press A on the last beep. Target " + Js.FmtMs(ms) + " after the seed" + (game.Family == "e" && cfg.Kind == "static" ? " (Emerald in battle advances twice per frame: the count here is up to the press that starts it)" : "") + ".");
         lines.Add("5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).");
         lines.Add("6. Repeat until the frame hit equals the target; then the card above is what the game creates.");
-        return lines;
+        return LabelSteps(lines, model.Id);
     }
     public static List<string> Gen4Procedure(WizardCfg cfg, WizardGen4Row row, Gen4Model timerModel, AdvancePlan plan, long current, int partyCount)
     {
@@ -1039,7 +1053,7 @@ public static class Wizard
         lines.Add("4. Verify the seed: " + (game.Family == "dppt" ? "open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below" : "call Elm (each call is one LCRNG advance: count them) and type the E/K/P letters below, with the roamers active on the save") + ": the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.");
         lines.Add("5. Advance to frame " + row.Frame + ": " + (plan.Needed <= 0 ? "no advance needed from frame " + current + "." : string.Join(", ", plan.Plan.Select(p => p.Uses + " x " + p.Tool + " (+" + p.PerUse + " each, " + p.Label + ")")) + (plan.Remainder != 0 ? " and " + plan.Remainder + " left that no listed tool covers" : "") + " from frame " + current + " (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers).") + " Then trigger the encounter.");
         lines.Add("6. Read the nature and stats: the card above says what frame " + row.Frame + " of seed " + Js.Hex8(row.Seed) + " creates.");
-        return lines;
+        return LabelSteps(lines, model.Id);
     }
     public static string[] AdvanceToolsFor(string gameKey) => Game(gameKey).Family == "dppt" ? new[] { "walk128", "journal", "chatot" } : new[] { "walk128", "elmCall", "chatot" };
 

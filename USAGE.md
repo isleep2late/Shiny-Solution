@@ -371,7 +371,8 @@ it runs under with that status on the card, the procedure and every search. Noth
    `ShinySolution.exe`).
 2. **Encounter.** A static or gift from the catalogue (the entry says its creation chain and so its
    method: Method 1 for gifts, starters, roamers and fossils, Method J / K for the Gen 4 scripted
-   battles; eggs and the fixed-PID Pichu are listed as not offered, with the reason), or a wild slot:
+   battles; eggs, however the catalogue files them (Emerald's Surfing Pichu egg and the Gen 4 Manaphy
+   egg sit under their event), and the fixed-PID Pichu are listed as not offered, with the reason), or a wild slot:
    the map, the kind (land, surfing, Rock Smash, a rod), on Gen 4 the time of day, and the species
    with its slots, levels and share of the slot roll. Gen 3 statics and wild slots take Method 1 /
    2 / 4 (the VBlank-skip variants); Emerald and the Gen 4 games offer their lead effects (Gen 4
@@ -389,7 +390,7 @@ it runs under with that status on the card, the procedure and every search. Noth
    date, time and delay rows inside your windows.
 5. **Result card and procedure.** Click a row: the card (PID, nature, gender, ability, IVs, Hidden
    Power, stats at the level, shiny yes / no, frame, seed, the seed model and its status) and the
-   numbered procedure under the seed model (Gen 3: the save, the seed at power-on, the constant
+   numbered procedure under the seed model, every step ending with the model's id (Gen 3: the save, the seed at power-on, the constant
    input path, the timer's two phases, the typed outcome; Gen 4: the DS clock setting with the
    minutes-before rule, the two phases, the coin-flip or Elm-call verification, the advance plan
    from the frame you type as your starting point and your party size).
@@ -430,12 +431,12 @@ Result card (EMPIRICAL / model output)
 ```
 ```
 Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)
-1. Prepare the save: in front of Turtwig L5 - Route 201 / Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (1 member).
-2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute (the countdown spans that long); target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0).
-3. Timer: start it as the clock confirms; phase 1 00:41.964 ends on the first long beep: press A to load the game from the DS menu; phase 2 05:17.236 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js).
-4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.
-5. Advance to frame 0: no advance needed from frame 0. Then trigger the encounter.
-6. Read the nature and stats: the card above says what frame 0 of seed 7B0448D1 creates.
+1. Prepare the save: in front of Turtwig L5 - Route 201 / Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (1 member). [dppt/nds/seed-to-time-v0]
+2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute (the countdown spans that long); target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0). [dppt/nds/seed-to-time-v0]
+3. Timer: start it as the clock confirms; phase 1 00:41.964 ends on the first long beep: press A to load the game from the DS menu; phase 2 05:17.236 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js). [dppt/nds/seed-to-time-v0]
+4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target. [dppt/nds/seed-to-time-v0]
+5. Advance to frame 0: no advance needed from frame 0. Then trigger the encounter. [dppt/nds/seed-to-time-v0]
+6. Read the nature and stats: the card above says what frame 0 of seed 7B0448D1 creates. [dppt/nds/seed-to-time-v0]
 ```
 
 Typing the target seed's own twelve coin flips, then a neighbour's (delay 18645):
