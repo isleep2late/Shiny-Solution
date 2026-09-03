@@ -20,6 +20,26 @@ else
   node test-gen5.cjs gen5-vectors.json gen5-random.json
 fi
 
+# Negative control: a corrupted Gen 5 vector (one TID row bumped by 1, one LCRNG64 step moved by 1) must FAIL, and is
+# shown failing. (test-timers.cjs and TimerChecks.cs carry their own corrupted-vector control and print it.)
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+v.ids[0].rows[0].tid += 1;
+v.lcrng64.next[0].forward = String(BigInt(v.lcrng64.next[0].forward) + 1n);
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' gen5-vectors.json "$corrupted"
+if node test-gen5.cjs "$corrupted" gen5-random.json > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted gen5 vectors): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted gen5 vectors): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # Gen 1 Trainer ID / Gen 3 Secret ID / press-jitter engine against the vectors emitted by RNG Solution's
 # Python (tests/emit_vectors.py there; the committed copy is gen1tid-vectors.json).
 node test-gen1tid.cjs gen1tid-vectors.json

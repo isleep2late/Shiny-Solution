@@ -4,7 +4,7 @@
 # page, the Electron file:// page and the mobile bundle need no fetch.
 set -euo pipefail
 cd "$(dirname "$0")"
-cp ../core/rng.js ../core/gen4.js ../core/gen12.js ../core/gen1tid.js .
+cp ../core/rng.js ../core/gen4.js ../core/gen12.js ../core/gen1tid.js ../core/timers.js ../core/gen5.js .
 mkdir -p data
 cp ../core/data/gen1-tid.json ../core/data/gen3-sid.json data/
 {
