@@ -9,8 +9,9 @@ against them, `tests/test-data.cjs` asserts them, and the web app's Wizard tab
 (`webapp/wizard-ui.js`) resolves a picked game, table and static entry into the records the
 engines take (`staticEntries`, `wildTables`, `slotsFor`).
 
-Which head loads them, and how: the web app's **Wizard (Gen 3/4)** tab (`webapp/wizard-ui.js`)
-is the consumer. `webapp/sync-core.sh` still writes `gen1-data.js` with `gen1-tid.json` /
+Which heads load them, and how: the web app's **Wizard (Gen 3/4)** tab (`webapp/wizard-ui.js`)
+and the desktop app's **Wizard (Gen 3/4)** tab (`app/App/WizardPanel.cs` over `WizardSupport.cs`)
+are the consumers. `webapp/sync-core.sh` still writes `gen1-data.js` with `gen1-tid.json` /
 `gen3-sid.json` / `gen2-tid.json` as globals (the Gen 2 tables are 1,034,046 bytes, read by the
 Gen 2 TID tab as `window.ShinyGen2TidData`, so the plain mobile bundle is about 1.8 MB), and now
 also writes `webapp/data/wizard-gen3.js` (1.26 MB: `window.ShinyWizardData3 = {species, encounters,
@@ -26,6 +27,13 @@ inlines neither file: it is one HTML string with no file beside it, so it sets
 static page or the Electron app. A per-game split was not taken: the encounter files are the bulk
 and are read by one game at a time already, so splitting them would save a load only for a visitor
 who never changes game.
+
+The desktop app takes the other choice: the six files are **embedded in `ShinySolution.Core.dll`**
+(`app/Core/ShinySolution.Core.csproj`, logical names `data.species-gen3` ... `data.statics-gen4`, 4.7 MB
+in the self-contained single file, as `gen2-tid.json` already is), and `WizardData.Load(gen)` prefers the
+three JSON files of a generation placed beside `ShinySolution.exe` (`species-genN.json`,
+`encounters-genN.json`, `statics-genN.json`) over the embedded copies, so a regenerated table can be
+dropped in without a rebuild. A generation is parsed on first use (the tab's game switch), not at start-up.
 
 | File | Bytes | Content |
 |---|---|---|

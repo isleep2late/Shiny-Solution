@@ -349,7 +349,10 @@ The tab gives you targets, a two-phase timer, and seed verification:
 ## Wanted-IVs wizard (Gen 3 / Gen 4): from the Pokemon you want to the frame, the seed and the procedure
 
 TARGET mode, human input only, in the web app's **Wizard (Gen 3/4)** tab (the same page in the
-Electron app; the mobile bundle carries the tab but not its tables and says so). You pick the game,
+Electron app; the mobile bundle carries the tab but not its tables and says so) and the desktop app's
+**Wizard (Gen 3/4)** tab (the same steps, texts and numbers; its tables are embedded in the app, its
+countdown is the Gen 4 panel's two-phase timer with the same beeps, and its samples live in the app's
+settings under `wizard.calibration`, per mode). You pick the game,
 the encounter and the outcome you want; the tab lists the frames (Gen 3) or the seeds with their
 dates, times and delays (Gen 4) that produce it, shows the result card and a numbered procedure,
 runs the timer, and learns from what you type after the attempt. **Every output is EMPIRICAL /
@@ -363,7 +366,9 @@ it runs under with that status on the card, the procedure and every search. Noth
    have no fixed seed and need one typed (`frlg/gba/typed-seed-v0`; without it the game is stated
    unavailable), and the Gen 4 games take the seed a DS clock can reach
    (`dppt/nds/seed-to-time-v0`, `hgss/nds/seed-to-time-v0`). The species, encounter and static
-   tables of the generation load on first use (`webapp/data/wizard-gen3.js`, `wizard-gen4.js`).
+   tables of the generation load on first use (`webapp/data/wizard-gen3.js`, `wizard-gen4.js`; the
+   desktop app reads the copies embedded in it, or the three JSON files of the generation placed beside
+   `ShinySolution.exe`).
 2. **Encounter.** A static or gift from the catalogue (the entry says its creation chain and so its
    method: Method 1 for gifts, starters, roamers and fossils, Method J / K for the Gen 4 scripted
    battles; eggs and the fixed-PID Pichu are listed as not offered, with the reason), or a wild slot:
@@ -398,7 +403,8 @@ it runs under with that status on the card, the procedure and every search. Noth
    the difference. Gen 4: type the coin flips (DPPt) or Elm calls (HGSS, with the roamers active on
    your save ticked): the tab matches them against the neighbouring delays and seconds, names the
    delay you hit and moves the calibrated delay (x 0.75 within 167 ms). Samples are kept under
-   `shinySolution.wizard.calibration` per game and console, stamped with the seed model and the mode
+   `shinySolution.wizard.calibration` (the desktop app: `wizard.calibration` in its settings) per game and
+   console, stamped with the seed model and the mode
    (RUN or PRACTICE / HUNT, each mode its own store); a sample of another mode or model is listed as
    left out and never in force.
 
@@ -529,6 +535,8 @@ available without installing anything:
   live page with the earlier tools until then.
 - **Hackmons Hub app** — Fun → Shiny Solution (same tools, beeps included; the wizard tab is there but its
   species, encounter and static tables are not inlined into the bundle, so it says to use the page or the desktop app).
+- **Windows desktop** — ShinySolution.exe carries the same Gen 1 TID, Gen 2 TID and Wizard (Gen 3/4) tabs as
+  the page, pinned to it by the vector files under `tests/`.
 - **Linux/macOS desktop** — the calculators-and-timers app from the releases page
   (Linux AppImage/tarball; macOS dmg/zip, unsigned — right-click → Open the first time).
 

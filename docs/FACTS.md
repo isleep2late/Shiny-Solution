@@ -1497,8 +1497,11 @@ pokeplatinum `7c0aa10b`, pokeheartgold `814275e`; PokeFinder `7adce35`.
   `Method4`). Statics accept Method 2 too (PokeFinder's static generator only offers 4).
 - Every result carries `callsUsed`, the number of LCRNG calls the creation consumed from the
   frame, so the wizard can place the next event.
-- **The head over these engines** is the web app's Wizard tab (`webapp/wizard-ui.js`, USAGE.md
-  "Wanted-IVs wizard"). Its Gen 3 answer is a forward generation from the game's seed model
+- **The heads over these engines** are the web app's Wizard tab (`webapp/wizard-ui.js`, USAGE.md
+  "Wanted-IVs wizard") and its desktop twin (`app/App/WizardPanel.cs` over `WizardSupport.cs`, the same
+  flow, searches, cards, procedures and store split, pinned to the web module's output for its self-test
+  scenarios and 20 random searches by `tests/wizard-panel-vectors.json`, emitted by
+  `tools/gen-wizard-panel-vectors.cjs` and checked by `app/Tests/WizardPanelChecks.cs`). Its Gen 3 answer is a forward generation from the game's seed model
   (Ruby / Sapphire dead battery `0x5A0`, Emerald `0`, FireRed / LeafGreen a typed seed) with the
   engine's own filter, chunked to the horizon; its Gen 4 answer is the seed-to-time layer's
   back-step (below, "The reachability search") followed by the static or wild generator run on
