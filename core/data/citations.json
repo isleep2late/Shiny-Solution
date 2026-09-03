@@ -21,7 +21,7 @@
    "lines": "6127-6137",
    "as_written": "pokecrystal/engine/battle/core.asm:6127-6137",
    "section": "Gen 1/2 (Game Boy) / Where DVs are rolled",
-   "facts_line": 73,
+   "facts_line": 84,
    "context": "- Gen 2 wild: `.GenerateDVs` in `LoadEnemyMon` (`pokecrystal/engine/battle/core.asm:6127-6137`);",
    "first_line": ".GenerateDVs:",
    "count": 1
@@ -33,7 +33,7 @@
    "lines": "8-43",
    "as_written": "pokecrystal/engine/gfx/color.asm:8-43",
    "section": "Gen 1/2 (Game Boy) / Shininess",
-   "facts_line": 55,
+   "facts_line": 66,
    "context": "`CheckShininess` (`pokecrystal/engine/gfx/color.asm:8-43`): shiny iff Def DV == 10,",
    "first_line": "CheckShininess:",
    "count": 1
@@ -45,7 +45,7 @@
    "lines": "1024-1108",
    "as_written": "pokecrystal/engine/link/link.asm:1024-1108",
    "section": "Gen 1/2 (Game Boy) / Shininess",
-   "facts_line": 59,
+   "facts_line": 70,
    "context": "(`pokecrystal/engine/link/link.asm:1024-1108`), so a Gen 1 mon is shiny in Gen 2 iff its",
    "first_line": "Link_ConvertPartyStruct1to2:",
    "count": 1
@@ -57,7 +57,7 @@
    "lines": "118-134",
    "as_written": "pokecrystal/engine/menus/intro_menu.asm:118-134",
    "section": "Gen 1/2 (Game Boy) / Where DVs are rolled",
-   "facts_line": 87,
+   "facts_line": 98,
    "context": "(`pokecrystal/engine/menus/intro_menu.asm:118-134`).",
    "first_line": "ldh a, [rLY]",
    "count": 1
@@ -69,7 +69,7 @@
    "lines": "205-214",
    "as_written": "pokecrystal/engine/pokemon/move_mon.asm:205-214",
    "section": "Gen 1/2 (Game Boy) / Where DVs are rolled",
-   "facts_line": 83,
+   "facts_line": 94,
    "context": "(`pokecrystal/engine/pokemon/move_mon.asm:205-214`).",
    "first_line": "call Random",
    "count": 1
@@ -81,7 +81,7 @@
    "lines": "1-29",
    "as_written": "pokecrystal/home/random.asm:1-29",
    "section": "Gen 1/2 (Game Boy) / The RNG",
-   "facts_line": 47,
+   "facts_line": 58,
    "context": "`pokecrystal/home/random.asm:1-29`), and the VBlank handler runs the same update every frame",
    "first_line": "Random::",
    "count": 1
@@ -93,7 +93,7 @@
    "lines": "68-79",
    "as_written": "pokecrystal/home/vblank.asm:68-79",
    "section": "Gen 1/2 (Game Boy) / The RNG",
-   "facts_line": 48,
+   "facts_line": 59,
    "context": "(`pokered/home/vblank.asm:37`, `pokecrystal/home/vblank.asm:68-79`). Results are a pure",
    "first_line": "; advance random variables",
    "count": 1
@@ -105,7 +105,7 @@
    "lines": "239-249",
    "as_written": "pokediamond/arm9/src/main.c:239-249",
    "section": "Gen 4 (Nintendo DS) / The seed",
-   "facts_line": 549,
+   "facts_line": 560,
    "context": "`pokeplatinum/src/main.c:306-315`, `pokediamond/arm9/src/main.c:239-249`):",
    "first_line": "void InitializeMainRNG(void) {",
    "count": 1
@@ -117,7 +117,7 @@
    "lines": "364-369",
    "as_written": "pokeemerald/include/pokemon.h:364-369",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1531,
+   "facts_line": 1542,
    "context": "- Unown letter = the four PID bit pairs, mod 28 (`pokeemerald/include/pokemon.h:364-369`).",
    "first_line": "#define GET_UNOWN_LETTER(personality) ((   \\",
    "count": 1
@@ -129,7 +129,7 @@
    "lines": "371",
    "as_written": "pokeemerald/include/pokemon.h:371",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1524,
+   "facts_line": 1535,
    "context": "- Shiny iff `TID ^ SID ^ PIDhi ^ PIDlo < 8` (`pokeemerald/include/pokemon.h:371`,",
    "first_line": "#define GET_SHINY_VALUE(otId, personality) (HIHALF(otId) ^ LOHALF(otId) ^ HIHALF(personality) ^ LOHALF(personality))",
    "count": 1
@@ -141,7 +141,7 @@
    "lines": "12",
    "as_written": "pokeemerald/include/random.h:12",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1485,
+   "facts_line": 1496,
    "context": "- **PID** = `lo | (hi << 16)`, low half first: `Random32()` (`pokeemerald/include/random.h:12`),",
    "first_line": "#define Random32() (Random() | (Random() << 16))",
    "count": 1
@@ -153,7 +153,7 @@
    "lines": "16",
    "as_written": "pokeemerald/include/random.h:16",
    "section": "Gen 3 (Game Boy Advance) / The RNG",
-   "facts_line": 784,
+   "facts_line": 795,
    "context": "(`pokeemerald/include/random.h:16`, `pokefirered/include/random.h:18-19`).",
    "first_line": "#define ISO_RANDOMIZE1(val) (1103515245 * (val) + 24691)",
    "count": 1
@@ -165,7 +165,7 @@
    "lines": "8905-8909",
    "as_written": "pokeemerald/src/battle_script_commands.c:8905-8909",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1528,
+   "facts_line": 1539,
    "context": "TYPE_MYSTERY (`pokeemerald/src/battle_script_commands.c:8905-8909`,",
    "first_line": "gDynamicBasePower = (40 * powerBits) / 63 + 30;",
    "count": 1
@@ -177,7 +177,7 @@
    "lines": "1039-1040",
    "as_written": "pokeemerald/src/daycare.c:1039-1040",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Not modelled / open",
-   "facts_line": 1801,
+   "facts_line": 1812,
    "context": "(`pokeemerald/src/daycare.c:1039-1040`, `pokeplatinum daycare.c:836-838`,",
    "first_line": "if (eggGroups[0][0] == EGG_GROUP_DITTO && eggGroups[1][0] == EGG_GROUP_DITTO)",
    "count": 1
@@ -189,7 +189,7 @@
    "lines": "326-331",
    "as_written": "daycare.c:326-331",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Not modelled / open",
-   "facts_line": 1799,
+   "facts_line": 1810,
    "context": "two-Ditto coin flips (`pokeemerald/src/daycare.c:437-442`, `pokeplatinum daycare.c:326-331`)",
    "first_line": "return PrepareDaycareCostStringForSelectedMon(&daycare->mons[slotId]);",
    "count": 1
@@ -201,7 +201,7 @@
    "lines": "336-341",
    "as_written": "daycare.c:336-341",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Disagreement log",
-   "facts_line": 1778,
+   "facts_line": 1789,
    "context": "| D6 | Gen 4 Everstone | LCRNG roll at trigger, `>= 0x7fff` fails (`daycare.c:336-341`, `get_egg.c:241,247`), then MT loops until the parent's nature (`daycare.c:353-367`, `get_egg.c:259-274`) | `EggGenerator4` ignores the parents' items | ",
    "first_line": "gSaveBlock1Ptr->daycare.mons[0].steps += numSteps;",
    "count": 1
@@ -213,7 +213,7 @@
    "lines": "353-367",
    "as_written": "daycare.c:353-367",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Disagreement log",
-   "facts_line": 1778,
+   "facts_line": 1789,
    "context": "| D6 | Gen 4 Everstone | LCRNG roll at trigger, `>= 0x7fff` fails (`daycare.c:336-341`, `get_egg.c:241,247`), then MT loops until the parent's nature (`daycare.c:353-367`, `get_egg.c:259-274`) | `EggGenerator4` ignores the parents' items | ",
    "first_line": "mail->otName[i] = 0;",
    "count": 1
@@ -225,7 +225,7 @@
    "lines": "437-442",
    "as_written": "pokeemerald/src/daycare.c:437-442",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Not modelled / open",
-   "facts_line": 1799,
+   "facts_line": 1810,
    "context": "two-Ditto coin flips (`pokeemerald/src/daycare.c:437-442`, `pokeplatinum daycare.c:326-331`)",
    "first_line": "if (dittoCount == DAYCARE_MON_COUNT)",
    "count": 1
@@ -237,7 +237,7 @@
    "lines": "446-447",
    "as_written": "daycare.c:446-447",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Disagreement log",
-   "facts_line": 1774,
+   "facts_line": 1785,
    "context": "| D2 | Emerald Everstone roll | `Random() >= USHRT_MAX/2` (= 0x7fff) -> no inheritance (`daycare.c:446-447`) | `(rand >> 15) == 0` inherits, so an output of exactly 0x7fff inherits | 1 in 65536 trigger frames (`pin D2`) |",
    "first_line": "if (GetBoxMonData(&daycare->mons[parent].mon, MON_DATA_HELD_ITEM) != ITEM_EVERSTONE",
    "count": 1
@@ -249,7 +249,7 @@
    "lines": "836-838",
    "as_written": "daycare.c:836-838",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Not modelled / open",
-   "facts_line": 1801,
+   "facts_line": 1812,
    "context": "(`pokeemerald/src/daycare.c:1039-1040`, `pokeplatinum daycare.c:836-838`,",
    "first_line": "CreateMon(mon, species, EGG_HATCH_LEVEL, USE_RANDOM_IVS, FALSE, 0, OT_ID_PLAYER_ID, 0);",
    "count": 1
@@ -261,7 +261,7 @@
    "lines": "893",
    "as_written": "pokeemerald/src/daycare.c:893",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 3 eggs: gen3EggEmerald, gen3EggRSFRLG",
-   "facts_line": 1579,
+   "facts_line": 1590,
    "context": "(`pokeemerald/src/daycare.c:893`, `pokeruby:755`, `pokefirered:1152`). Emerald then rolls",
    "first_line": "if (compatibility > (Random() * 100u) / USHRT_MAX)",
    "count": 1
@@ -273,7 +273,7 @@
    "lines": "108-110",
    "as_written": "pokeemerald/src/main.c:108-110",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 799,
+   "facts_line": 810,
    "context": "`pokeemerald/src/main.c:108-110`), so retail Emerald boots with state 0 and re-seeds from",
    "first_line": "#ifdef BUGFIX",
    "count": 1
@@ -285,7 +285,7 @@
    "lines": "208-213",
    "as_written": "pokeemerald/src/main.c:208-213",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 800,
+   "facts_line": 811,
    "context": "Timer1 only when the player-naming screen exits (`pokeemerald/src/main.c:208-213`,",
    "first_line": "void SeedRngAndSetTrainerId(void)",
    "count": 1
@@ -297,7 +297,7 @@
    "lines": "365-366",
    "as_written": "pokeemerald/src/main.c:365-366",
    "section": "Gen 3 (Game Boy Advance) / The idle advance",
-   "facts_line": 816,
+   "facts_line": 827,
    "context": "(`pokeemerald/src/main.c:365-366`). Scripted events, wandering NPCs and battle logic consume",
    "first_line": "if (!gMain.inBattle || !(gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_FRONTIER | BATTLE_TYPE_RECORDED)))",
    "count": 2
@@ -309,7 +309,7 @@
    "lines": "701",
    "as_written": "naming_screen.c:701",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 801,
+   "facts_line": 812,
    "context": "`naming_screen.c:701`).",
    "first_line": "SeedRngAndSetTrainerId();",
    "count": 1
@@ -321,7 +321,7 @@
    "lines": "2218,2277-2296",
    "as_written": "pokeemerald/src/pokemon.c:2218,2277-2296",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 3 statics and gifts: gen3Static",
-   "facts_line": 1538,
+   "facts_line": 1549,
    "context": "PID lo, PID hi, [M2 skip], IV1, [M4 skip], IV2 (`pokeemerald/src/pokemon.c:2218,2277-2296`).",
    "first_line": "personality = Random32();",
    "count": 1
@@ -333,7 +333,7 @@
    "lines": "2277-2296",
    "as_written": "pokeemerald/src/pokemon.c:2277-2296",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1491,
+   "facts_line": 1502,
    "context": "(`pokeemerald/src/pokemon.c:2277-2296`, `pokeplatinum/src/pokemon.c:452-470`,",
    "first_line": "value = Random();",
    "count": 1
@@ -345,7 +345,7 @@
    "lines": "2298-2302",
    "as_written": "pokeemerald/src/pokemon.c:2298-2302",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1522,
+   "facts_line": 1533,
    "context": "(`pokeemerald/src/pokemon.c:2298-2302`, `pokeplatinum/src/pokemon.c:475-483`). Results carry",
    "first_line": "value = personality & 1;",
    "count": 1
@@ -357,7 +357,7 @@
    "lines": "3471-3485",
    "as_written": "pokeemerald/src/pokemon.c:3471-3485",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1520,
+   "facts_line": 1531,
    "context": "(`pokeemerald/src/pokemon.c:3471-3485`); reported 0 = M, 1 = F, 2 = none.",
    "first_line": "u8 GetGenderFromSpeciesAndPersonality(u16 species, u32 personality)",
    "count": 1
@@ -369,7 +369,7 @@
    "lines": "4400",
    "as_written": "pokeemerald/src/pokemon.c:4400",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 3 statics and gifts: gen3Static",
-   "facts_line": 1543,
+   "facts_line": 1554,
    "context": "(`pokeemerald/src/pokemon.c:4400`).",
    "first_line": "u32 ivs = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);",
    "count": 1
@@ -381,7 +381,7 @@
    "lines": "5498-5500",
    "as_written": "pokeemerald/src/pokemon.c:5498-5500",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1518,
+   "facts_line": 1529,
    "context": "- Nature = PID % 25 (`pokeemerald/src/pokemon.c:5498-5500`).",
    "first_line": "u8 GetNatureFromPersonality(u32 personality)",
    "count": 1
@@ -393,7 +393,7 @@
    "lines": "11",
    "as_written": "pokeemerald/src/random.c:11",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1478,
+   "facts_line": 1489,
    "context": "- **LCRNG** `x = 0x41C64E6D*x + 0x6073`, output = `x >> 16` (`pokeemerald/src/random.c:11`,",
    "first_line": "u16 Random(void)",
    "count": 1
@@ -405,7 +405,7 @@
    "lines": "121-122,137",
    "as_written": "pokeemerald/src/wild_encounter.c:121-122,137",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Disagreement log",
-   "facts_line": 1779,
+   "facts_line": 1790,
    "context": "| D7 | Feebas roll off the tile | Route 119: `Random()%100` after the map check and before the spot comparison (`pokeemerald/src/wild_encounter.c:121-122,137`, `pokeruby:84-85,98`); Mt. Coronet B1F: `RandMod(2)` first in `PlayerAvatar_IsFac",
    "first_line": "if (gSaveBlock1Ptr->location.mapGroup == MAP_GROUP(MAP_ROUTE119)",
    "count": 1
@@ -417,7 +417,7 @@
    "lines": "432,440,445-446",
    "as_written": "pokeemerald/src/wild_encounter.c:432,440,445-446",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Disagreement log",
-   "facts_line": 1773,
+   "facts_line": 1784,
    "context": "| D1 | Emerald typed slots | Magnet Pull on land only, Static on land and water, neither on rocks (`pokeemerald/src/wild_encounter.c:432,440,445-446`) | applies both leads to every encounter type (`WildGenerator3.cpp`, `if ((lead == Lead::M",
    "first_line": "if (TRY_GET_ABILITY_INFLUENCED_WILD_MON_INDEX(wildMonInfo->wildPokemon, TYPE_ELECTRIC, ABILITY_STATIC, &wildMonIndex, NUM_LAND_MONS_ENCOUNTER_SLOTS))",
    "count": 1
@@ -429,7 +429,7 @@
    "lines": "595-661",
    "as_written": "pokeemerald/src/wild_encounter.c:595-661",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 3 wild Method H: gen3Wild",
-   "facts_line": 1549,
+   "facts_line": 1560,
    "context": "`StandardWildEncounter` (`pokeemerald/src/wild_encounter.c:595-661`, `pokeruby:447-512`,",
    "first_line": "if (MetatileBehavior_IsLandWildEncounter(curMetatileBehavior) == TRUE)",
    "count": 1
@@ -441,7 +441,7 @@
    "lines": "18-19",
    "as_written": "pokefirered/include/random.h:18-19",
    "section": "Gen 3 (Game Boy Advance) / The RNG",
-   "facts_line": 784,
+   "facts_line": 795,
    "context": "(`pokeemerald/include/random.h:16`, `pokefirered/include/random.h:18-19`).",
    "first_line": "#define RAND_MULT 1103515245",
    "count": 1
@@ -453,7 +453,7 @@
    "lines": "412",
    "as_written": "pokefirered/src/main.c:412",
    "section": "Gen 3 (Game Boy Advance) / The idle advance",
-   "facts_line": 814,
+   "facts_line": 825,
    "context": "once per frame everywhere: `pokeruby/src/main.c:328`, `pokefirered/src/main.c:412`.",
    "first_line": "Random();",
    "count": 1
@@ -465,7 +465,7 @@
    "lines": "23-35",
    "as_written": "pokefirered/src/main_menu.c:23-35",
    "section": "Gen 3 (Game Boy Advance) / Secret ID from a typed Trainer ID / Gen 3 Secret ID (Emerald, FireRed, LeafGreen): sid / Measured frame counts",
-   "facts_line": 1049,
+   "facts_line": 1060,
    "context": "680 = 680, 2937 = 2937); FRLG's main menu has no OPTION (`pokefirered/src/main_menu.c:23-35`) and the Oak",
    "first_line": "MAIN_MENU_NEWGAME = 0,",
    "count": 1
@@ -477,7 +477,7 @@
    "lines": "428",
    "as_written": "naming_screen.c:428",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 806,
+   "facts_line": 817,
    "context": "(`naming_screen.c:428`) and reseeds again at naming exit (`SeedRngAndSetTrainerId`,",
    "first_line": "StartTimer1();",
    "count": 1
@@ -489,7 +489,7 @@
    "lines": "722",
    "as_written": "naming_screen.c:722",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 807,
+   "facts_line": 818,
    "context": "`naming_screen.c:722`), overwriting it. So FRLG TID is determined by the naming-screen exit,",
    "first_line": "SeedRngAndSetTrainerId();",
    "count": 1
@@ -501,7 +501,7 @@
    "lines": "761",
    "as_written": "oak_speech.c:761",
    "section": "Gen 3 (Game Boy Advance) / Secret ID from a typed Trainer ID / Gen 3 Secret ID (Emerald, FireRed, LeafGreen): sid / Measured frame counts",
-   "facts_line": 1050,
+   "facts_line": 1061,
    "context": "speech caches the speed at its start (`oak_speech.c:761`), so a fresh save is MID and fast / slow were",
    "first_line": "sOakSpeechResources->textSpeed = GetTextSpeedSetting();",
    "count": 1
@@ -513,7 +513,7 @@
    "lines": "3660",
    "as_written": "pokefirered/src/pokemon.c:3660",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 3 statics and gifts: gen3Static",
-   "facts_line": 1541,
+   "facts_line": 1552,
    "context": "(`pokeruby/src/pokemon_2.c:938`, `pokefirered/src/pokemon.c:3660`, stored at",
    "first_line": "u32 ivs = *data; // Bug: Only the HP IV and the lower 3 bits of the Attack IV are read. The rest become 0.",
    "count": 1
@@ -525,7 +525,7 @@
    "lines": "108",
    "as_written": "pokefirered/src/roamer.c:108",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 3 statics and gifts: gen3Static",
-   "facts_line": 1542,
+   "facts_line": 1553,
    "context": "`pokeruby/src/roamer.c:71`, `pokefirered/src/roamer.c:108`); Emerald reads all four bytes",
    "first_line": "ROAMER->ivs = GetMonData(mon, MON_DATA_IVS);",
    "count": 1
@@ -537,7 +537,7 @@
    "lines": "944-955",
    "as_written": "text.c:944-955",
    "section": "Gen 3 (Game Boy Advance) / Secret ID from a typed Trainer ID / Gen 3 Secret ID (Emerald, FireRed, LeafGreen): sid / Measured frame counts",
-   "facts_line": 1053,
+   "facts_line": 1064,
    "context": "only a press while the text prints arms `hasPrintBeenSpedUp` (`text.c:944-955`).",
    "first_line": "lineWidths[line] = width;",
    "count": 1
@@ -549,7 +549,7 @@
    "lines": "351",
    "as_written": "pokefirered/src/title_screen.c:351",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 802,
+   "facts_line": 813,
    "context": "- **FireRed/LeafGreen**: Timer1 starts at title-screen init (`pokefirered/src/title_screen.c:351`)",
    "first_line": "StartTimer1();",
    "count": 1
@@ -561,7 +561,7 @@
    "lines": "735",
    "as_written": "title_screen.c:735",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 804,
+   "facts_line": 815,
    "context": "(`SeedRngAndSetTrainerId`, `title_screen.c:735`). **Correction:** that title-screen value does",
    "first_line": "SeedRngAndSetTrainerId();",
    "count": 1
@@ -573,7 +573,7 @@
    "lines": "248",
    "as_written": "pokefirered/src/wild_encounter.c:248",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1488,
+   "facts_line": 1499,
    "context": "(`pokefirered/src/wild_encounter.c:248`; operand order is compiler output, verified for",
    "first_line": "personality = (Random() << 16) | Random();",
    "count": 1
@@ -585,7 +585,7 @@
    "lines": "212-220",
    "as_written": "asm/unk_02067A60.s:212-220",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 681,
+   "facts_line": 692,
    "context": "`sub_02067BE8`, a thunk at `asm/unk_02067A60.s:212-220` (`Save_Roamers_Get`, then",
    "first_line": "thumb_func_start sub_02067BE8",
    "count": 1
@@ -597,7 +597,7 @@
    "lines": "4-7",
    "as_written": "include/constants/roamer.h:4-7",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 683,
+   "facts_line": 694,
    "context": "of `include/constants/roamer.h:4-7` (two more thunks re-roll on the warps at",
    "first_line": "#define ROAMER_RAIKOU 0",
    "count": 1
@@ -609,7 +609,7 @@
    "lines": "46-51",
    "as_written": "pokeheartgold/include/gf_rtc.h:46-51",
    "section": "Gen 4 (Nintendo DS) / The seed",
-   "facts_line": 548,
+   "facts_line": 559,
    "context": "Verified in all three decomps (`pokeheartgold/include/gf_rtc.h:46-51` + `src/main.c:281-284`,",
    "first_line": "#define RngSeedFromRTC() ({                                                                                                                      \\",
    "count": 2
@@ -621,7 +621,7 @@
    "lines": "34",
    "as_written": "pokeheartgold/include/math_util.h:34",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1484,
+   "facts_line": 1495,
    "context": "`LCRandRange(n) = LCRandom() % n` (`pokeheartgold/include/math_util.h:34`) everywhere.",
    "first_line": "u16 result = LCRandom() % maximum;",
    "count": 1
@@ -633,7 +633,7 @@
    "lines": "190-240",
    "as_written": "phone_script_defs.c:190-240",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 673,
+   "facts_line": 684,
    "context": "messages are evolution / Kanto / Pokerus (`phone_script_defs.c:190-240` maps the scripts to",
    "first_line": "// PHONE_SCRIPT_014",
    "count": 1
@@ -645,7 +645,7 @@
    "lines": "59,84,86",
    "as_written": "phone_scripts_prof_elm.c:59,84,86",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / Advance costs",
-   "facts_line": 702,
+   "facts_line": 713,
    "context": "| Elm call | +1 | STRUCTURAL | `phone_scripts_prof_elm.c:59,84,86`, only on the story states that roll |",
    "first_line": "return PHONE_SCRIPT_014 + (LCRandom() % 2);",
    "count": 1
@@ -657,7 +657,7 @@
    "lines": "84",
    "as_written": "pokeheartgold/src/application/pokegear/phone/scripts/phone_scripts_prof_elm.c:84",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 668,
+   "facts_line": 679,
    "context": "(`pokeheartgold/src/application/pokegear/phone/scripts/phone_scripts_prof_elm.c:84`). The 3-way",
    "first_line": "return PHONE_SCRIPT_020 + (LCRandom() % 3);",
    "count": 2
@@ -669,7 +669,7 @@
    "lines": "84-86",
    "as_written": "pokeheartgold/.../phone_scripts_prof_elm.c:84-86",
    "section": "Gen 4 (Nintendo DS) / Seed verification",
-   "facts_line": 592,
+   "facts_line": 603,
    "context": "(`pokeheartgold/.../phone_scripts_prof_elm.c:84-86`) — but the 3-way E/K/P branch is",
    "first_line": "return PHONE_SCRIPT_020 + (LCRandom() % 3);",
    "count": 1
@@ -681,7 +681,7 @@
    "lines": "55-59",
    "as_written": "pokeheartgold/src/choose_starter.c:55-59",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1611,
+   "facts_line": 1622,
    "context": "(`pokeheartgold/src/choose_starter.c:55-59`); DPPt starters are single `GivePokemon` mons",
    "first_line": "for (i = 0; i < (int)NELEMS(species); i++) {",
    "count": 1
@@ -693,7 +693,7 @@
    "lines": "796",
    "as_written": "encounter_check.c:796",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1604,
+   "facts_line": 1615,
    "context": "called from `encounter_check.c:796`): 15 calls, then IVs.",
    "first_line": "personality = GenerateShinyPersonality(otid);",
    "count": 1
@@ -705,7 +705,7 @@
    "lines": "988-996,1350",
    "as_written": "pokeheartgold/src/field/encounter_check.c:988-996,1350",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1609,
+   "facts_line": 1620,
    "context": "`pokemon.c:4681`; HGSS `pokeheartgold/src/field/encounter_check.c:988-996,1350`); `callsUsedWithItem` counts it.",
    "first_line": "void FieldSystem_GenerateSingleWildPokemon(FieldSystem *fieldSystem, u16 species, u8 level, BOOL shiny, BattleSetup *battleSetup) {",
    "count": 1
@@ -717,7 +717,7 @@
    "lines": "123-130",
    "as_written": "src/field_roamer.c:123-130",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 682,
+   "facts_line": 693,
    "context": "`Save_RandomizeRoamersLocation`), which is `src/field_roamer.c:123-130` looping the active roamers",
    "first_line": "void Save_RandomizeRoamersLocation(RoamerSaveData *roamer) {",
    "count": 1
@@ -729,7 +729,7 @@
    "lines": "355-379",
    "as_written": "pokeheartgold/src/field_warp_tasks.c:355-379",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 680,
+   "facts_line": 691,
    "context": "`FieldTask_ContinueGame_Normal` (`pokeheartgold/src/field_warp_tasks.c:355-379`, case 0) calls",
    "first_line": "static BOOL FieldTask_ContinueGame_Normal(TaskManager *taskManager) {",
    "count": 1
@@ -741,7 +741,7 @@
    "lines": "633",
    "as_written": "field_warp_tasks.c:633",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 684,
+   "facts_line": 695,
    "context": "`field_warp_tasks.c:633` and `:744`). The draw (`:236-254`): `LCRandom() % 16` into the Johto",
    "first_line": "sub_02067B88(fieldSystem);",
    "count": 1
@@ -753,7 +753,7 @@
    "lines": "687-689",
    "as_written": "pokeheartgold/src/get_egg.c:687-689",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Not modelled / open",
-   "facts_line": 1802,
+   "facts_line": 1813,
    "context": "`pokeheartgold/src/get_egg.c:687-689`).",
    "first_line": "if (eggGroups[0][0] == EGG_GROUP_DITTO && eggGroups[1][0] == EGG_GROUP_DITTO) {",
    "count": 1
@@ -765,7 +765,7 @@
    "lines": "136-150",
    "as_written": "main.c:136-150",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The inverse of seed",
-   "facts_line": 631,
+   "facts_line": 642,
    "context": "(`main.c:136-150`). So the top byte is `month*day + minute + second` mod 256, byte 2 is the hour,",
    "first_line": "_02111868.mainOverlayId = FS_OVERLAY_ID_NONE;",
    "count": 1
@@ -777,7 +777,7 @@
    "lines": "281-284",
    "as_written": "src/main.c:281-284",
    "section": "Gen 4 (Nintendo DS) / The seed",
-   "facts_line": 548,
+   "facts_line": 559,
    "context": "Verified in all three decomps (`pokeheartgold/include/gf_rtc.h:46-51` + `src/main.c:281-284`,",
    "first_line": "void InitializeMainRNG(void) {",
    "count": 2
@@ -789,7 +789,7 @@
    "lines": "70-74",
    "as_written": "pokeheartgold/src/math_util.c:70-74",
    "section": "Gen 4 (Nintendo DS) / The generators",
-   "facts_line": 562,
+   "facts_line": 573,
    "context": "`pokeheartgold/src/math_util.c:70-74`. Used for PIDs, IVs, encounters, Chatot pitch,",
    "first_line": "u16 LCRandom(void) {",
    "count": 1
@@ -801,7 +801,7 @@
    "lines": "71-73",
    "as_written": "pokeheartgold/src/math_util.c:71-73",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1479,
+   "facts_line": 1490,
    "context": "`pokeplatinum/src/math_util.c:82`, `pokeheartgold/src/math_util.c:71-73`).",
    "first_line": "sLCRNG_State *= 1103515245;",
    "count": 1
@@ -813,7 +813,7 @@
    "lines": "79-119",
    "as_written": "math_util.c:79-119",
    "section": "Gen 4 (Nintendo DS) / The generators",
-   "facts_line": 564,
+   "facts_line": 575,
    "context": "- Mersenne Twister (textbook MT19937, init 1812433253) — `math_util.c:79-119`. Used for",
    "first_line": "",
    "count": 1
@@ -825,7 +825,7 @@
    "lines": "185-202",
    "as_written": "pokeheartgold/src/overlay_36.c:185-202",
    "section": "Gen 4 (Nintendo DS) / TID/SID",
-   "facts_line": 574,
+   "facts_line": 585,
    "context": "`pokeheartgold/src/overlay_36.c:185-202`). TID manip therefore targets the seed hit at that",
    "first_line": "",
    "count": 1
@@ -837,7 +837,7 @@
    "lines": "188-243",
    "as_written": "pokeheartgold/src/pokemon.c:188-243",
    "section": "Gen 4 (Nintendo DS) / Starters and gifts",
-   "facts_line": 580,
+   "facts_line": 591,
    "context": "IV word 2), MT not involved (`pokeheartgold/src/pokemon.c:188-243`,",
    "first_line": "void CreateBoxMon(BoxPokemon *boxMon, int species, int level, int fixedIV, int hasFixedPersonality, int fixedPersonality, int otIdType, int fixedOtId) {",
    "count": 1
@@ -849,7 +849,7 @@
    "lines": "195",
    "as_written": "pokeheartgold/src/pokemon.c:195",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1486,
+   "facts_line": 1497,
    "context": "`pokeplatinum/src/pokemon.c:412`, `pokeheartgold/src/pokemon.c:195`. The one exception is",
    "first_line": "fixedPersonality = (LCRandom() | (LCRandom() << 16));",
    "count": 1
@@ -861,7 +861,7 @@
    "lines": "195,226-239",
    "as_written": "pokeheartgold/src/pokemon.c:195,226-239",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1600,
+   "facts_line": 1611,
    "context": "`pokeheartgold/src/pokemon.c:195,226-239`).",
    "first_line": "fixedPersonality = (LCRandom() | (LCRandom() << 16));",
    "count": 1
@@ -873,7 +873,7 @@
    "lines": "2037",
    "as_written": "pokeheartgold/src/pokemon.c:2037",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / Advance costs",
-   "facts_line": 701,
+   "facts_line": 712,
    "context": "| 128-step friendship cycle | +1 per party member | STRUCTURAL | step counter wraps at 128 then every party mon is updated (`pokeplatinum/src/overlay005/field_control.c:759-760,871`), one `LCRNG_Next() & 1` per mon (`src/pokemon.c:2637-2641",
    "first_line": "if (kind == FRIENDSHIP_EVENT_WALKING && (LCRandom() & 1)) {",
    "count": 1
@@ -885,7 +885,7 @@
    "lines": "2132-2152",
    "as_written": "pokeheartgold/src/pokemon.c:2132-2152",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1603,
+   "facts_line": 1614,
    "context": "gets the bit (`pokeplatinum/src/pokemon.c:2762-2795`, `pokeheartgold/src/pokemon.c:2132-2152`,",
    "first_line": "u32 GenerateShinyPersonality(u32 otid) {",
    "count": 1
@@ -897,7 +897,7 @@
    "lines": "226-239",
    "as_written": "pokeheartgold/src/pokemon.c:226-239",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1492,
+   "facts_line": 1503,
    "context": "`pokeheartgold/src/pokemon.c:226-239`). Result arrays use PokeFinder's order",
    "first_line": "exp = LCRandom();",
    "count": 1
@@ -909,7 +909,7 @@
    "lines": "2637-2641",
    "as_written": "src/pokemon.c:2637-2641",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / Advance costs",
-   "facts_line": 701,
+   "facts_line": 712,
    "context": "| 128-step friendship cycle | +1 per party member | STRUCTURAL | step counter wraps at 128 then every party mon is updated (`pokeplatinum/src/overlay005/field_control.c:759-760,871`), one `LCRNG_Next() & 1` per mon (`src/pokemon.c:2637-2641",
    "first_line": "} else {",
    "count": 1
@@ -921,7 +921,7 @@
    "lines": "4681",
    "as_written": "pokemon.c:4681",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1609,
+   "facts_line": 1620,
    "context": "`pokemon.c:4681`; HGSS `pokeheartgold/src/field/encounter_check.c:988-996,1350`); `callsUsedWithItem` counts it.",
    "first_line": "263,",
    "count": 1
@@ -933,7 +933,7 @@
    "lines": "68-70",
    "as_written": "pokeheartgold/src/pokemon.c:68-70",
    "section": "Gen 4 (Nintendo DS) / Starters and gifts",
-   "facts_line": 584,
+   "facts_line": 595,
    "context": "(`pokeheartgold/src/pokemon.c:68-70`).",
    "first_line": "#define SHINY_CHECK(otid, pid) ((                                                                                                              \\",
    "count": 1
@@ -945,7 +945,7 @@
    "lines": "59",
    "as_written": "pokeheartgold/src/sound_chatot.c:59",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 692,
+   "facts_line": 703,
    "context": "`pokeheartgold/src/sound_chatot.c:59`). The five bands are PokeFinder's scale,",
    "first_line": "u16 r4 = (LCRandom() % 8192);",
    "count": 3
@@ -957,7 +957,7 @@
    "lines": "156-169",
    "as_written": "pokeplatinum/include/inlines.h:156-169",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1481,
+   "facts_line": 1492,
    "context": "DPPt `LCRNG_RandMod(n) = rand / ((0xffff / n) + 1)` (`pokeplatinum/include/inlines.h:156-169`)",
    "first_line": "inline u16 LCRNG_RandMod(const u16 param)",
    "count": 1
@@ -969,7 +969,7 @@
    "lines": "158",
    "as_written": "pokeplatinum/src/applications/poketch/coin_toss/main.c:158",
    "section": "Gen 4 (Nintendo DS) / Seed verification",
-   "facts_line": 589,
+   "facts_line": 600,
    "context": "(`pokeplatinum/src/applications/poketch/coin_toss/main.c:158`) — drains the Twister",
    "first_line": "appData->coin.isHeads = MTRNG_Next() % 2;",
    "count": 2
@@ -981,7 +981,7 @@
    "lines": "6025-6031",
    "as_written": "pokeplatinum/src/battle/battle_script.c:6025-6031",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1529,
+   "facts_line": 1540,
    "context": "`pokeplatinum/src/battle/battle_script.c:6025-6031`). `hiddenPower` is the 0..15 index",
    "first_line": "battleCtx->movePower = battleCtx->movePower * 40 / 63 + 30;",
    "count": 1
@@ -993,7 +993,7 @@
    "lines": "144-172",
    "as_written": "pokeplatinum/src/game_start.c:144-172",
    "section": "Gen 4 (Nintendo DS) / TID/SID",
-   "facts_line": 573,
+   "facts_line": 584,
    "context": "SID = high 16 (`pokeplatinum/src/game_start.c:144-172`,",
    "first_line": "static void InitializeNewSave(enum HeapID heapID, SaveData *saveData, BOOL setTrainerID)",
    "count": 1
@@ -1005,7 +1005,7 @@
    "lines": "306-315",
    "as_written": "pokeplatinum/src/main.c:306-315",
    "section": "Gen 4 (Nintendo DS) / The seed",
-   "facts_line": 549,
+   "facts_line": 560,
    "context": "`pokeplatinum/src/main.c:306-315`, `pokediamond/arm9/src/main.c:239-249`):",
    "first_line": "void InitRNG(void)",
    "count": 2
@@ -1017,7 +1017,7 @@
    "lines": "106",
    "as_written": "src/math_util.c:106",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1606,
+   "facts_line": 1617,
    "context": "(`pokeplatinum/src/overlay005/daycare.c:1130-1131`, `src/math_util.c:106`).",
    "first_line": "return seed * MT19937_F + 1;",
    "count": 1
@@ -1029,7 +1029,7 @@
    "lines": "82",
    "as_written": "pokeplatinum/src/math_util.c:82",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1479,
+   "facts_line": 1490,
    "context": "`pokeplatinum/src/math_util.c:82`, `pokeheartgold/src/math_util.c:71-73`).",
    "first_line": "sLCRNGState = sLCRNGState * LCRNG_MULTIPLIER + LCRNG_INCREMENT;",
    "count": 1
@@ -1041,7 +1041,7 @@
    "lines": "1130-1131",
    "as_written": "pokeplatinum/src/overlay005/daycare.c:1130-1131",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1606,
+   "facts_line": 1617,
    "context": "(`pokeplatinum/src/overlay005/daycare.c:1130-1131`, `src/math_util.c:106`).",
    "first_line": "while (Pokemon_IsPersonalityShiny(otID, personality)) {",
    "count": 1
@@ -1053,7 +1053,7 @@
    "lines": "336-341",
    "as_written": "pokeplatinum/src/overlay005/daycare.c:336-341",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 eggs: gen4EggHeld, gen4EggPickup, gen4Egg",
-   "facts_line": 1694,
+   "facts_line": 1705,
    "context": "(= 0x7fff) -> no inheritance (`pokeplatinum/src/overlay005/daycare.c:336-341`; HGSS",
    "first_line": "if (LCRNG_Next() >= (0xffff / 2)) {",
    "count": 1
@@ -1065,7 +1065,7 @@
    "lines": "353",
    "as_written": "daycare.c:353",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 eggs: gen4EggHeld, gen4EggPickup, gen4Egg",
-   "facts_line": 1697,
+   "facts_line": 1708,
    "context": "time (`GEN4_EVERSTONE_INHERIT_CHANCE`). Then the PID is one MT19937 output (`daycare.c:353`,",
    "first_line": "Daycare_SetOffspringPersonality(daycare, MTRNG_Next());",
    "count": 1
@@ -1077,7 +1077,7 @@
    "lines": "361-367",
    "as_written": "daycare.c:361-367",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 eggs: gen4EggHeld, gen4EggPickup, gen4Egg",
-   "facts_line": 1699,
+   "facts_line": 1710,
    "context": "nonzero, 2400 tries (`daycare.c:361-367`, `get_egg.c:266-267`). `everstoneNature` models the",
    "first_line": "newPersonality = MTRNG_Next();",
    "count": 1
@@ -1089,7 +1089,7 @@
    "lines": "405-410",
    "as_written": "daycare.c:405-410",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 eggs: gen4EggHeld, gen4EggPickup, gen4Egg",
-   "facts_line": 1705,
+   "facts_line": 1716,
    "context": "and three `%2` parents (`daycare.c:405-410`, `get_egg.c:317-325`); DPPt removes position `i`",
    "first_line": "selectedIVs[i] = availableIVs[LCRNG_Next() % (STAT_MAX - i)];",
    "count": 1
@@ -1101,7 +1101,7 @@
    "lines": "406",
    "as_written": "daycare.c:406",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 eggs: gen4EggHeld, gen4EggPickup, gen4Egg",
-   "facts_line": 1706,
+   "facts_line": 1717,
    "context": "(Emerald's bug, `daycare.c:406`), HGSS removes the rolled index (`get_egg.c:319`). HGSS power",
    "first_line": "RemoveIVIndexFromList(availableIVs, i);",
    "count": 1
@@ -1113,7 +1113,7 @@
    "lines": "722-724",
    "as_written": "daycare.c:722-724",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 eggs: gen4EggHeld, gen4EggPickup, gen4Egg",
-   "facts_line": 1703,
+   "facts_line": 1714,
    "context": "ARNG rerolls until shiny (`daycare.c:722-724`, `get_egg.c:601-604`). Pickup: IV1, IV2 from",
    "first_line": "if (Pokemon_IsPersonalityShiny(monOTID, personality) == FALSE) {",
    "count": 1
@@ -1125,7 +1125,7 @@
    "lines": "734,764",
    "as_written": "daycare.c:734,764",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 eggs: gen4EggHeld, gen4EggPickup, gen4Egg",
-   "facts_line": 1704,
+   "facts_line": 1715,
    "context": "`Pokemon_InitWith`/`CreateMon` (`daycare.c:734,764`, `get_egg.c:611,631`), then `%6 %5 %4`",
    "first_line": "",
    "count": 1
@@ -1137,7 +1137,7 @@
    "lines": "759-760,871",
    "as_written": "pokeplatinum/src/overlay005/field_control.c:759-760,871",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / Advance costs",
-   "facts_line": 701,
+   "facts_line": 712,
    "context": "| 128-step friendship cycle | +1 per party member | STRUCTURAL | step counter wraps at 128 then every party mon is updated (`pokeplatinum/src/overlay005/field_control.c:759-760,871`), one `LCRNG_Next() & 1` per mon (`src/pokemon.c:2637-2641",
    "first_line": "if (Field_UpdateFriendship(fieldSystem)) {",
    "count": 1
@@ -1149,7 +1149,7 @@
    "lines": "1227-1235,1462",
    "as_written": "wild_encounters.c:1227-1235,1462",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1608,
+   "facts_line": 1619,
    "context": "loop, IVs, then one held-item roll after the IVs (`wild_encounters.c:1227-1235,1462`,",
    "first_line": "void CreateWildMon_Scripted(FieldSystem *fieldSystem, u16 species, u8 level, FieldBattleDTO *battleParams)",
    "count": 1
@@ -1161,7 +1161,7 @@
    "lines": "967",
    "as_written": "wild_encounters.c:967",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1482,
+   "facts_line": 1493,
    "context": "except the places that spell `LCRNG_Next() % n` (surf/fish level `wild_encounters.c:967`,",
    "first_line": "randRange = LCRNG_Next() % levelRange;",
    "count": 1
@@ -1173,7 +1173,7 @@
    "lines": "2755",
    "as_written": "pokeplatinum/src/pokemon.c:2755",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1525,
+   "facts_line": 1536,
    "context": "`pokeplatinum/src/pokemon.c:2755`). `shinyType` 2/1/0 (equal / < 8 / not) is PokeFinder's",
    "first_line": "}",
    "count": 1
@@ -1185,7 +1185,7 @@
    "lines": "2762-2795",
    "as_written": "pokeplatinum/src/pokemon.c:2762-2795",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1603,
+   "facts_line": 1614,
    "context": "gets the bit (`pokeplatinum/src/pokemon.c:2762-2795`, `pokeheartgold/src/pokemon.c:2132-2152`,",
    "first_line": "u32 Pokemon_FindShinyPersonality(u32 monOTID)",
    "count": 1
@@ -1197,7 +1197,7 @@
    "lines": "405-476",
    "as_written": "pokeplatinum/src/pokemon.c:405-476",
    "section": "Gen 4 (Nintendo DS) / Starters and gifts",
-   "facts_line": 581,
+   "facts_line": 592,
    "context": "`pokeplatinum/src/pokemon.c:405-476`). HGSS rolls all three starters at scene launch in",
    "first_line": "static void sub_02073E18(BoxPokemon *boxMon, int monSpecies, int monLevel, int monIVs, BOOL useMonPersonalityParam, u32 monPersonality, int monOTIDSource, u32 m",
    "count": 1
@@ -1209,7 +1209,7 @@
    "lines": "412",
    "as_written": "pokeplatinum/src/pokemon.c:412",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1486,
+   "facts_line": 1497,
    "context": "`pokeplatinum/src/pokemon.c:412`, `pokeheartgold/src/pokemon.c:195`. The one exception is",
    "first_line": "monPersonality = (LCRNG_Next() | (LCRNG_Next() << 16));",
    "count": 1
@@ -1221,7 +1221,7 @@
    "lines": "412,452-470",
    "as_written": "pokeplatinum/src/pokemon.c:412,452-470",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple",
-   "facts_line": 1599,
+   "facts_line": 1610,
    "context": "- Method 1: PID lo|hi, IV1, IV2 (`pokeplatinum/src/pokemon.c:412,452-470`,",
    "first_line": "monPersonality = (LCRNG_Next() | (LCRNG_Next() << 16));",
    "count": 1
@@ -1233,7 +1233,7 @@
    "lines": "452-470",
    "as_written": "pokeplatinum/src/pokemon.c:452-470",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1491,
+   "facts_line": 1502,
    "context": "(`pokeemerald/src/pokemon.c:2277-2296`, `pokeplatinum/src/pokemon.c:452-470`,",
    "first_line": "v1 = LCRNG_Next();",
    "count": 1
@@ -1245,7 +1245,7 @@
    "lines": "4681",
    "as_written": "pokemon.c:4681",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Conventions",
-   "facts_line": 1483,
+   "facts_line": 1494,
    "context": "typed slot pick `:1312`, held item `pokemon.c:4681`, Unown form `:1489`); HGSS",
    "first_line": "u32 rand = LCRNG_Next() % 100;",
    "count": 1
@@ -1257,7 +1257,7 @@
    "lines": "475-483",
    "as_written": "pokeplatinum/src/pokemon.c:475-483",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Derived values",
-   "facts_line": 1522,
+   "facts_line": 1533,
    "context": "(`pokeemerald/src/pokemon.c:2298-2302`, `pokeplatinum/src/pokemon.c:475-483`). Results carry",
    "first_line": "",
    "count": 1
@@ -1269,7 +1269,7 @@
    "lines": "80",
    "as_written": "pokeplatinum/src/sound_chatot.c:80",
    "section": "Gen 4 (Nintendo DS) / Gen 4 seed-to-time and reversal / The neighbour table and its verification strings",
-   "facts_line": 691,
+   "facts_line": 702,
    "context": "- Chatot: one LCRNG advance per cry, pitch from `hi16 % 8192` (`pokeplatinum/src/sound_chatot.c:80`,",
    "first_line": "u16 speedVariance = LCRNG_Next() % CHATOT_CRY_SPEED_VARIANCE;",
    "count": 3
@@ -1281,7 +1281,7 @@
    "lines": "6007-6019",
    "as_written": "pokered/engine/battle/core.asm:6007-6019",
    "section": "Gen 1/2 (Game Boy) / Where DVs are rolled",
-   "facts_line": 64,
+   "facts_line": 75,
    "context": "- Gen 1 wild: two `BattleRandom` calls at battle init (`pokered/engine/battle/core.asm:6007-6019`);",
    "first_line": "cp $2 ; is it a trainer battle?",
    "count": 1
@@ -1293,7 +1293,7 @@
    "lines": "1-13",
    "as_written": "pokered/engine/math/random.asm:1-13",
    "section": "Gen 1/2 (Game Boy) / The RNG",
-   "facts_line": 46,
+   "facts_line": 57,
    "context": "subtracts it from the other (`pokered/engine/math/random.asm:1-13`,",
    "first_line": "Random_::",
    "count": 1
@@ -1305,7 +1305,7 @@
    "lines": "1-10",
    "as_written": "pokered/engine/movie/oak_speech/init_player_data.asm:1-10",
    "section": "Gen 1/2 (Game Boy) / Where DVs are rolled",
-   "facts_line": 85,
+   "facts_line": 96,
    "context": "(`pokered/engine/movie/oak_speech/init_player_data.asm:1-10`); Crystal samples them one",
    "first_line": "InitPlayerData:",
    "count": 1
@@ -1317,7 +1317,7 @@
    "lines": "114,116",
    "as_written": "pokered/engine/pokemon/add_mon.asm:114,116",
    "section": "Gen 1/2 (Game Boy) / Where DVs are rolled",
-   "facts_line": 67,
+   "facts_line": 78,
    "context": "(`pokered/engine/pokemon/add_mon.asm:114,116`). **Important ordering:** `_AddPartyMon`",
    "first_line": "call Random ; generate random IVs",
    "count": 1
@@ -1329,7 +1329,7 @@
    "lines": "37",
    "as_written": "pokered/home/vblank.asm:37",
    "section": "Gen 1/2 (Game Boy) / The RNG",
-   "facts_line": 48,
+   "facts_line": 59,
    "context": "(`pokered/home/vblank.asm:37`, `pokecrystal/home/vblank.asm:68-79`). Results are a pure",
    "first_line": "call Random",
    "count": 1
@@ -1341,7 +1341,7 @@
    "lines": "41-55",
    "as_written": "data/text/birch_speech.inc:41-55",
    "section": "Gen 3 (Game Boy Advance) / The press windows",
-   "facts_line": 866,
+   "facts_line": 877,
    "context": "`data/text/birch_speech.inc:41-55`). From that final press everything is constant-length",
    "first_line": "gBirchSpeech_AhOkayYouArePlayer:: @ 81C7025",
    "count": 1
@@ -1353,7 +1353,7 @@
    "lines": "843-846",
    "as_written": "pokeruby/include/global.h:843-846",
    "section": "Gen 3 (Game Boy Advance) / RAM addresses",
-   "facts_line": 882,
+   "facts_line": 893,
    "context": "| `playerTrainerId` offset | `+0x0A` | `+0x0A` | `+0x0A` | proven from `struct SaveBlock2` (`pokeruby/include/global.h:843-846`) |",
    "first_line": "/*0x00*/ u8 playerName[8];",
    "count": 1
@@ -1365,7 +1365,7 @@
    "lines": "865-882",
    "as_written": "pokeruby/src/battle_setup.c:865-882",
    "section": "Gen 3 (Game Boy Advance) / The starter is Method 1",
-   "facts_line": 835,
+   "facts_line": 846,
    "context": "`CreateMon` → `CreateBoxMon` (`pokeruby/src/battle_setup.c:865-882`,",
    "first_line": "void ScrSpecial_ChooseStarter(void)",
    "count": 1
@@ -1377,7 +1377,7 @@
    "lines": "871-883",
    "as_written": "battle_setup.c:871-883",
    "section": "Gen 3 (Game Boy Advance) / The press windows",
-   "facts_line": 872,
+   "facts_line": 883,
    "context": "the very next frame (`starter_choose.c:434-445`, `battle_setup.c:871-883`,",
    "first_line": "static void CB2_GiveStarter(void)",
    "count": 1
@@ -1389,7 +1389,7 @@
    "lines": "411-418",
    "as_written": "contest_util.c:411-418",
    "section": "Gen 3 (Game Boy Advance) / The starter is Method 1",
-   "facts_line": 836,
+   "facts_line": 847,
    "context": "`contest_util.c:411-418`, `pokemon_1.c:1364-1455`). RNG call order:",
    "first_line": "u8 ScriptGiveMon(u16 species, u8 level, u16 item, u32 unused1, u32 unused2, u8 unused3)",
    "count": 2
@@ -1401,7 +1401,7 @@
    "lines": "111,115",
    "as_written": "pokeruby/src/main.c:111,115",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 789,
+   "facts_line": 800,
    "context": "(`pokeruby/src/main.c:111,115`). The seed is the RTC minutes-since-2000 count XOR-folded to",
    "first_line": "RtcInit();",
    "count": 1
@@ -1413,7 +1413,7 @@
    "lines": "201-206",
    "as_written": "pokeruby/src/main.c:201-206",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 790,
+   "facts_line": 801,
    "context": "16 bits (`pokeruby/src/main.c:201-206`, `pokeruby/src/rtc.c:367-371`).",
    "first_line": "static void SeedRngWithRtc(void)",
    "count": 1
@@ -1425,7 +1425,7 @@
    "lines": "328",
    "as_written": "pokeruby/src/main.c:328",
    "section": "Gen 3 (Game Boy Advance) / The idle advance",
-   "facts_line": 814,
+   "facts_line": 825,
    "context": "once per frame everywhere: `pokeruby/src/main.c:328`, `pokefirered/src/main.c:412`.",
    "first_line": "Random();",
    "count": 1
@@ -1437,7 +1437,7 @@
    "lines": "1130-1319",
    "as_written": "pokeruby/src/main_menu.c:1130-1319",
    "section": "Gen 3 (Game Boy Advance) / The press windows",
-   "facts_line": 865,
+   "facts_line": 876,
    "context": "timer and the \"Are you ready?\" speech (`pokeruby/src/main_menu.c:1130-1319`,",
    "first_line": "static void Task_NewGameSpeech25(u8 taskId)",
    "count": 1
@@ -1449,7 +1449,7 @@
    "lines": "174",
    "as_written": "new_game.c:174",
    "section": "Gen 3 (Game Boy Advance) / The press windows",
-   "facts_line": 868,
+   "facts_line": 879,
    "context": "`NewGameInitData` → `InitPlayerTrainerId` (`overworld.c:1272-1276`, `new_game.c:174`).",
    "first_line": "InitPlayerTrainerId();",
    "count": 1
@@ -1461,7 +1461,7 @@
    "lines": "76-79",
    "as_written": "pokeruby/src/new_game.c:76-79",
    "section": "Gen 3 (Game Boy Advance) / TID and SID",
-   "facts_line": 821,
+   "facts_line": 832,
    "context": "`NewGameInitData` → `InitPlayerTrainerId` (`pokeruby/src/new_game.c:76-79`):",
    "first_line": "void InitPlayerTrainerId(void)",
    "count": 1
@@ -1473,7 +1473,7 @@
    "lines": "1272-1276",
    "as_written": "overworld.c:1272-1276",
    "section": "Gen 3 (Game Boy Advance) / The press windows",
-   "facts_line": 868,
+   "facts_line": 879,
    "context": "`NewGameInitData` → `InitPlayerTrainerId` (`overworld.c:1272-1276`, `new_game.c:174`).",
    "first_line": "void CB2_NewGame(void)",
    "count": 1
@@ -1485,7 +1485,7 @@
    "lines": "1364-1455",
    "as_written": "pokemon_1.c:1364-1455",
    "section": "Gen 3 (Game Boy Advance) / The starter is Method 1",
-   "facts_line": 836,
+   "facts_line": 847,
    "context": "`contest_util.c:411-418`, `pokemon_1.c:1364-1455`). RNG call order:",
    "first_line": "void CreateMon(struct Pokemon *mon, u16 species, u8 level, u8 fixedIV, u8 hasFixedPersonality, u32 fixedPersonality, u8 otIdType, u32 fixedOtId)",
    "count": 1
@@ -1497,7 +1497,7 @@
    "lines": "938",
    "as_written": "pokeruby/src/pokemon_2.c:938",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 3 statics and gifts: gen3Static",
-   "facts_line": 1541,
+   "facts_line": 1552,
    "context": "(`pokeruby/src/pokemon_2.c:938`, `pokefirered/src/pokemon.c:3660`, stored at",
    "first_line": "u32 ivs = *data; // Bug: Only the HP IV and the lower 3 bits of the Attack IV are read. The rest become 0.",
    "count": 1
@@ -1509,7 +1509,7 @@
    "lines": "15-18",
    "as_written": "pokeruby/src/random.c:15-18",
    "section": "Gen 3 (Game Boy Advance) / The RNG",
-   "facts_line": 783,
+   "facts_line": 794,
    "context": "(`pokeruby/src/random.c:15-18`). Emerald and FRLG use the identical constants",
    "first_line": "void SeedRng(u16 seed)",
    "count": 1
@@ -1521,7 +1521,7 @@
    "lines": "7-13",
    "as_written": "pokeruby/src/random.c:7-13",
    "section": "Gen 3 (Game Boy Advance) / The RNG",
-   "facts_line": 770,
+   "facts_line": 781,
    "context": "One global 32-bit LCRNG. `pokeruby/src/random.c:7-13`:",
    "first_line": "u32 gRngValue;",
    "count": 1
@@ -1533,7 +1533,7 @@
    "lines": "62",
    "as_written": "pokeruby/src/roamer.c:62",
    "section": "Gen 3 (Game Boy Advance) / The starter is Method 1",
-   "facts_line": 855,
+   "facts_line": 866,
    "context": "`CreateInitialRoamerMon` (`pokeruby/src/roamer.c:62`) at `InitRoamer` time, not when you meet",
    "first_line": "void CreateInitialRoamerMon(void)",
    "count": 1
@@ -1545,7 +1545,7 @@
    "lines": "71",
    "as_written": "pokeruby/src/roamer.c:71",
    "section": "Generators (Gen 3 / Gen 4 encounter engines) / Gen 3 statics and gifts: gen3Static",
-   "facts_line": 1542,
+   "facts_line": 1553,
    "context": "`pokeruby/src/roamer.c:71`, `pokefirered/src/roamer.c:108`); Emerald reads all four bytes",
    "first_line": "roamer->ivs = GetMonData(&gEnemyParty[0], MON_DATA_IVS);",
    "count": 1
@@ -1557,7 +1557,7 @@
    "lines": "13,134-140",
    "as_written": "pokeruby/src/rtc.c:13,134-140",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 793,
+   "facts_line": 804,
    "context": "substitutes the dummy time 2000-01-01 00:00 (`pokeruby/src/rtc.c:13,134-140`). Day count",
    "first_line": "static const struct SiiRtcInfo sRtcDummy = {0, MONTH_JAN, 1}; // 2000 Jan 1",
    "count": 1
@@ -1569,7 +1569,7 @@
    "lines": "169-170",
    "as_written": "pokeruby/src/rtc.c:169-170",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 792,
+   "facts_line": 803,
    "context": "`RtcCheckInfo` flags `RTC_ERR_POWER_FAILURE` (`pokeruby/src/rtc.c:169-170`), and `RtcGetInfo`",
    "first_line": "if (rtc->status & SIIRTCINFO_POWER)",
    "count": 1
@@ -1581,7 +1581,7 @@
    "lines": "367-371",
    "as_written": "pokeruby/src/rtc.c:367-371",
    "section": "Gen 3 (Game Boy Advance) / When each game seeds",
-   "facts_line": 790,
+   "facts_line": 801,
    "context": "16 bits (`pokeruby/src/main.c:201-206`, `pokeruby/src/rtc.c:367-371`).",
    "first_line": "u32 RtcGetMinuteCount()",
    "count": 1
@@ -1593,7 +1593,7 @@
    "lines": "434-445",
    "as_written": "starter_choose.c:434-445",
    "section": "Gen 3 (Game Boy Advance) / The press windows",
-   "facts_line": 872,
+   "facts_line": 883,
    "context": "the very next frame (`starter_choose.c:434-445`, `battle_setup.c:871-883`,",
    "first_line": "static void Task_StarterChoose5(u8 taskId)",
    "count": 1
@@ -1601,532 +1601,532 @@
  ],
  "skipped": [
   {
-   "facts_line": 222,
+   "facts_line": 233,
    "as_written": "engine/movie/intro_yellow.asm:12-20",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 223,
+   "facts_line": 234,
    "as_written": "engine/movie/title.asm:166-175",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 225,
+   "facts_line": 236,
    "as_written": "engine/movie/intro.asm:82-118",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 225,
+   "facts_line": 236,
    "as_written": "home/overworld.asm:2273-2302",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 452,
+   "facts_line": 463,
    "as_written": "engine/menus/intro_menu.asm:1-7,28-49",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 453,
+   "facts_line": 464,
    "as_written": "intro_menu.asm:130-134",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 454,
+   "facts_line": 465,
    "as_written": "home/vblank.asm:68-79",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 454,
+   "facts_line": 465,
    "as_written": "home/init.asm:79-86",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 456,
+   "facts_line": 467,
    "as_written": "intro_menu.asm:225-248",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 463,
+   "facts_line": 474,
    "as_written": "splash.asm:14",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 463,
+   "facts_line": 474,
    "as_written": "engine/movie/splash.asm:86-90,14",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 463,
+   "facts_line": 474,
    "as_written": "engine/movie/intro.asm:15-19",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 463,
+   "facts_line": 474,
    "as_written": "intro_menu.asm:968-1000",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 464,
+   "facts_line": 475,
    "as_written": "engine/menus/main_menu.asm:142-152",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 464,
+   "facts_line": 475,
    "as_written": "home/menu.asm:479-485,35-48",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 464,
+   "facts_line": 475,
    "as_written": "engine/menus/menu.asm:190-234,236-247,185",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 464,
+   "facts_line": 475,
    "as_written": "home/tilemap.asm:3-10",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 464,
+   "facts_line": 475,
    "as_written": "home/joypad.asm:106-155",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 464,
+   "facts_line": 475,
    "as_written": "main_menu.asm:240-252",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 464,
+   "facts_line": 475,
    "as_written": "home/menu.asm:523-529",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 464,
+   "facts_line": 475,
    "as_written": "menu.asm:190-234",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 472,
+   "facts_line": 483,
    "as_written": "engine/gfx/color.asm:762-797",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 472,
+   "facts_line": 483,
    "as_written": "home/init.asm:148",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 483,
+   "facts_line": 494,
    "as_written": "constants/ram_constants.asm:358",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 483,
+   "facts_line": 494,
    "as_written": "home/joypad.asm:1-6",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 489,
+   "facts_line": 500,
    "as_written": "engine/menus/empty_sram.asm:1-19",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 491,
+   "facts_line": 502,
    "as_written": "engine/events/specials.asm:321-326",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 492,
+   "facts_line": 503,
    "as_written": "engine/pokemon/move_mon.asm:1",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 498,
+   "facts_line": 509,
    "as_written": "engine/rtc/rtc.asm:91-101,103-115",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 498,
+   "facts_line": 509,
    "as_written": "home/time.asm:61-120,205-250",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 501,
+   "facts_line": 512,
    "as_written": "engine/rtc/rtc.asm:117-137",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 502,
+   "facts_line": 513,
    "as_written": "home/init.asm:123",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 502,
+   "facts_line": 513,
    "as_written": "home/time.asm:61-120",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 502,
+   "facts_line": 513,
    "as_written": "rtc.asm:76-89",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 703,
+   "facts_line": 714,
    "as_written": "coin_toss/main.c:158",
    "why": "no file coin_toss/main.c in pokeheartgold"
   },
   {
-   "facts_line": 881,
+   "facts_line": 892,
    "as_written": "include/global.h:841",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 962,
+   "facts_line": 973,
    "as_written": "src/naming_screen.c:411-412",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 962,
+   "facts_line": 973,
    "as_written": "src/naming_screen.c:427-428",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 962,
+   "facts_line": 973,
    "as_written": "src/title_screen.c:351",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 963,
+   "facts_line": 974,
    "as_written": "src/naming_screen.c:696-701",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 963,
+   "facts_line": 974,
    "as_written": "src/main.c:208-214",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 963,
+   "facts_line": 974,
    "as_written": "src/naming_screen.c:717-723",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 963,
+   "facts_line": 974,
    "as_written": "src/main.c:264-270",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 963,
+   "facts_line": 974,
    "as_written": "title_screen.c:735",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 964,
+   "facts_line": 975,
    "as_written": "src/random.c:11-16",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 964,
+   "facts_line": 975,
    "as_written": "src/random.c:8-17",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 965,
+   "facts_line": 976,
    "as_written": "src/main.c:365-366",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 965,
+   "facts_line": 976,
    "as_written": "src/main.c:412",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 966,
+   "facts_line": 977,
    "as_written": "src/overworld.c:1532-1537",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 966,
+   "facts_line": 977,
    "as_written": "src/new_game.c:140-164",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 966,
+   "facts_line": 977,
    "as_written": "src/overworld.c:1527-1531",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 966,
+   "facts_line": 977,
    "as_written": "src/new_game.c:82-96",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 967,
+   "facts_line": 978,
    "as_written": "oak_speech.c:2146,2148",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 967,
+   "facts_line": 978,
    "as_written": "new_game.c:103",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 967,
+   "facts_line": 978,
    "as_written": "title_screen.c:737",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 967,
+   "facts_line": 978,
    "as_written": "new_game.c:82-96",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 979,
+   "facts_line": 990,
    "as_written": "menu.c:1013-1022",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 979,
+   "facts_line": 990,
    "as_written": "menu.c:342-349",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 982,
+   "facts_line": 993,
    "as_written": "text.c:865-899,1167-1188",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 983,
+   "facts_line": 994,
    "as_written": "text.c:550-585,859-875",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 983,
+   "facts_line": 994,
    "as_written": "include/constants/characters.h:175-176",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 985,
+   "facts_line": 996,
    "as_written": "text.c:944-955",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 989,
+   "facts_line": 1000,
    "as_written": "main_menu.c:1788-1850",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 989,
+   "facts_line": 1000,
    "as_written": "data/text/birch_speech.inc:42-61",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 998,
+   "facts_line": 1009,
    "as_written": "oak_speech.c:1788-1880",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 999,
+   "facts_line": 1010,
    "as_written": "data/text/new_game_intro.inc:218-243",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1009,
+   "facts_line": 1020,
    "as_written": "menu.c:191-196",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1010,
+   "facts_line": 1021,
    "as_written": "oak_speech.c:761",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1011,
+   "facts_line": 1022,
    "as_written": "new_menu_helpers.c:27-32,658-664",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1012,
+   "facts_line": 1023,
    "as_written": "intro.c:1152-1156",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1013,
+   "facts_line": 1024,
    "as_written": "title_screen.c:737-741",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1556,
+   "facts_line": 1567,
    "as_written": "src/roamer.c:216",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1556,
+   "facts_line": 1567,
    "as_written": "src/roamer.c:183",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1563,
+   "facts_line": 1574,
    "as_written": "src/pokemon.c:2340-2343",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1566,
+   "facts_line": 1577,
    "as_written": "src/pokemon.c:2305-2311,2340-2343",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1623,
+   "facts_line": 1634,
    "as_written": "feebas_fishing.c:37",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1624,
+   "facts_line": 1635,
    "as_written": "map_header.c:194-196",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1641,
+   "facts_line": 1652,
    "as_written": "pokemon.c:516,535-536",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1643,
+   "facts_line": 1654,
    "as_written": "pokemon.c:498-499",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1644,
+   "facts_line": 1655,
    "as_written": "pokemon.c:4681",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1651,
+   "facts_line": 1662,
    "as_written": "pokeradar.c:473-478",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1669,
+   "facts_line": 1680,
    "as_written": "overlay_bug_contest.c:178-183",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1675,
+   "facts_line": 1686,
    "as_written": "overlay_bug_contest.c:186",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1680,
+   "facts_line": 1691,
    "as_written": "pokemon.c:275,292",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1684,
+   "facts_line": 1695,
    "as_written": "pokemon.c:3748",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1687,
+   "facts_line": 1698,
    "as_written": "constants/maps.h:495",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1687,
+   "facts_line": 1698,
    "as_written": "encounter_tables_narc.h:31",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1695,
+   "facts_line": 1706,
    "as_written": "get_egg.c:241,247",
    "why": "no file named get_egg.c in pokeplatinum"
   },
   {
-   "facts_line": 1698,
+   "facts_line": 1709,
    "as_written": "get_egg.c:262",
    "why": "no file named get_egg.c in pokeplatinum"
   },
   {
-   "facts_line": 1699,
+   "facts_line": 1710,
    "as_written": "get_egg.c:266-267",
    "why": "no file named get_egg.c in pokeplatinum"
   },
   {
-   "facts_line": 1703,
+   "facts_line": 1714,
    "as_written": "get_egg.c:601-604",
    "why": "no file named get_egg.c in pokeplatinum"
   },
   {
-   "facts_line": 1704,
+   "facts_line": 1715,
    "as_written": "get_egg.c:611,631",
    "why": "no file named get_egg.c in pokeplatinum"
   },
   {
-   "facts_line": 1705,
+   "facts_line": 1716,
    "as_written": "get_egg.c:317-325",
    "why": "no file named get_egg.c in pokeplatinum"
   },
   {
-   "facts_line": 1706,
+   "facts_line": 1717,
    "as_written": "get_egg.c:319",
    "why": "no file named get_egg.c in pokeplatinum"
   },
   {
-   "facts_line": 1707,
+   "facts_line": 1718,
    "as_written": "get_egg.c:308-312,999-1029",
    "why": "no file named get_egg.c in pokeplatinum"
   },
   {
-   "facts_line": 1775,
+   "facts_line": 1786,
    "as_written": "overlay_bug_contest.c:178-186",
    "why": "no file named overlay_bug_contest.c in pokeemerald"
   },
   {
-   "facts_line": 1776,
+   "facts_line": 1787,
    "as_written": "encounter_check.c:961-965",
    "why": "no file named encounter_check.c in pokeemerald"
   },
   {
-   "facts_line": 1777,
+   "facts_line": 1788,
    "as_written": "wild_encounters.c:1113-1115",
    "why": "no file named wild_encounters.c in pokeemerald"
   },
   {
-   "facts_line": 1778,
+   "facts_line": 1789,
    "as_written": "get_egg.c:241,247",
    "why": "no file named get_egg.c in pokeemerald"
   },
   {
-   "facts_line": 1778,
+   "facts_line": 1789,
    "as_written": "get_egg.c:259-274",
    "why": "no file named get_egg.c in pokeemerald"
   },
   {
-   "facts_line": 1779,
+   "facts_line": 1790,
    "as_written": "feebas_fishing.c:37",
    "why": "no file named feebas_fishing.c in pokeemerald"
   },
   {
-   "facts_line": 1779,
+   "facts_line": 1790,
    "as_written": "wild_encounters.c:407",
    "why": "no file named wild_encounters.c in pokeemerald"
   },
   {
-   "facts_line": 1779,
+   "facts_line": 1790,
    "as_written": "map_header.c:194-196",
    "why": "no file named map_header.c in pokeemerald"
   },
   {
-   "facts_line": 1784,
+   "facts_line": 1795,
    "as_written": "encounter_check.c:1388",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1784,
+   "facts_line": 1795,
    "as_written": "map_headers.h:9466-9467,14746-14747",
    "why": "bare path with no repository named earlier in the paragraph"
   },
   {
-   "facts_line": 1798,
+   "facts_line": 1809,
    "as_written": "get_egg.c:235-240",
    "why": "bare path with no repository named earlier in the paragraph"
   }

@@ -229,7 +229,11 @@ node ../tools/gen-gen2-panel-vectors.cjs | cmp - gen2tid-panel-vectors.json && e
 if [ -d "$HOME/AI/pret/pokeemerald" ]; then
   regen=$(mktemp --suffix=.json)
   python3 ../tools/gen-citations.py "$regen" > /dev/null 2>&1 || { echo "gen-citations.py failed"; rm -f "$regen"; exit 1; }
-  cmp "$regen" ../core/data/citations.json && echo "citation registry regenerated from docs/FACTS.md and pret: byte-identical ($(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).entries.length)' "$regen") entries)"
+  if cmp "$regen" ../core/data/citations.json; then
+    echo "citation registry regenerated from docs/FACTS.md and pret: byte-identical ($(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).entries.length)' "$regen") entries)"
+  else
+    echo "FAIL: core/data/citations.json is not what tools/gen-citations.py generates from docs/FACTS.md and pret now"; rm -f "$regen"; exit 1
+  fi
   rm -f "$regen"
   # Negative control: a copy of FACTS.md citing a line past the end of pokeruby/src/rtc.c must make the generator FAIL, and
   # is shown failing: a citation the checkout cannot read never lands in the registry silently.
@@ -507,7 +511,7 @@ node test-sw.cjs
 nodata=$(mktemp --suffix=.js)
 sed '/DATA ROUTE BEGIN/,/DATA ROUTE END/d' ../webapp/sw.js > "$nodata"
 grep -q "DATA ROUTE" "$nodata" && { echo "negative control setup: the data route was not cut out of sw.js"; exit 1; }
-grep -q "isDataFile(url)" "$nodata" && { echo "negative control setup: sw.js still routes data files"; exit 1; }
+grep -q "if (isDataFile(url))" "$nodata" && { echo "negative control setup: sw.js still routes data files"; exit 1; }
 if node test-sw.cjs "$nodata" > "$nodata.out" 2>&1; then
   echo "negative control (sw.js without its data route): DID NOT FAIL"
   rm -f "$nodata" "$nodata.out"
@@ -757,17 +761,19 @@ const m = ts.match(/^export const shinySolutionHtml = ([\s\S]*);\n$/);
 if (!m) { console.error("the bundle is not one exported HTML string"); process.exit(1); }
 fs.writeFileSync(process.argv[2], JSON.parse(m[1]));
 ' "$wv/bundle.ts" "$wv/bundle.html"
-  wv_dom=$(timeout 120 google-chrome --headless=new --disable-gpu --user-data-dir="$wv/profile" --window-size=360,780 \
+  # the DOM goes to a file: under pipefail an echo of a 1.9 MB DOM into grep -q dies of SIGPIPE once grep has matched
+  timeout 120 google-chrome --headless=new --disable-gpu --user-data-dir="$wv/profile" --window-size=360,780 \
     --user-agent="Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/124.0.0.0 Mobile Safari/537.36 wv" \
-    --virtual-time-budget=5000 --dump-dom "file://$wv/bundle.html" 2>/dev/null)
+    --virtual-time-budget=5000 --dump-dom "file://$wv/bundle.html" > "$wv/dom.html" 2>/dev/null || true
   stamp=$(grep -o 'window.SHINY_BUILD = "[0-9a-f]*"' ../webapp/index.html | grep -o '[0-9a-f]\{12\}')
-  rm -rf "$wv"
   wbad=0
-  echo "$wv_dom" | grep -qF "<p id=\"sw-status\">offline copy: not registered: the mobile bundle is one HTML string for the Hub app, with no sw.js beside it (build $stamp)</p>" || { echo "FAIL WebView bundle: the status line does not say why the offline copy is not registered, with the build stamp"; wbad=1; }
-  echo "$wv_dom" | grep -q 'serviceWorker\.register(' && { echo "FAIL WebView bundle: a service worker registration is in the page"; wbad=1; }
-  echo "$wv_dom" | grep -qF '<pre id="page-errors" class="text" hidden></pre>' || { echo "FAIL WebView bundle: #page-errors is not empty and hidden"; echo "$wv_dom" | grep -o '<pre id="page-errors"[^<]*' | head -3; wbad=1; }
-  echo "$wv_dom" | grep -q 'id="wz-status">[^<]*carries no species, encounter or static tables' || { echo "FAIL WebView bundle: the wizard tab does not say its tables are not in this build"; wbad=1; }
-  for tab in g3timer g3check g4 g12 g1tid g2tid wizard about; do echo "$wv_dom" | grep -q "data-tab=\"$tab\"" || { echo "FAIL WebView bundle: no button for tab $tab"; wbad=1; }; done
+  [ -s "$wv/dom.html" ] || { echo "FAIL WebView bundle: headless Chrome returned no DOM"; wbad=1; }
+  grep -qF "<p id=\"sw-status\">offline copy: not registered: the mobile bundle is one HTML string for the Hub app, with no sw.js beside it (build $stamp)</p>" "$wv/dom.html" || { echo "FAIL WebView bundle: the status line does not say why the offline copy is not registered, with the build stamp"; wbad=1; }
+  grep -q 'serviceWorker\.register(' "$wv/dom.html" && { echo "FAIL WebView bundle: a service worker registration is in the page"; wbad=1; }
+  grep -qE '<pre id="page-errors" class="text" hidden(="")?></pre>' "$wv/dom.html" || { echo "FAIL WebView bundle: #page-errors is not empty and hidden"; grep -o '<pre id="page-errors"[^<]*' "$wv/dom.html" | head -3; wbad=1; }
+  grep -q 'id="wz-status"[^>]*>this build carries no species, encounter or static tables (the mobile bundle inlines no species, encounter or static tables): the wizard needs the static page or the Electron app' "$wv/dom.html" || { echo "FAIL WebView bundle: the wizard tab does not say its tables are not in this build"; wbad=1; }
+  for tab in g3timer g3check g4 g12 g1tid g2tid wizard about; do grep -q "data-tab=\"$tab\"" "$wv/dom.html" || { echo "FAIL WebView bundle: no button for tab $tab"; wbad=1; }; done
+  rm -rf "$wv"
   [ $wbad = 0 ] || exit 1
   echo "mobile bundle in a WebView (360x780, Android UA): no worker, the status line names the reason and build $stamp, no page error, the wizard says its tables are not in this build, 8 tab buttons"
 else
