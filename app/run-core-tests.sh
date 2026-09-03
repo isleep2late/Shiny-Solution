@@ -212,6 +212,49 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# Negative control: the citation registry without the Gen 1 hold-START line (the pokered title loop, the first footnote of
+# every Gen 1 protocol) given to the Gen 1 checks must FAIL, and is shown failing: the panel then prints NOT IN THE REGISTRY
+# for that footnote and the pinned line no longer matches.
+corrupted=$(mktemp --suffix=.json)
+python3 - core/data/citations.json "$corrupted" <<'PY'
+import json, sys
+v = json.load(open(sys.argv[1]))
+before = len(v["entries"])
+v["entries"] = [e for e in v["entries"] if e["cite"] != "pokered/engine/movie/title.asm:227-239,266"]
+assert len(v["entries"]) == before - 1, "negative control setup: the Gen 1 hold-START entry is not in the registry"
+json.dump(v, open(sys.argv[2], "w"))
+PY
+if dotnet run --project app/Tests -c Release --no-build -- --gen1tid tests/gen1tid-vectors.json . "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (citation registry without the Gen 1 hold-START line, C#): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (citation registry without the Gen 1 hold-START line, C#): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /' | cut -c1-260
+fi
+rm -f "$corrupted" "$corrupted.out"
+
+# Negative control: the registry without the Gen 2 4-frame poll line (pokegold's MainMenuJoypadLoop) given to the Gen 2 panel
+# check must FAIL, and is shown failing: the panel's protocol then prints NOT IN THE REGISTRY and no longer matches the web tab's.
+corrupted=$(mktemp --suffix=.json)
+python3 - core/data/citations.json "$corrupted" <<'PY'
+import json, sys
+v = json.load(open(sys.argv[1]))
+before = len(v["entries"])
+v["entries"] = [e for e in v["entries"] if e["cite"] != "pokegold/engine/menus/main_menu.asm:142-152"]
+assert len(v["entries"]) == before - 1, "negative control setup: the Gen 2 poll entry is not in the registry"
+json.dump(v, open(sys.argv[2], "w"))
+PY
+if dotnet run --project app/Tests -c Release --no-build -- --gen2tid-panel tests/gen2tid-panel-vectors.json "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (citation registry without the Gen 2 poll line, C#): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (citation registry without the Gen 2 poll line, C#): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /' | cut -c1-260
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # SeedTime4.cs (Gen 4 seed-to-time, calibrate rows, advance planner, PKHeX-semantics LCRNG reversal, the
 # reachability search) against the same vectors the JS suite checks (tests/seedtime4-vectors.json).
 dotnet run --project app/Tests -c Release --no-build -- --seedtime4 tests/seedtime4-vectors.json

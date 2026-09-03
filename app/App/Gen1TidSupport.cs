@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using ShinySolution.Core;
 
 namespace ShinySolution.App;
@@ -228,6 +229,41 @@ public static class Gen1TidText
     public static string Plural(int n, string word) => $"{n} {word}{(n == 1 ? "" : "s")}";
     public static string Now() => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
+    // ---- the sources the protocol, the target line, the schedule and verify rest on: footnotes [^n] over the citation
+    // registry (Citations.cs), numbered in this fixed order so every line of the panel carries the Sources block's
+    // numbers; the web tab's sources (webapp/gen1tid-ui.js sourcesFor) word for word. The decomp lines are pokered's
+    // (Blue is pret's pokered built for Blue) or pokeyellow's; the table is a measured source under the console's
+    // validation status word from gen1-tid.json (EMULATOR-EXACT on GSE, HARDWARE-VALIDATED n where the console was
+    // sampled, EMPIRICAL otherwise) ----
+    public static readonly string[] SourceOrder = { "holdStart", "table", "menuInput", "tidRoll", "stir" };
+    static readonly Regex ValidatedN = new(@"(\d+ of \d+)", RegexOptions.Compiled);
+    public static string StatusWord(Gen1Platform p)
+    {
+        if (p.Status == "emulator-exact") return "EMULATOR-EXACT";
+        var m = ValidatedN.Match(p.Validation ?? "");
+        if (p.Status == "hardware-validated" && m.Success) return "HARDWARE-VALIDATED " + m.Groups[1].Value;
+        return "EMPIRICAL";
+    }
+    public static Dictionary<string, Citations.CiteSource> SourcesFor(Gen1Platform p)
+    {
+        bool y = p.GameKey == "yellow";
+        string repo = y ? "pokeyellow" : "pokered";
+        var t = p.Timing;
+        return new Dictionary<string, Citations.CiteSource>
+        {
+            ["holdStart"] = y
+                ? new("pokeyellow/engine/movie/title.asm:166-175", null, "Yellow's title loop tests hJoyHeld for A or START by level on every frame, so START held anywhere in the window is read on the title's first frame and the NEW GAME menu opens on one fixed frame")
+                : new("pokered/engine/movie/title.asm:227-239,266", null, "the title screen waits on CheckForUserInterruption (one JoypadLowSensitivity poll per frame; START or A ends it), then the cry and the fade play before MainMenu, so START held anywhere in the window is read on the first poll and the NEW GAME menu opens on one fixed frame"),
+            ["table"] = new(null, null,
+                "hold START on any frame " + t.HoldLoFrame + "-" + t.HoldHiFrame + " and the NEW GAME menu opens on frame " + t.MenuFrame + "; the A press frame is the menu frame + 80 + the offset (the table's definition), one Trainer ID per offset under " + p.MethodologyId + "; " + p.Name + ": " + p.Status,
+                "the table's derivation on pokemon-speedrunning/gambatte-core with START held inside the window, docs/FACTS.md Gen 1 Trainer ID (hold-START methodologies, RNG Solution)", StatusWord(p)),
+            ["menuInput"] = new(repo + "/engine/menus/main_menu.asm:" + (y ? "63-66,84" : "64-68,85-86"), null, "the NEW GAME menu waits in HandleMenuInput with A, B and START watched; A on NEW GAME goes to StartNewGame, so the frame of that press is the one the offset counts"),
+            ["tidRoll"] = new(repo + "/engine/movie/oak_speech/init_player_data.asm:1-10", null, "InitPlayerData2, first thing in the Oak speech, rolls the Trainer ID with two Random calls: hRandomSub is the high byte, hRandomAdd the low byte"),
+            ["stir"] = new(repo + "/engine/math/random.asm:1-13", null, "Random_ is the only RNG: hRandomAdd += rDIV and hRandomSub -= rDIV, called once per VBlank, so the Trainer ID is a function of the frame of the A press and of the DIV phase the hold-START boot fixes"),
+        };
+    }
+    public static Citations.Footnotes FootnotesFor(Gen1Platform p) => new(SourcesFor(p), SourceOrder);
+
     public static string DerivationTag(Gen1Platform p, int offset)
     {
         if (Gen1Tid.Verdict(p.Table[offset], p.TargetSets) != "RUN") return "";
@@ -241,7 +277,7 @@ public static class Gen1TidText
         string tag = v == "RUN" ? $"route-valid ({AnyPercent}: {SetTag(p, tid)})" : v == "40!" ? "TRAP: $40 but hard-locks" : "";
         string ver = DerivationTag(p, offset);
         return $"offset {offset} -> {Gen1Tid.FormatTid(tid)} : press A {FmtSf(Gen1Tid.TargetSeconds(offset))} after the menu" +
-            (tag != "" ? "   " + tag : "") + (ver != "" ? " " + ver : "");
+            (tag != "" ? "   " + tag : "") + (ver != "" ? " " + ver : "") + FootnotesFor(p).Mark("table", "tidRoll");
     }
 
     public static List<string> MethodologyLines(Gen1Platform p, bool conditions, string indent = "  ")
@@ -297,6 +333,7 @@ public static class Gen1TidText
         double menu = Gen1Tid.FramesToSeconds(p.Timing.MenuFrame);
         int tid = p.Table[offset];
         var m = p.Methodology;
+        var fn = FootnotesFor(p);
         var lines = new List<string>
         {
             $"PROTOCOL  ({p.GameName} on {p.Name}, target offset {offset} -> {Gen1Tid.FormatTid(tid)})",
@@ -314,14 +351,14 @@ public static class Gen1TidText
         if (anchor == Gen1Tid.AnchorMenu)
         {
             lines.Add($" 2. {PowerOnPhrase(p)}. Touch nothing during the boot and intro.");
-            lines.Add($" 3. Between {F(holdLo, 2)} s and {F(holdHi, 2)} s after the boot starts (frames {p.Timing.HoldLoFrame}-{p.Timing.HoldHiFrame}), HOLD START and keep holding.");
+            lines.Add($" 3. Between {F(holdLo, 2)} s and {F(holdHi, 2)} s after the boot starts (frames {p.Timing.HoldLoFrame}-{p.Timing.HoldHiFrame}), HOLD START and keep holding." + fn.Mark("holdStart", "table"));
             lines.Add("    Anywhere inside that window gives the same result: this press is NOT timed.");
             string landmark = J.S(m, "landmark");
             if (landmark != "") lines.Add("    Landmark: " + landmark);
-            lines.Add($" 4. The NEW GAME menu opens at {F(menu, 2)} s (frame {p.Timing.MenuFrame}). The INSTANT you see it, click ANCHOR (or press Space).");
+            lines.Add($" 4. The NEW GAME menu opens at {F(menu, 2)} s (frame {p.Timing.MenuFrame}). The INSTANT you see it, click ANCHOR (or press Space)." + fn.Mark("table", "menuInput"));
             lines.Add("    Release START whenever you like; release timing does not matter.");
             lines.Add($" 5. You will hear {beeps} short beeps {F(spacing, 1)} s apart, then one long high beep (the display flashes with each).");
-            lines.Add("    Press A ON the long high beep. That is the only frame-exact action.");
+            lines.Add("    Press A ON the long high beep. That is the only frame-exact action." + fn.Mark("tidRoll", "stir", "table"));
             lines.Add($"    Target: A at {FmtSf(Gen1Tid.TargetSeconds(offset))} after the menu. The beep is {FmtMs(correctionMs)} early to cover your");
             lines.Add("    reaction to the menu plus the audio delay (the correction; calibration tunes it).");
         }
@@ -333,12 +370,12 @@ public static class Gen1TidText
             if (p.AnchorNotes.TryGetValue(anchor, out var note) && note != "") lines.Add("    " + AppNote(note));
             lines.Add("    Touch nothing during the boot and intro.");
             double hLo = sched.HoldLo ?? 0, hHi = sched.HoldHi ?? 0, mn = sched.Menu ?? 0;
-            lines.Add($" 3. Two low beeps mark the START-hold window ({F(hLo, 2)} s and {F((hLo + hHi) / 2.0, 2)} s after your anchor).");
+            lines.Add($" 3. Two low beeps mark the START-hold window ({F(hLo, 2)} s and {F((hLo + hHi) / 2.0, 2)} s after your anchor)." + fn.Mark("holdStart", "table"));
             lines.Add($"    HOLD START on the first low beep and keep holding. Anywhere in {F(hLo, 2)}-{F(hHi, 2)} s is fine.");
-            lines.Add($" 4. A double blip at {F(mn, 2)} s marks when the NEW GAME menu should appear (frame {p.Timing.MenuFrame} of the boot).");
+            lines.Add($" 4. A double blip at {F(mn, 2)} s marks when the NEW GAME menu should appear (frame {p.Timing.MenuFrame} of the boot)." + fn.Mark("table", "menuInput"));
             lines.Add("    If the menu appears far from the blip, START was held outside the window: the");
             lines.Add("    attempt is no good, reset and try again. Release START whenever.");
-            lines.Add($" 5. Then {beeps - sched.DroppedCountIn} short beeps {F(spacing, 1)} s apart and one long high beep. Press A ON the long high beep.");
+            lines.Add($" 5. Then {beeps - sched.DroppedCountIn} short beeps {F(spacing, 1)} s apart and one long high beep. Press A ON the long high beep." + fn.Mark("tidRoll", "stir", "table"));
             lines.Add($"    Target: A at {FmtSf(Gen1Tid.TargetSeconds(offset))} after the menu = {FmtSf(mn + Gen1Tid.TargetSeconds(offset))} after your anchor.");
             lines.Add($"    The beep is {FmtMs(correctionMs)} early for the audio delay (this anchor's correction).");
             if (sched.DroppedCountIn > 0) lines.Add($"    ({Plural(sched.DroppedCountIn, "count-in beep")} left out: they would have sounded before the menu.)");
@@ -354,7 +391,9 @@ public static class Gen1TidText
             lines.Add(" 6. Afterwards, type the Trainer ID you got below (read it off the Trainer Card, or a");
             lines.Add("    Pokemon's status screen shows IDNo).");
         }
-        lines.Add("    Each answer sharpens the correction.");
+        lines.Add("    Each answer sharpens the correction." + fn.Mark("table"));
+        lines.Add("");
+        lines.AddRange(fn.Lines());
         return lines;
     }
 
@@ -368,7 +407,7 @@ public static class Gen1TidText
         }
         if (sched.CountInTimes.Length > 0) lines.Add("  count-in beeps      " + string.Join(", ", sched.CountInTimes.Select(t => F(t, 3))));
         lines.Add($"  A cue (long beep)   {F(sched.TA ?? 0, 3)} s   = target {FmtSf(Gen1Tid.TargetSeconds(offset))}" +
-            (sched.Anchor == Gen1Tid.AnchorMenu ? " after the menu" : " after the menu, from your anchor") + $" minus correction {FmtMs(correctionMs)}");
+            (sched.Anchor == Gen1Tid.AnchorMenu ? " after the menu" : " after the menu, from your anchor") + $" minus correction {FmtMs(correctionMs)}" + FootnotesFor(p).Mark("table"));
         return lines;
     }
 
@@ -655,20 +694,23 @@ public static class Gen1TidText
         var rVis = Gen1Tid.Verify(p.Table, tid, menuToPressS, tolerance, lag, p.TargetSets);
         var r = fromVisible ? rVis : rPress;
         var other = fromVisible ? rPress : rVis;
+        var fn = FootnotesFor(p);
         var lines = new List<string> { $"{Gen1Tid.FormatTid(tid)} on {p.Name} ({p.GameName}): {Gen1Tid.VerdictTextFor(tid, p.TargetSets)}" };
         lines.AddRange(MethodologyLines(p, true));
         if (fromVisible)
         {
             lines.Add($"  measured menu -> first VISIBLE effect of the A press: {F(menuToPressS, 3)} s; minus the {p.FamilyKey.ToUpperInvariant()} press-to-visible lag");
-            lines.Add($"  of {F(lag, 2)} frames ({(p.Timing.VisibleLagNote != "" ? p.Timing.VisibleLagNote : "no lag known for this console")}) = offset {F(r.PredictedOffset, 1)}");
+            lines.Add($"  of {F(lag, 2)} frames ({(p.Timing.VisibleLagNote != "" ? p.Timing.VisibleLagNote : "no lag known for this console")}) = offset {F(r.PredictedOffset, 1)}" + fn.Mark("table"));
         }
-        else lines.Add($"  measured menu -> A press: {F(menuToPressS, 3)} s = offset {F(r.PredictedOffset, 1)} ({F(menuToPressS, 3)} s x {F(Gen1Tid.Fps, 4)} fps - {Gen1Tid.MenuToTableFrames})");
+        else lines.Add($"  measured menu -> A press: {F(menuToPressS, 3)} s = offset {F(r.PredictedOffset, 1)} ({F(menuToPressS, 3)} s x {F(Gen1Tid.Fps, 4)} fps - {Gen1Tid.MenuToTableFrames})" + fn.Mark("table"));
         if (!r.InTable)
         {
-            lines.Add("  this Trainer ID is produced by NO press time on this console: INCONSISTENT with the table");
+            lines.Add("  this Trainer ID is produced by NO press time on this console: INCONSISTENT with the table" + fn.Mark("table", "tidRoll"));
+            lines.Add("");
+            lines.AddRange(fn.Lines());
             return (false, lines);
         }
-        lines.Add($"  the table produces it at offset{(r.Offsets.Length > 1 ? "s " : " ")}{string.Join(", ", r.Offsets)}");
+        lines.Add($"  the table produces it at offset{(r.Offsets.Length > 1 ? "s " : " ")}{string.Join(", ", r.Offsets)}" + fn.Mark("table", "tidRoll"));
         lines.Add($"  nearest offset {r.Nearest} is {F(r.DifferenceFrames ?? 0, 1)} frames from the measurement (tolerance +-{tolerance} frames): {(r.Consistent ? "CONSISTENT" : "INCONSISTENT")}");
         if (lag != 0 && other.Consistent != r.Consistent)
         {
@@ -677,6 +719,8 @@ public static class Gen1TidText
             lines.Add($"  ({(p.FamilyKey == "gba" ? "provisional" : "fitted on two runs")}). Say which you measured.");
         }
         lines.Add("  (this checks timing against the table only, and only under the methodology above; it says nothing else about the run)");
+        lines.Add("");
+        lines.AddRange(fn.Lines());
         return (r.Consistent, lines);
     }
 

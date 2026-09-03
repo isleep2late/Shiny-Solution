@@ -30,7 +30,7 @@ fi
 rm -rf webapp
 mkdir -p webapp/data
 bash "$src/sync-core.sh"
-cp "$src/index.html" "$src/app.css" "$src/mode.js" "$src/app.js" "$src/downloads.js" "$src/gen1tid-ui.js" "$src/gen2tid-ui.js" "$src/wizard-ui.js" \
+cp "$src/index.html" "$src/app.css" "$src/mode.js" "$src/footnotes.js" "$src/app.js" "$src/downloads.js" "$src/gen1tid-ui.js" "$src/gen2tid-ui.js" "$src/wizard-ui.js" \
    "$src/rng.js" "$src/gen4.js" "$src/gen12.js" "$src/gen1tid.js" "$src/timers.js" "$src/gen5.js" "$src/seedtime4.js" "$src/generators.js" "$src/gen2tid.js" "$src/gen1-data.js" webapp/
 cp "$src/data/gen1-tid.json" "$src/data/gen3-sid.json" "$src/data/gen2-tid.json" webapp/data/
 # the manifest and icons the page links (no sw.js: the page registers none under file://)

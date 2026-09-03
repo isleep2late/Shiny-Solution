@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ShinySolution.App;
 using ShinySolution.Core;
 
 // app/Core/Gen1Tid.cs against tests/gen1tid-vectors.json, the vectors emitted by RNG Solution's
@@ -149,7 +150,7 @@ static class Gen1TidChecks
         })
     };
 
-    public static int Run(string vectorsPath, string repoRoot)
+    public static int Run(string vectorsPath, string repoRoot, string? citationsPath = null)
     {
         var V = JsonDocument.Parse(File.ReadAllText(vectorsPath)).RootElement;
         var DATA = Gen1TidData.LoadEmbedded();
@@ -591,6 +592,42 @@ static class Gen1TidChecks
                 Gen1Tid.ResetAnchorExtraSeconds(DATA.ResetModel("gbp-fade")), DATA.Methodology("red/dmg/hold-start-v1")));
             Check("ParseTid takes any number of leading zeros", 0x4003, Gen1Tid.ParseTid("$0000000000004003"));
             Refuses("ParseTid 20 digits over the range", () => Gen1Tid.ParseTid("99999999999999999999"));
+        }
+
+        // ---- the panel's footnotes (Gen1TidSupport.cs over Citations.cs): the protocol of Red on GSE lists its sources with
+        // the pokered title-loop line under its FACTS.md section and the table under EMULATOR-EXACT, the text the web tab
+        // prints (tests/test-webapp.cjs pins the same lines); the GBA HD and the DMG print HARDWARE-VALIDATED n, Yellow
+        // its pokeyellow lines and EMPIRICAL; the target line, the schedule and verify carry the block's numbers; no
+        // citation is outside the registry (the registry given on the command line, or the embedded copy:
+        // app/run-core-tests.sh passes a copy without the hold-START line as its negative control) ----
+        {
+            Citations.LoadCitations(citationsPath);
+            Check("the citation registry is loaded", true, Citations.Loaded);
+            var gse = Gen1Platform.Resolve(DATA, "red", "gse", null, null);
+            var sched = Gen1TidText.BuildSchedule(gse, "menu", 358, 200, 4, 1.0);
+            var proto = Gen1TidText.ProtocolLines(gse, "menu", 358, sched, 200, 4, 1.0);
+            Check("protocol footnote count", 5, proto.Count(l => l.StartsWith("  [^")));
+            Check("protocol Sources header with the status note", true, proto.Contains(Citations.Header + Citations.StatusNote));
+            Check("protocol hold-START footnote", true, proto.Contains("  [^1] pokered/engine/movie/title.asm:227-239,266 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 1 Trainer ID / Where the ID comes from): the title screen waits on CheckForUserInterruption (one JoypadLowSensitivity poll per frame; START or A ends it), then the cry and the fade play before MainMenu, so START held anywhere in the window is read on the first poll and the NEW GAME menu opens on one fixed frame"));
+            Check("protocol table footnote under EMULATOR-EXACT", true, proto.Contains("  [^2] EMULATOR-EXACT (no decomp line; the table's derivation on pokemon-speedrunning/gambatte-core with START held inside the window, docs/FACTS.md Gen 1 Trainer ID (hold-START methodologies, RNG Solution)): hold START on any frame 1300-1475 and the NEW GAME menu opens on frame 1553; the A press frame is the menu frame + 80 + the offset (the table's definition), one Trainer ID per offset under red/gba/hold-start-v1; GSE or gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact"));
+            Check("protocol steps marked", true, proto.Any(l => l.StartsWith(" 3. ") && l.EndsWith(" [^1] [^2]")) && proto.Any(l => l.StartsWith(" 4. ") && l.EndsWith(" [^2] [^3]")) && proto.Contains("    Press A ON the long high beep. That is the only frame-exact action. [^4] [^5] [^2]"));
+            Check("no footnote outside the registry", 0, Citations.ProcedureProblems(proto).Count);
+            Check("target line marked", true, Gen1TidText.DescribeTarget(gse, 358).EndsWith(" [3x cold-boot verified] [^2] [^4]"));
+            Check("schedule A cue marked", true, Gen1TidText.ScheduleLines(sched, 358, 200, gse).Last().EndsWith(" [^2]"));
+            var verify = Gen1TidText.VerifyLines(Gen1Platform.Resolve(DATA, "red", "gbp", null, null), 0x4003, 7.333, false, 3, null).Lines;
+            Check("verify carries the table and roll footnotes and its Sources", true, verify.Contains("  the table produces it at offset 358 [^2] [^4]") && verify.Any(l => l.StartsWith("  [^2] EMPIRICAL (no decomp line; ")) && verify.Any(l => l.StartsWith("  [^4] pokered/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: ")) && verify.Count(l => l.StartsWith("  [^")) == 2);
+            var hd = Gen1Platform.Resolve(DATA, "red", "gba-hd", null, null);
+            Check("GBA HD status word", "HARDWARE-VALIDATED 5 of 5", Gen1TidText.StatusWord(hd));
+            Check("GBA HD protocol prints it", true, Gen1TidText.ProtocolLines(hd, "menu", 358, Gen1TidText.BuildSchedule(hd, "menu", 358, 200, 4, 1.0), 200, 4, 1.0).Any(l => l.StartsWith("  [^2] HARDWARE-VALIDATED 5 of 5 (no decomp line; ")));
+            var dmg = Gen1Platform.Resolve(DATA, "red", "dmg", null, null);
+            var dmgProto = Gen1TidText.ProtocolLines(dmg, "poweron", 517, Gen1TidText.BuildSchedule(dmg, "poweron", 517, 100, 4, 1.0), 100, 4, 1.0);
+            Check("DMG status word", "HARDWARE-VALIDATED 5 of 6", Gen1TidText.StatusWord(dmg));
+            Check("DMG power-on protocol prints it with its window", true, dmgProto.Any(l => l.StartsWith("  [^2] HARDWARE-VALIDATED 5 of 6 (no decomp line; ") && l.Contains("hold START on any frame 1450-1640 and the NEW GAME menu opens on frame 1701")) && dmgProto.Any(l => l.StartsWith(" 3. Two low beeps") && l.EndsWith(" [^1] [^2]")));
+            var yellow = Gen1Platform.Resolve(DATA, "yellow", "gba-hd", null, null);
+            var yProto = Gen1TidText.ProtocolLines(yellow, "menu", 358, Gen1TidText.BuildSchedule(yellow, "menu", 358, 200, 4, 1.0), 200, 4, 1.0);
+            Check("Yellow status word", "EMPIRICAL", Gen1TidText.StatusWord(yellow));
+            Check("Yellow cites pokeyellow", true, yProto.Any(l => l.StartsWith("  [^1] pokeyellow/engine/movie/title.asm:166-175 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 1 Trainer ID / Where the ID comes from): Yellow's title loop")) && yProto.Any(l => l.StartsWith("  [^2] EMPIRICAL (no decomp line; ")) && yProto.Any(l => l.StartsWith("  [^4] pokeyellow/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: ")) && yProto.Any(l => l.StartsWith("  [^5] pokeyellow/engine/math/random.asm:1-13 (docs/FACTS.md: ")));
+            Check("no Yellow footnote outside the registry", 0, Citations.ProcedureProblems(yProto).Count);
         }
 
         if (failures > 0)

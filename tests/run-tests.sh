@@ -547,6 +547,32 @@ PROBE
   chrome_dom() { timeout 120 google-chrome --headless=new --disable-gpu --user-data-dir="$profile" --virtual-time-budget="$1" --dump-dom "$2" 2>/dev/null; }
   chrome_dom 1000 "file://$probe?seed" | grep -o '<pre id="ls">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.seeded"
   chrome_dom 5000 "file://$(cd ../webapp && pwd)/index.html?g1selftest" | grep -o '<pre id="g1-selftest">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.dom"
+  # The Gen 1 tab's footnotes as the page renders them (webapp/footnotes.js over the registry in gen1-data.js): the protocol
+  # lists its sources with the pokered title-loop line under its FACTS.md section and the table under the console's status
+  # word, no footnote outside the registry; run on the genuine report here and, below, on a copy of the page whose registry
+  # lacks the hold-START line, which must fail.
+  g1_footnotes_ok() {
+    node -e '
+const fs = require("fs");
+const un = (s) => s.replace(/&quot;/g, "\"").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "\x27");
+let r; try { r = JSON.parse(un(fs.readFileSync(process.argv[1], "utf8"))); } catch (e) { r = { error: "no report: " + e.message }; }
+const checks = [
+  ["the registry is loaded from the page and the protocol lists five footnotes after the steps, four step lines marked", r.registryLoaded === true && r.footnoteCount === 5 && r.footnoteSteps === 4],
+  ["the hold-START footnote is the pokered title-loop line under its FACTS.md section", r.footnoteHoldStart === true],
+  ["the table footnote is under EMULATOR-EXACT on GSE and the header carries the status note", r.footnoteStatusGse === true && r.footnoteHeaderStatus === true],
+  ["no footnote outside the registry", r.footnoteProblems === 0],
+  ["the target line and the schedule A cue carry the block numbers", r.targetInfoMarked === true && r.scheduleMarked === true],
+  ["the registry without the hold-START line is reported as NOT IN THE REGISTRY and restored is clean", Array.isArray(r.registryCutProblems) && r.registryCutProblems.length === 1 && /^  \[\^1\] pokered\/engine\/movie\/title\.asm:227-239,266 NOT IN THE REGISTRY \(core\/data\/citations\.json carries no such line of docs\/FACTS\.md\): /.test(r.registryCutProblems[0]) && r.registryRestoredProblems === 0],
+  ["the GBA HD prints HARDWARE-VALIDATED 5 of 5, the DMG 5 of 6 with its window, Yellow its pokeyellow lines and EMPIRICAL", r.footnoteStatusGbaHd === true && r.footnoteStatusDmg === true && r.footnoteYellow === true]
+];
+let bad = 0;
+for (const [label, ok] of checks) if (!ok) { bad++; console.error("FAIL browser (Gen 1 footnotes): " + label); }
+if (r.error) { bad++; console.error("FAIL browser (Gen 1 footnotes): " + r.error); }
+console.log("browser self-test (Gen 1 TID footnotes): " + checks.length + " checks, " + bad + " failure" + (bad === 1 ? "" : "s"));
+process.exit(bad ? 1 : 0);
+' "$1"
+  }
+  g1_footnotes_ok "$profile.dom"
   # the Gen 2 TID tab's self-test (?g2selftest) in the same profile: its stores and the mode stay in memory too, so the
   # after-probe below covers both tabs
   chrome_dom 8000 "file://$(cd ../webapp && pwd)/index.html?g2selftest" | grep -o '<pre id="g2-selftest">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.dom2"
@@ -644,7 +670,16 @@ const checks = [
   ["all four Gold methodologies listed with their protocol text and validity verbatim", r.methodologiesListed === 4 && r.protocolVerbatim === true && r.validityVerbatim === true],
   ["twenty RTC states offered for Gold", r.stateOptions === 20],
   ["no single-tap route target in days0; the LID 01001 hit shown from halt-days200 bin 392", r.targetsInDays0 === 0 && JSON.stringify(r.targetsOtherStates) === "[\"halt-days200:392\"]"],
-  ["bin 300 described with its window, IDs and methodology", /^Target: bin 300 \(A down 1201\.\.1204 frames after the visible menu box, aim 1202\.5 = 20\.133 s .*TID 20322 \(\$4F62\), Lucky ID 61052 \(\$EE7C\).*methodology gold\/gbp\/hold-start-v1$/.test(r.targetInfo || "")],
+  ["bin 300 described with its window, IDs and methodology, the poll and ID-roll footnotes after it", /^Target: bin 300 \(A down 1201\.\.1204 frames after the visible menu box, aim 1202\.5 = 20\.133 s .*TID 20322 \(\$4F62\), Lucky ID 61052 \(\$EE7C\).*methodology gold\/gbp\/hold-start-v1 \[\^2\] \[\^4\]$/.test(r.targetInfo || "")],
+  // the footnotes: ten sources listed after the steps, the pokegold 4-frame poll line under its FACTS.md section, the roll under
+  // EMULATOR-EXACT, the RTC lines and the wPlayerID roll, the schedule marked, the registry without the poll line reported and
+  // restored clean, the pokecrystal lines of Crystal and EMPIRICAL
+  ["the registry is loaded from the page and the protocol lists ten footnotes after the steps, six step lines marked", r.registryLoaded === true && r.footnoteCount === 10 && r.footnoteSteps === 6],
+  ["the 4-frame poll footnote is the pokegold main-menu line under its FACTS.md section, the roll under EMULATOR-EXACT, the header with the status note", r.footnotePoll === true && r.footnoteStatusGse === true && r.footnoteHeaderStatus === true],
+  ["StartClock and StartRTC and the wPlayerID roll are registry lines, no footnote outside the registry", r.footnoteRtc === true && r.footnoteTidRoll === true && r.footnoteProblems === 0],
+  ["the schedule A window and tap lines carry the block numbers", r.scheduleMarked === true],
+  ["negative control: the registry without the 4-frame poll line is reported as NOT IN THE REGISTRY, and restored is clean", Array.isArray(r.registryCutProblems) && r.registryCutProblems.length === 1 && /^  \[\^2\] pokegold\/engine\/menus\/main_menu\.asm:142-152 NOT IN THE REGISTRY \(core\/data\/citations\.json carries no such line of docs\/FACTS\.md\): /.test(r.registryCutProblems[0]) && r.registryRestoredProblems === 0],
+  ["Crystal on a Game Boy Color cites the pokecrystal title, immunity and Secret ID lines and prints EMPIRICAL with the 14-frame roll", r.crystalFootnotes === true],
   ["protocol names the methodology and the hardware status", r.protocolHasMethodology === true && r.protocolHasNoHardware === true],
   ["A cue at 19.933 s", r.scheduleA === "19.933"],
   ["anchor button enabled", r.anchorEnabled === true],
@@ -724,6 +759,36 @@ console.log("browser self-test (wizard tab): " + checks.length + " checks, " + b
 fs.unlinkSync(process.argv[1] + ".dom3");
 process.exit(bad ? 1 : 0);
 ' "$profile"
+  # Negative control: the page served with a registry copy without the Gen 1 hold-START line (window.ShinyCitations in a copy's
+  # gen1-data.js rewritten without that entry) must FAIL the Gen 1 footnote checks above, and is shown failing: the page then
+  # prints NOT IN THE REGISTRY for that footnote, and the check reads the footnotes the page renders.
+  cut=$(mktemp -d)
+  cp -r ../webapp/. "$cut/webapp"
+  node -e '
+const fs = require("fs");
+const p = process.argv[1];
+const src = fs.readFileSync(p, "utf8");
+const key = "window.ShinyCitations = ";
+const at = src.indexOf(key);
+if (at < 0) { console.error("negative control setup: gen1-data.js carries no window.ShinyCitations"); process.exit(1); }
+const reg = JSON.parse(src.slice(at + key.length).replace(/;\n$/, ""));
+const before = reg.entries.length;
+reg.entries = reg.entries.filter((e) => e.cite !== "pokered/engine/movie/title.asm:227-239,266");
+if (reg.entries.length !== before - 1) { console.error("negative control setup: the Gen 1 hold-START line is not in the registry"); process.exit(1); }
+fs.writeFileSync(p, src.slice(0, at) + key + JSON.stringify(reg) + ";\n");
+' "$cut/webapp/gen1-data.js"
+  grep -q 'pokered/engine/movie/title.asm:227-239,266' "$cut/webapp/gen1-data.js" && { echo "negative control setup: the hold-START line is still in the copy"; exit 1; }
+  cutprofile=$(mktemp -d)
+  timeout 120 google-chrome --headless=new --disable-gpu --user-data-dir="$cutprofile" --virtual-time-budget=5000 --dump-dom "file://$cut/webapp/index.html?g1selftest" 2>/dev/null | grep -o '<pre id="g1-selftest">.*</pre>' | sed 's/<[^>]*>//g' > "$cut/dom"
+  if g1_footnotes_ok "$cut/dom" > "$cut/out" 2>&1; then
+    echo "negative control (the page with the registry without the Gen 1 hold-START line): DID NOT FAIL"
+    rm -rf "$cut" "$cutprofile"
+    exit 1
+  else
+    echo "negative control (the page with the registry without the Gen 1 hold-START line): FAILED as required ->"
+    grep -E '^FAIL' "$cut/out" | head -3 | sed 's/^/      /'
+  fi
+  rm -rf "$cut" "$cutprofile"
   # The Practice & Hunt page (webapp/hunt/hunt.html) in the same browser, straight from the source tree: it carries no
   # mode switch of its own; in RUN (a fresh profile) it says the mode is off and closes, showing no controls; once the
   # shared mode setting is PRACTICE / HUNT (seeded by a probe page on the same file:// origin, the way the main window's

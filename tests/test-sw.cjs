@@ -102,7 +102,7 @@ function recomputeStamp() {
   const core = (n) => path.join(root, "core", n), data = (n) => path.join(root, "core", "data", n), web = (n) => path.join(path.dirname(indexPath), n);
   const files = ["rng.js", "gen4.js", "gen12.js", "gen1tid.js", "timers.js", "gen5.js", "seedtime4.js", "generators.js", "gen2tid.js"].map(core)
     .concat(["gen1-tid.json", "gen3-sid.json", "gen2-tid.json", "citations.json", "species-gen3.json", "encounters-gen3.json", "statics-gen3.json", "species-gen4.json", "encounters-gen4.json", "statics-gen4.json"].map(data))
-    .concat(["app.css", "app.js", "downloads.js", "mode.js", "gen1tid-ui.js", "gen2tid-ui.js", "wizard-ui.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-512-maskable.png"].map(web));
+    .concat(["app.css", "app.js", "downloads.js", "mode.js", "footnotes.js", "gen1tid-ui.js", "gen2tid-ui.js", "wizard-ui.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-512-maskable.png"].map(web));
   for (const f of files) h.update(fs.readFileSync(f));
   const withoutLines = (text, re) => { const lines = text.split("\n"); if (lines[lines.length - 1] === "") lines.pop(); return lines.filter((l) => !re.test(l)).map((l) => l + "\n").join(""); };
   h.update(withoutLines(page, /window\.SHINY_BUILD = "/));

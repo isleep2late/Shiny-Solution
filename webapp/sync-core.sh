@@ -35,7 +35,7 @@ build=$( {
   cat ../core/rng.js ../core/gen4.js ../core/gen12.js ../core/gen1tid.js ../core/timers.js ../core/gen5.js ../core/seedtime4.js ../core/generators.js ../core/gen2tid.js
   cat ../core/data/gen1-tid.json ../core/data/gen3-sid.json ../core/data/gen2-tid.json ../core/data/citations.json
   cat ../core/data/species-gen3.json ../core/data/encounters-gen3.json ../core/data/statics-gen3.json ../core/data/species-gen4.json ../core/data/encounters-gen4.json ../core/data/statics-gen4.json
-  cat app.css app.js downloads.js mode.js gen1tid-ui.js gen2tid-ui.js wizard-ui.js manifest.webmanifest icons/icon-192.png icons/icon-512.png icons/icon-512-maskable.png
+  cat app.css app.js downloads.js mode.js footnotes.js gen1tid-ui.js gen2tid-ui.js wizard-ui.js manifest.webmanifest icons/icon-192.png icons/icon-512.png icons/icon-512-maskable.png
   grep -v 'window.SHINY_BUILD = "' index.html
   grep -v '^const BUILD = "' sw.js
 } | sha256sum | cut -c1-12)

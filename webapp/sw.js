@@ -9,14 +9,14 @@
 // BUILD is stamped by webapp/sync-core.sh (a hash of the shipped sources, written here and into
 // index.html): a changed sw.js installs as a new worker, precaches into new caches and, at activate,
 // deletes every shiny-* cache of another build, so a new sync invalidates the old copy.
-const BUILD = "c234b1e9973b";
+const BUILD = "98c0dd1ac797";
 const SHELL_CACHE = "shiny-shell-" + BUILD;
 const DATA_CACHE = "shiny-data-" + BUILD;
 const INDEX = "index.html";
 const SHELL = [
   INDEX, "app.css", "manifest.webmanifest",
   "rng.js", "gen4.js", "gen12.js", "gen1tid.js", "timers.js", "gen5.js", "seedtime4.js", "generators.js", "gen2tid.js",
-  "gen1-data.js", "downloads.js", "mode.js", "app.js", "gen1tid-ui.js", "gen2tid-ui.js", "wizard-ui.js",
+  "gen1-data.js", "downloads.js", "mode.js", "footnotes.js", "app.js", "gen1tid-ui.js", "gen2tid-ui.js", "wizard-ui.js",
   "icons/icon-192.png", "icons/icon-512.png", "icons/icon-512-maskable.png"
 ];
 

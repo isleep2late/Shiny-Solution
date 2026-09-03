@@ -1017,51 +1017,22 @@ public static class Wizard
         => CardLines(mon, Game(cfg.Game).Gen, cfg.Kind == "static" ? cfg.Species : null, cfg.Wanted.Tid, cfg.Wanted.Sid, seed, ModelOf(cfg.Game), timeText);
 
     // ---- procedures (design 5.1 step 6), numbered, every step under the seed model id ---------------------
-    // ---- the decomp citation registry (core/data/citations.json, generated from docs/FACTS.md by tools/gen-citations.py):
-    // embedded in the Core assembly as data.citations, a copy beside the executable preferred, or the file given to
-    // LoadCitations (app/Tests). Each procedure step's sources are footnotes over it, the web tab's texts word for word:
-    // a decomp line is printed with the docs/FACTS.md section the registry files it under, a source with no decomp line
-    // is marked SYNTHESISED, and a citation the registry does not carry is printed as NOT IN THE REGISTRY, which
+    // ---- the decomp citation footnotes (Citations.cs over core/data/citations.json, the registry generated from
+    // docs/FACTS.md by tools/gen-citations.py): each procedure step's sources are footnotes over it, the web tab's
+    // texts word for word: a decomp line with the docs/FACTS.md section the registry files it under, a source with no
+    // decomp line marked SYNTHESISED, a citation the registry does not carry printed as NOT IN THE REGISTRY, which
     // ProcedureProblems reports ----
-    static Dictionary<string, string>? _citations;
-    static bool _citationsTried;
-    public static bool CitationsLoaded { get { EnsureCitations(); return _citations is not null; } }
-    public static void SetCitations(JsonElement? registry)
-    {
-        _citationsTried = true;
-        _citations = null;
-        if (registry is not JsonElement r || r.ValueKind != JsonValueKind.Object || !r.TryGetProperty("entries", out var entries) || entries.ValueKind != JsonValueKind.Array) return;
-        var by = new Dictionary<string, string>();
-        foreach (var e in entries.EnumerateArray()) by[WJ.S(e, "cite")] = WJ.S(e, "section");
-        _citations = by;
-    }
-    public static void LoadCitations(string? path = null)
-    {
-        var beside = Path.Combine(AppContext.BaseDirectory, "citations.json");
-        try
-        {
-            if (path is not null) SetCitations(JsonDocument.Parse(File.ReadAllText(path)).RootElement.Clone());
-            else if (File.Exists(beside)) SetCitations(JsonDocument.Parse(File.ReadAllText(beside)).RootElement.Clone());
-            else
-            {
-                using var stream = typeof(Generators).Assembly.GetManifestResourceStream("data.citations");
-                if (stream is null) { SetCitations(null); return; }
-                using var reader = new StreamReader(stream, Encoding.UTF8);
-                SetCitations(JsonDocument.Parse(reader.ReadToEnd()).RootElement.Clone());
-            }
-        }
-        catch (Exception) when (path is null) { SetCitations(null); }
-    }
-    static void EnsureCitations() { if (!_citationsTried) LoadCitations(); }
+    public static bool CitationsLoaded => Citations.Loaded;
+    public static void SetCitations(JsonElement? registry) => Citations.SetCitations(registry);
+    public static void LoadCitations(string? path = null) => Citations.LoadCitations(path);
 
-    public sealed record WizardSource(string? Cite, string? Synth, string Claim);
     const string IdleClaim = "Random() runs once in every VBlank, so the RNG advances once per frame from the seed";
     const string Gen4SeedClaim = "seed = ((month*day + minute + second) << 24) + (hour << 16) + (year - 2000) + the VBlank count since boot (the delay), one u32 with natural overflow";
     const string Gen4StaticClaim = "Method 1 on the LCRNG: PID low | PID high, IV word 1, IV word 2, the Mersenne Twister not involved";
     const string Gen4WildClaim = "a wild encounter goes through the wild creator: the lead's effect, the nature, PIDs until the nature matches, the IVs, then one held-item roll after them";
     const string ChatotClaim = "each Chatot cry takes one LCRNG output for its pitch";
     const string WalkClaim = "every 128th step updates the friendship of every party member, one LCRNG output each";
-    public static readonly Dictionary<string, WizardSource> Sources = new()
+    public static readonly Dictionary<string, Citations.CiteSource> Sources = new()
     {
         ["rsSeed"] = new("pokeruby/src/rtc.c:13,134-140", null, "with a dead battery the RTC reports its power-failure flag and the dummy time 2000-01-01 00:00 is read instead, so every boot seeds 0x5A0"),
         ["eSeed"] = new("pokeemerald/src/main.c:108-110", null, "Emerald's RTC seeding is compiled out (BUGFIX), so a retail cartridge boots with the RNG state 0"),
@@ -1090,39 +1061,9 @@ public static class Wizard
         ["chatotHgss"] = new("pokeheartgold/src/sound_chatot.c:59", null, ChatotClaim),
         ["journal"] = new(null, "EMPIRICAL, a community convention; docs/FACTS.md Advance costs finds no LCRNG call in pokeplatinum/src/journal.c", "a journal page flip counts as two advances"),
     };
-    public static string FootnoteText(int n, string key)
-    {
-        var src = Sources[key];
-        string head = "[^" + n + "] ";
-        if (src.Synth is not null) return head + "SYNTHESISED (no decomp line; " + src.Synth + "): " + src.Claim;
-        EnsureCitations();
-        if (_citations is null || !_citations.TryGetValue(src.Cite!, out var section))
-            return head + src.Cite + " NOT IN THE REGISTRY (" + (_citations is not null ? "core/data/citations.json carries no such line of docs/FACTS.md" : "no citation registry is loaded") + "): " + src.Claim;
-        return head + src.Cite + " (docs/FACTS.md: " + section + "): " + src.Claim;
-    }
+    public static string FootnoteText(int n, string key) => Citations.FootnoteText(n, Sources[key]);
     // one procedure's footnotes: Mark(keys) returns the markers for a step (numbered in order of first use), Lines() the block
-    sealed class Footnotes
-    {
-        readonly List<string> _keys = new();
-        public string Mark(params string[] keys)
-        {
-            var sb = new StringBuilder();
-            foreach (var k in keys)
-            {
-                if (!Sources.ContainsKey(k)) throw new ArgumentException("no source named " + k);
-                int i = _keys.IndexOf(k);
-                if (i < 0) { _keys.Add(k); i = _keys.Count - 1; }
-                sb.Append(" [^").Append(i + 1).Append(']');
-            }
-            return sb.ToString();
-        }
-        public List<string> Lines()
-        {
-            var out_ = new List<string> { "Sources: decomp lines from docs/FACTS.md through the registry core/data/citations.json; SYNTHESISED marks a source with no decomp line." };
-            for (int i = 0; i < _keys.Count; i++) out_.Add("  " + FootnoteText(i + 1, _keys[i]));
-            return out_;
-        }
-    }
+    static Citations.Footnotes Footnotes() => new(Sources);
     static string[] AdvanceSourceKeys(string family, AdvancePlan plan)
     {
         var keys = new List<string>();
@@ -1133,8 +1074,7 @@ public static class Wizard
         }
         return keys.ToArray();
     }
-    static readonly Regex ProblemLine = new(@"^  \[\^\d+\] .* NOT IN THE REGISTRY \(", RegexOptions.Compiled);
-    public static List<string> ProcedureProblems(IEnumerable<string> lines) => lines.Where(l => ProblemLine.IsMatch(l)).ToList();
+    public static List<string> ProcedureProblems(IEnumerable<string> lines) => Citations.ProcedureProblems(lines);
 
     // every numbered step carries the seed model id it runs under (the header line names it first); each step's sources
     // are marked [^n] and listed after the steps
@@ -1148,7 +1088,7 @@ public static class Wizard
         var model = ModelOf(cfg.Game); var game = Game(cfg.Game); string fam = game.Family;
         double ms = FrameToMs(hit.Frame, cfg.Console);
         var phases = Timers.Gen3Phases(Settings(cfg.Console), timerModel);
-        var fn = new Footnotes();
+        var fn = Footnotes();
         var lines = new List<string>();
         uint seed = cfg.Seed ?? 0;
         lines.Add("Procedure (" + model.Id + "; " + NoHardware + ")");
@@ -1168,7 +1108,7 @@ public static class Wizard
         var settings = Settings(cfg.Console);
         var phases = Timers.Gen4Phases(settings, timerModel);
         double minutes = Timers.Gen4MinutesBefore(settings, timerModel);
-        var fn = new Footnotes();
+        var fn = Footnotes();
         var lines = new List<string>();
         lines.Add("Procedure (" + model.Id + "; " + NoHardware + ")");
         lines.Add("1. Prepare the save: " + (cfg.Kind == "static" ? "in front of " + cfg.StaticLabel + ", the last A before the battle or the gift is the frame that matters." : "on the " + KindNames[cfg.Encounter] + " tile of " + cfg.TableName + (cfg.Lead is not null ? ", lead " + LeadText(cfg.Lead) : "") + ".") + " Save with the party you will advance with (" + Js.Plural(partyCount, "member") + ")." + fn.Mark(cfg.Kind == "static" ? (fam == "dppt" ? "dpptStatic" : "hgssStatic") : (fam == "dppt" ? "dpptWild" : "hgssWild")));

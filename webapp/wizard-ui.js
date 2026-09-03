@@ -5,7 +5,7 @@
 // nothing reads a capture; every output names the seed model it runs under and that model's validation
 // status, which today is EMPIRICAL / model output for every game (no hardware session).
 //
-// Loaded after core/generators.js, core/timers.js, mode.js and app.js (the Gen 4 two-phase countdown,
+// Loaded after core/generators.js, core/timers.js, mode.js, footnotes.js and app.js (the Gen 4 two-phase countdown,
 // app.js's Countdown, is reused as root.ShinyCountdown). Species, encounter and static tables are
 // fetched lazily on first use as data/wizard-gen{3,4}.js (webapp/sync-core.sh writes them from
 // core/data/*.json); the mobile bundle carries none of them and says so (docs/DATA.md).
@@ -88,22 +88,14 @@
     NDS_SLOT1: { key: "NDS_SLOT1", gen: 4, name: "DS / DS Lite (59.8261 fps)" },
     DSI: { key: "DSI", gen: 4, name: "DSi / 3DS (59.8261 fps)" }
   };
-  // ---- the decomp citation registry (core/data/citations.json, generated from docs/FACTS.md by tools/gen-citations.py) ----
-  // The page reads it as window.ShinyCitations (webapp/sync-core.sh writes it into gen1-data.js, the mobile bundle
-  // inlines it); node callers pass the parsed file to setCitations. Each procedure step's sources are footnotes over
-  // it: a decomp line is printed with the docs/FACTS.md section the registry files it under; a source with no decomp
-  // line (a timer model, a measured constant, a community convention) is marked SYNTHESISED; a citation the registry
-  // does not carry is printed as NOT IN THE REGISTRY, which procedureProblems reports and the self-tests refuse.
-  var CITATIONS = null;
-  function setCitations(registry) {
-    CITATIONS = null;
-    if (!registry || !Array.isArray(registry.entries)) return;
-    var by = {};
-    registry.entries.forEach(function (e) { by[e.cite] = e; });
-    CITATIONS = { byCite: by, count: registry.entries.length };
-  }
-  function citationsLoaded() { return !!CITATIONS; }
-  if (root.ShinyCitations) setCitations(root.ShinyCitations);
+  // ---- the decomp citation footnotes (webapp/footnotes.js over core/data/citations.json, generated from docs/FACTS.md
+  // by tools/gen-citations.py): each procedure step's sources are marked [^n] and listed after the steps, a decomp
+  // line with the docs/FACTS.md section the registry files it under, a source with no decomp line (a timer model, a
+  // community convention) marked SYNTHESISED, a citation the registry does not carry printed as NOT IN THE REGISTRY,
+  // which procedureProblems reports and the self-tests refuse ----
+  var FN = root.ShinyFootnotes;
+  if (!FN) throw new Error("webapp/footnotes.js (ShinyFootnotes) must load before wizard-ui.js");
+  var setCitations = FN.setCitations, citationsLoaded = FN.citationsLoaded, procedureProblems = FN.procedureProblems;
   var IDLE_CLAIM = "Random() runs once in every VBlank, so the RNG advances once per frame from the seed";
   var GEN4_SEED_CLAIM = "seed = ((month*day + minute + second) << 24) + (hour << 16) + (year - 2000) + the VBlank count since boot (the delay), one u32 with natural overflow";
   var GEN4_STATIC_CLAIM = "Method 1 on the LCRNG: PID low | PID high, IV word 1, IV word 2, the Mersenne Twister not involved";
@@ -138,32 +130,9 @@
     chatotHgss: { cite: "pokeheartgold/src/sound_chatot.c:59", claim: CHATOT_CLAIM },
     journal: { synth: "EMPIRICAL, a community convention; docs/FACTS.md Advance costs finds no LCRNG call in pokeplatinum/src/journal.c", claim: "a journal page flip counts as two advances" }
   };
-  function footnoteText(n, key) {
-    var src = SOURCES[key], head = "[^" + n + "] ";
-    if (src.synth) return head + "SYNTHESISED (no decomp line; " + src.synth + "): " + src.claim;
-    var e = CITATIONS && CITATIONS.byCite[src.cite];
-    if (!e) return head + src.cite + " NOT IN THE REGISTRY (" + (CITATIONS ? "core/data/citations.json carries no such line of docs/FACTS.md" : "no citation registry is loaded") + "): " + src.claim;
-    return head + src.cite + " (docs/FACTS.md: " + e.section + "): " + src.claim;
-  }
+  function footnoteText(n, key) { return FN.footnoteText(n, SOURCES[key]); }
   // one procedure's footnotes: mark(keys) returns the markers for a step (numbered in order of first use), lines() the block
-  function footnotes() {
-    var keys = [];
-    return {
-      mark: function (list) {
-        return list.map(function (k) {
-          if (!SOURCES[k]) throw new Error("no source named " + k);
-          var i = keys.indexOf(k);
-          if (i < 0) { keys.push(k); i = keys.length - 1; }
-          return " [^" + (i + 1) + "]";
-        }).join("");
-      },
-      lines: function () {
-        var out = ["Sources: decomp lines from docs/FACTS.md through the registry core/data/citations.json; SYNTHESISED marks a source with no decomp line."];
-        keys.forEach(function (k, i) { out.push("  " + footnoteText(i + 1, k)); });
-        return out;
-      }
-    };
-  }
+  function footnotes() { return FN.footnotes(SOURCES); }
   function advanceSourceKeys(family, plan) {
     var keys = [];
     (plan.needed <= 0 ? [] : plan.plan).forEach(function (p) {
@@ -171,9 +140,6 @@
       if (k && keys.indexOf(k) < 0) keys.push(k);
     });
     return keys;
-  }
-  function procedureProblems(lines) {
-    return (Array.isArray(lines) ? lines : String(lines).split("\n")).filter(function (l) { return /^  \[\^\d+\] .* NOT IN THE REGISTRY \(/.test(l); });
   }
 
   function consolesFor(gameKey) {

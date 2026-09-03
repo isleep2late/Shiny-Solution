@@ -30,6 +30,8 @@ globalThis.ShinyGen1Data = DATA;
 globalThis.ShinyGen3SidData = JSON.parse(fs.readFileSync(path.join(root, "core", "data", "gen3-sid.json"), "utf8"));
 const M = require(modePath);
 globalThis.ShinyMode = M;
+globalThis.ShinyCitations = JSON.parse(fs.readFileSync(path.join(root, "core", "data", "citations.json"), "utf8"));
+globalThis.ShinyFootnotes = require(path.join(path.dirname(uiPath), "footnotes.js"));
 const U = require(uiPath);
 const G = globalThis.ShinyGen1Tid;
 

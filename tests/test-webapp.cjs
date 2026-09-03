@@ -98,6 +98,8 @@ globalThis.ShinyGen1Tid = require(path.join(root, "core", "gen1tid.js"));
 globalThis.ShinyGen1Data = DATA;
 globalThis.ShinyGen3SidData = SIDDATA;
 globalThis.ShinyMode = require(path.join(root, "webapp", "mode.js"));
+globalThis.ShinyCitations = JSON.parse(fs.readFileSync(path.join(root, "core", "data", "citations.json"), "utf8"));
+const FN = require(path.join(root, "webapp", "footnotes.js"));
 const G = globalThis.ShinyGen1Tid;
 const U = require(path.join(root, "webapp", "gen1tid-ui.js"));
 const RUN = globalThis.ShinyMode.RUN, PRACTICE = globalThis.ShinyMode.PRACTICE;
@@ -211,6 +213,36 @@ assert("verify wrong timing is INCONSISTENT", !U.verifyLines(gbp, 16387, 9.0, fa
 assert("verify right timing is CONSISTENT", U.verifyLines(gbp, 16387, 7.333, false, 3, null).consistent);
 assert("verify text names the offset", U.verifyLines(gbp, 16387, 7.333, false, 3, null).lines.join("\n").includes("the table produces it at offset 358"));
 
+// the footnotes (webapp/footnotes.js over core/data/citations.json): the protocol lists its sources after the steps, the pokered
+// title-loop line under its FACTS.md section and the table under the console's status word (the same lines app/Tests/Gen1TidChecks.cs
+// pins on the panel); the target line, the schedule and verify carry the block's numbers; the GBA HD and the DMG print
+// HARDWARE-VALIDATED n, Yellow its pokeyellow lines and EMPIRICAL; the registry without the hold-START line (the negative
+// control) is reported as NOT IN THE REGISTRY and, restored, is clean
+const protoLines = U.protocolLines(plat, "menu", 358, sched, 200, 4, 1.0);
+assert("Gen 1 protocol lists five footnotes after the steps under the header with the status note", protoLines.filter((l) => /^  \[\^\d+\] /.test(l)).length === 5 && protoLines.indexOf(FN.HEADER + FN.STATUS_NOTE) > protoLines.findIndex((l) => l.startsWith(" 6. ")));
+assert("Gen 1 hold-START footnote is the pokered title-loop line under its FACTS.md section", protoLines.includes("  [^1] pokered/engine/movie/title.asm:227-239,266 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 1 Trainer ID / Where the ID comes from): the title screen waits on CheckForUserInterruption (one JoypadLowSensitivity poll per frame; START or A ends it), then the cry and the fade play before MainMenu, so START held anywhere in the window is read on the first poll and the NEW GAME menu opens on one fixed frame"));
+assert("Gen 1 table footnote under EMULATOR-EXACT on GSE", protoLines.includes("  [^2] EMULATOR-EXACT (no decomp line; the table's derivation on pokemon-speedrunning/gambatte-core with START held inside the window, docs/FACTS.md Gen 1 Trainer ID (hold-START methodologies, RNG Solution)): hold START on any frame 1300-1475 and the NEW GAME menu opens on frame 1553; the A press frame is the menu frame + 80 + the offset (the table's definition), one Trainer ID per offset under red/gba/hold-start-v1; GSE or gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact"));
+assert("Gen 1 menu, roll and stir footnotes are registry lines", protoLines.some((l) => l.startsWith("  [^3] pokered/engine/menus/main_menu.asm:64-68,85-86 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 1 Trainer ID / Where the ID comes from): the NEW GAME menu waits in HandleMenuInput")) && protoLines.some((l) => l.startsWith("  [^4] pokered/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: ")) && protoLines.some((l) => l.startsWith("  [^5] pokered/engine/math/random.asm:1-13 (docs/FACTS.md: Gen 1/2 (Game Boy) / The RNG): Random_ is the only RNG")));
+assert("Gen 1 steps marked", protoLines.some((l) => l.startsWith(" 3. ") && l.endsWith(" [^1] [^2]")) && protoLines.some((l) => l.startsWith(" 4. ") && l.endsWith(" [^2] [^3]")) && protoLines.includes("    Press A ON the long high beep. That is the only frame-exact action. [^4] [^5] [^2]") && protoLines.includes("    Each answer sharpens the correction. [^2]"));
+assert("Gen 1 no footnote outside the registry", U.procedureProblems(protoLines).length === 0);
+assert("Gen 1 power-on protocol marks its steps too", pproto.includes(" [^1] [^2]\n") && /Press A ON the long high beep\. \[\^4\] \[\^5\] \[\^2\]\n/.test(pproto) && pproto.includes("\n  [^2] HARDWARE-VALIDATED 5 of 6 (no decomp line; ") && pproto.includes("hold START on any frame 1450-1640 and the NEW GAME menu opens on frame 1701"));
+assert("Gen 1 target line marked", U.describeTarget(plat, 358).endsWith(" [3x cold-boot verified] [^2] [^4]"));
+assert("Gen 1 schedule A cue marked", sl.endsWith(" [^2]"));
+const vl = U.verifyLines(gbp, 16387, 7.333, false, 3, null).lines;
+assert("Gen 1 verify carries the table and roll footnotes and lists those two", vl.includes("  the table produces it at offset 358 [^2] [^4]") && vl.some((l) => l.startsWith("  [^2] EMPIRICAL (no decomp line; ") && l.endsWith("GameCube Game Boy Player: UNVALIDATED on this console")) && vl.some((l) => l.startsWith("  [^4] pokered/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: ")) && vl.filter((l) => /^  \[\^/.test(l)).length === 2);
+assert("Gen 1 status words: GSE exact, GBA HD 5 of 5, DMG 5 of 6, Game Boy Player and Yellow EMPIRICAL", U.statusWord(plat) === "EMULATOR-EXACT" && U.statusWord(U.resolve(DATA, "red", "gba-hd")) === "HARDWARE-VALIDATED 5 of 5" && U.statusWord(dmg) === "HARDWARE-VALIDATED 5 of 6" && U.statusWord(gbp) === "EMPIRICAL" && U.statusWord(U.resolve(DATA, "yellow", "gba-hd")) === "EMPIRICAL" && U.statusWord(U.resolve(DATA, "blue", "gse")) === "EMPIRICAL");
+{
+  const yellow = U.resolve(DATA, "yellow", "gba-hd");
+  const yProto = U.protocolLines(yellow, "menu", 358, U.buildSchedule(yellow, "menu", 358, 200, 4, 1.0), 200, 4, 1.0);
+  assert("Yellow cites pokeyellow and prints EMPIRICAL", yProto.some((l) => l.startsWith("  [^1] pokeyellow/engine/movie/title.asm:166-175 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 1 Trainer ID / Where the ID comes from): Yellow's title loop")) && yProto.some((l) => l.startsWith("  [^2] EMPIRICAL (no decomp line; ")) && yProto.some((l) => l.startsWith("  [^3] pokeyellow/engine/menus/main_menu.asm:63-66,84 (docs/FACTS.md: ")) && yProto.some((l) => l.startsWith("  [^4] pokeyellow/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: ")) && yProto.some((l) => l.startsWith("  [^5] pokeyellow/engine/math/random.asm:1-13 (docs/FACTS.md: ")) && U.procedureProblems(yProto).length === 0);
+  const full = globalThis.ShinyCitations;
+  FN.setCitations({ entries: full.entries.filter((e) => e.cite !== "pokered/engine/movie/title.asm:227-239,266") });
+  const problems = U.procedureProblems(U.protocolLines(plat, "menu", 358, sched, 200, 4, 1.0));
+  assert("negative control: the registry without the Gen 1 hold-START line is reported (one problem naming the line)", problems.length === 1 && problems[0].startsWith("  [^1] pokered/engine/movie/title.asm:227-239,266 NOT IN THE REGISTRY (core/data/citations.json carries no such line of docs/FACTS.md): "), problems);
+  FN.setCitations(full);
+  assert("the registry restored: no Gen 1 problem", U.procedureProblems(U.protocolLines(plat, "menu", 358, sched, 200, 4, 1.0)).length === 0);
+}
+
 // the Secret ID branch (RNG Solution control S1: Emerald TID $B0AF -> SID $7F16 at k = 5478)
 const em = U.sidMethodologyFor(SIDDATA, "emerald");
 const cue = U.sidCue(em, 7, "fast", 30, 6, 20, null);
@@ -298,6 +330,38 @@ assert("a DMG offers hold-start and late-start for Gold and Silver, nothing for 
 assert("the anchors a console offers", JSON.stringify(U2.resolve(GEN2DATA, "gold", "gse").anchors) === '["menu","reset"]' && JSON.stringify(U2.resolve(GEN2DATA, "gold", "gbp").anchors) === '["menu"]' &&
   JSON.stringify(U2.resolve(GEN2DATA, "gold", "gba").anchors) === '["menu","poweron"]' && JSON.stringify(U2.resolve(GEN2DATA, "crystal", "gbc").anchors) === '["menu","poweron"]');
 assert("the reachability rule names the two recurring states", U2.reachabilityLines(GEN2DATA, "gold").join("\n").includes("Only days0 and days512 recur boot after boot") && U2.reachabilityLines(GEN2DATA, "crystal").join("\n").includes("immune"));
+// the footnotes: Gold on GSE lists ten sources after the steps (the pokegold 4-frame poll and title lines, the roll under
+// EMULATOR-EXACT, the wPlayerID roll, the VBlank stir, the held-input rule, StartClock, FixDays, StartRTC, the Lucky ID roll);
+// every protocol the panel vectors pin carries its block with the console's status word and no problem; Crystal cites
+// pokecrystal's title, immunity and Secret ID lines; the registry without the poll line is reported and restored is clean
+{
+  const g2plat = U2.resolve(GEN2DATA, "gold", "gse", null, "days0", null, DATA);
+  const g2sched = U2.buildSchedule(g2plat, "menu", 300, 200, 4, 1.0);
+  const g2proto = U2.protocolLines(g2plat, "menu", 300, g2sched, 200, 4, 1.0);
+  assert("Gen 2 protocol lists ten footnotes after the steps under the header with the status note", g2proto.filter((l) => /^  \[\^\d+\] /.test(l)).length === 10 && g2proto.indexOf(FN.HEADER + FN.STATUS_NOTE) > g2proto.findIndex((l) => l.startsWith(" 6. ")));
+  assert("Gen 2 poll footnote is the pokegold main-menu line under its FACTS.md section", g2proto.includes("  [^2] pokegold/engine/menus/main_menu.asm:142-152 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 2 Trainer ID / Lucky ID / The boot path with START held, and the 4-frame poll): MainMenuJoypadLoop goes through SetUpMenu, which disables the joypad filter, so _ScrollingMenuJoypad returns after one poll and the loop comes back through WaitBGMap: the menu reads the pad once every 4 frames, and the target is the 4-frame bin the A tap lands in, not a frame"));
+  assert("Gen 2 roll footnote under EMULATOR-EXACT on GSE with the 13-frame roll", g2proto.includes("  [^3] EMULATOR-EXACT (no decomp line; the tables' derivation on pokemon-speedrunning/gambatte-core, docs/FACTS.md Gen 2 Trainer ID / Lucky ID (hold-START single-tap methodologies)): hold START on any frame 0-355 and the menu box is visible on frame 450; the roll is 13 frames after the accepting poll (Crystal 14, Gold and Silver 13) and constant inside a bin, 599 bins of 4 frames per table under gold/gbp/hold-start-v1; GSE or gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact"));
+  assert("Gen 2 ID roll, stir, RTC and Lucky ID footnotes are registry lines", g2proto.some((l) => l.startsWith("  [^4] pokegold/engine/menus/intro_menu.asm:1-7,28-49 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 2 Trainer ID / Lucky ID / Where the IDs come from): NewGame -> _ResetWRAM writes wPlayerID right after the WRAM clear: hRandomSub on one frame is the high byte")) && g2proto.some((l) => l.startsWith("  [^5] pokegold/home/vblank.asm:68-79 (docs/FACTS.md: ")) && g2proto.some((l) => l.startsWith("  [^7] pokegold/engine/rtc/rtc.asm:91-101,103-115 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 2 Trainer ID / Lucky ID / RTC dependence of Gold/Silver): StartClock runs before the LCD is switched on")) && g2proto.some((l) => l.startsWith("  [^8] pokegold/home/time.asm:61-120,205-250 (docs/FACTS.md: ")) && g2proto.some((l) => l.startsWith("  [^9] pokegold/engine/rtc/rtc.asm:13-22 (docs/FACTS.md: ") && l.includes("StartRTC, run at the end of StartClock on every boot, clears the RTC halt bit")) && g2proto.some((l) => l.startsWith("  [^10] pokegold/engine/menus/intro_menu.asm:225-248 (docs/FACTS.md: ") && l.includes("LoadOrRegenerateLuckyIDNumber")));
+  assert("Gen 2 steps marked", g2proto.some((l) => l.startsWith("    RTC state: ") && l.endsWith(" [^7] [^8] [^9]")) && g2proto.includes("    only to the FIRST New Game after the clear. [^10]") && g2proto.some((l) => l.startsWith("    Hold window: ") && l.endsWith(" [^1] [^3]")) && g2proto.some((l) => l.startsWith(" 3. Keep START held") && l.endsWith(" [^3]")) && g2proto.some((l) => l.startsWith("    On the long high beep tap A ONCE") && l.endsWith(" [^2] [^6]")) && g2proto.some((l) => l.startsWith("    Target: bin 300 ") && l.endsWith(" [^2] [^4] [^5]")) && g2proto.some((l) => l.startsWith("    Each answer sharpens") && l.endsWith(" [^4] [^10]")));
+  assert("Gen 2 no footnote outside the registry", U2.procedureProblems(g2proto).length === 0);
+  assert("Gen 2 target line, schedule and verify carry the block's numbers", U2.describeBin(g2plat, 300).endsWith("methodology gold/gbp/hold-start-v1 [^2] [^4]") && U2.scheduleLines(g2sched, 300, 200, g2plat).slice(-2).join("\n") === "  A window (bin 300) 20.108 - 20.175 s   (A down inside it, before the correction) [^2] [^3]\n  tap 67-134 ms, then nothing for 0.35 s [^6]" && (() => { const v = U2.verifyLines(g2plat, G2.lookup(GEN2DATA, "gold", "gbp", "days0", 300).tid, null, 20.13).lines; return v.some((l) => l.startsWith("  the tables produce them at bin 300 [^2] [^4]")) && v.some((l) => l.includes("-> bin 300; scope") && l.endsWith(" [^2] [^3]")) && v.filter((l) => /^  \[\^/.test(l)).length === 3; })());
+  assert("Gen 2 invert lines carry the poll, ID roll and halt footnotes on a first-boot-only candidate", (() => { const v = U2.invertLines(g2plat, 0x6F53, 0x03E9, { family: "all" }).lines; return v.some((l) => l.includes("halt-days200 bin 392:") && l.endsWith("[first boot only] [^2] [^4] [^9]")) && v.filter((l) => /^  \[\^/.test(l)).length === 3; })());
+  const crystal = U2.resolve(GEN2DATA, "crystal", "gbc", null, "days0", null, DATA);
+  const cProto = U2.protocolLines(crystal, "poweron", 300, U2.buildSchedule(crystal, "poweron", 300, 100, 4, 1.0), 100, 4, 1.0);
+  assert("Crystal cites pokecrystal's title, poll, immunity and Secret ID lines and prints EMPIRICAL with the 14-frame roll", cProto.some((l) => l.startsWith("  [^1] pokecrystal/engine/menus/intro_menu.asm:1138-1200 (docs/FACTS.md: ")) && cProto.some((l) => l.startsWith("  [^2] pokecrystal/engine/menus/main_menu.asm:240-252 (docs/FACTS.md: ")) && cProto.some((l) => l.startsWith("  [^3] EMPIRICAL (no decomp line; ") && l.includes("hold START on any frame 0-407 and the menu box is visible on frame 526; the roll is 14 frames after the accepting poll") && l.endsWith("Game Boy Color: no hardware sample")) && cProto.some((l) => l.startsWith("  [^7] pokecrystal/home/init.asm:131,143,155-159 (docs/FACTS.md: ") && l.includes("Crystal switches the LCD on before StartClock")) && cProto.some((l) => l.startsWith("  [^9] pokecrystal/engine/menus/intro_menu.asm:130-134 (docs/FACTS.md: ") && l.includes("wSecretID")) && cProto.some((l) => l.startsWith("    RTC state: ") && l.endsWith(" [^7]")) && cProto.some((l) => l.startsWith("    Target: bin 300 ") && l.endsWith(" [^2] [^4] [^9] [^5]")) && U2.procedureProblems(cProto).length === 0 && U2.statusWord(crystal) === "EMPIRICAL");
+  assert("Crystal's target line carries the Secret ID footnote", U2.describeBin(crystal, 300).endsWith("methodology crystal/gbc/hold-start-v1 [^2] [^4] [^9]"));
+  const g2vectors = JSON.parse(fs.readFileSync(path.join(root, "tests", "gen2tid-panel-vectors.json"), "utf8"));
+  const g2cases = g2vectors.cases.filter((c) => Array.isArray(c.protocolLines));
+  assert("every Gen 2 protocol the panel vectors pin lists at least eight footnotes under the header with its console's status word", g2cases.length >= 18 && g2cases.every((c) => c.protocolLines.includes(FN.HEADER + FN.STATUS_NOTE) && c.protocolLines.filter((l) => /^  \[\^\d+\] /.test(l)).length >= 8 && c.protocolLines.some((l) => l.startsWith("  [^3] " + (c.input.platform === "gse" ? "EMULATOR-EXACT" : "EMPIRICAL") + " (no decomp line; the tables' derivation"))));
+  assert("no pinned Gen 2 protocol has a footnote outside the registry", g2cases.every((c) => U2.procedureProblems(c.protocolLines).length === 0));
+  assert("every pinned Gen 2 target line carries the poll and ID-roll footnotes", g2cases.every((c) => / \[\^2\] \[\^4\]( \[\^9\])?$/.test(c.describeBin)));
+  const full2 = globalThis.ShinyCitations;
+  FN.setCitations({ entries: full2.entries.filter((e) => e.cite !== "pokegold/engine/menus/main_menu.asm:142-152") });
+  const problems2 = U2.procedureProblems(U2.protocolLines(g2plat, "menu", 300, g2sched, 200, 4, 1.0));
+  assert("negative control: the registry without the Gen 2 poll line is reported (one problem naming the line)", problems2.length === 1 && problems2[0].startsWith("  [^2] pokegold/engine/menus/main_menu.asm:142-152 NOT IN THE REGISTRY (core/data/citations.json carries no such line of docs/FACTS.md): "), problems2);
+  FN.setCitations(full2);
+  assert("the registry restored: no Gen 2 problem", U2.procedureProblems(U2.protocolLines(g2plat, "menu", 300, g2sched, 200, 4, 1.0)).length === 0);
+}
 assert("the scripts line names the published IDs as community scripts", U2.scriptsLine(GEN2DATA, "gold").includes("need their community multi-step scripts") && U2.scriptsLine(GEN2DATA, "gold").includes("$25E9") && U2.scriptsLine(GEN2DATA, "crystal").includes("$26FB"));
 
 // the schedule and its text (USAGE's worked example: Gold on GSE, bin 300, A at 19.933 s after the visible menu)

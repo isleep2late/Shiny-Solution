@@ -24,7 +24,9 @@
   var DATA1 = root.ShinyGen1Data;                                // the reset models (GSE's gbp-fade) live in the Gen 1 data
   var MODE = root.ShinyMode;                                     // webapp/mode.js: the RUN / PRACTICE-HUNT wall's switch
   var U1 = root.ShinyGen1TidUi;                                  // webapp/gen1tid-ui.js: the shared text, store and player code
+  var FN = root.ShinyFootnotes;                                  // webapp/footnotes.js: the citation footnotes over core/data/citations.json
   if (!MODE) throw new Error("webapp/mode.js (ShinyMode) must load before gen2tid-ui.js");
+  if (!FN) throw new Error("webapp/footnotes.js (ShinyFootnotes) must load before gen2tid-ui.js");
   if (!U1) throw new Error("webapp/gen1tid-ui.js (ShinyGen1TidUi) must load before gen2tid-ui.js");
   var STORE_KEY_CAL = "shinySolution.gen2tid.calibration";      // RUN mode: {"<platform>/<anchor>": {"samples": [...]}}; PRACTICE / HUNT: + ".practice" (calStoreKey)
   var METHODOLOGY_SENTENCE = U1.METHODOLOGY_SENTENCE;
@@ -190,6 +192,42 @@
     return s === null ? "every RTC state of platform " + plat.platformKey : "RTC state " + s + " (first boot only)";
   }
 
+  // ---- the sources the protocol, the target line, the schedule, invert and verify rest on: footnotes [^n] over the
+  // citation registry (webapp/footnotes.js), numbered in this fixed order (the keys a game lacks are left out) so every
+  // line of the tab carries the Sources block's numbers. The decomp lines are pokegold's or pokecrystal's; the tables'
+  // roll and the held-input rule are measured sources under the console's status word from gen2-tid.json
+  // (EMULATOR-EXACT on GSE, EMPIRICAL on every console: no hardware sample exists) ----
+  var SOURCE_ORDER = ["holdStart", "poll", "roll", "tidRoll", "stir", "heldInput", "startClock", "fixDays", "haltClear", "crystalImmune", "lid", "crystalSid"];
+  function statusWord(plat) { return plat.status === "emulator-exact" ? "EMULATOR-EXACT" : "EMPIRICAL"; }
+  function sourcesFor(plat) {
+    var c = plat.gameKey === "crystal", repo = c ? "pokecrystal" : "pokegold", t = plat.timing;
+    var s = {
+      holdStart: { cite: c ? "pokecrystal/engine/menus/intro_menu.asm:1138-1200" : "pokegold/engine/menus/intro_menu.asm:968-1000", claim: "TitleScreenMain accepts START or A by level on its first frame" + (c ? " (Crystal after a 28-frame scroll-in)" : "") + ", and the splash and the intro skip on any button from their first frame, so START held from inside the window opens the NEW GAME menu on one fixed frame" },
+      poll: { cite: c ? "pokecrystal/engine/menus/main_menu.asm:240-252" : "pokegold/engine/menus/main_menu.asm:142-152", claim: "MainMenuJoypadLoop goes through SetUpMenu, which disables the joypad filter, so _ScrollingMenuJoypad returns after one poll and the loop comes back through WaitBGMap: the menu reads the pad once every 4 frames, and the target is the 4-frame bin the A tap lands in, not a frame" },
+      roll: { measured: "the tables' derivation on pokemon-speedrunning/gambatte-core, docs/FACTS.md Gen 2 Trainer ID / Lucky ID (hold-START single-tap methodologies)", status: statusWord(plat),
+        claim: "hold START on any frame " + t.hold_lo_frame + "-" + t.hold_hi_frame + " and the menu box is visible on frame " + t.visible_menu_frame + "; the roll is " + (c ? "14" : "13") + " frames after the accepting poll (Crystal 14, Gold and Silver 13) and constant inside a bin, 599 bins of 4 frames per table under " + plat.methodologyId + "; " + plat.name + ": " + plat.status },
+      tidRoll: { cite: c ? "pokecrystal/engine/menus/intro_menu.asm:61-68,102-128" : "pokegold/engine/menus/intro_menu.asm:1-7,28-49", claim: "NewGame -> _ResetWRAM writes wPlayerID right after the WRAM clear: hRandomSub on one frame is the high byte, hRandomAdd one DelayFrame later the low byte" },
+      stir: { cite: repo + "/home/vblank.asm:68-79", claim: "the only RNG is the VBlank stir, hRandomAdd += DIV and hRandomSub -= DIV over HRAM cleared at Init, so the IDs are a function of the frame of the accepting poll and of the DIV phase the boot fixes" },
+      heldInput: { measured: "the held-input sweeps of every table, docs/FACTS.md Held input changes Gold/Silver IDs", status: statusWord(plat),
+        claim: c ? "Crystal's IDs do not change with the tap length or with START still down at the roll; the 4-8-frame tap is what selects one bin" : "a 4-8-frame tap reproduces every table; a longer tap or START still down at the roll changes the Trainer ID on hundreds of offsets, so nothing may be down from 7 frames after the accepting poll until the roll" }
+    };
+    if (c) {
+      s.crystalImmune = { cite: "pokecrystal/home/init.asm:131,143,155-159", claim: "Crystal switches the LCD on before StartClock and clears rIF before ei, so the day count never moves its table: one RTC state" };
+      s.crystalSid = { cite: "pokecrystal/engine/menus/intro_menu.asm:130-134", claim: "Crystal then rolls wSecretID with two Random calls a frame apart; it is not shown in the game and has no shiny role in Gen 2" };
+    } else {
+      s.startClock = { cite: "pokegold/engine/rtc/rtc.asm:91-101,103-115", claim: "StartClock runs before the LCD is switched on, so the cycles FixDays spends on the day count move the LCD's phase against DIV: one table per bracket (0-139, 140-255, 256-279, 280-419, 420-511 days, and the same five with the carry bit)" };
+      s.fixDays = { cite: "pokegold/home/time.asm:61-120,205-250", claim: "FixDays loops once per 140 days and SetClock writes the count back, so a 140-511-day bracket lasts one boot; the carry bit is written back unchanged" };
+      s.haltClear = { cite: "pokegold/engine/rtc/rtc.asm:13-22", claim: "StartRTC, run at the end of StartClock on every boot, clears the RTC halt bit unconditionally, so a halted cartridge is halted for its FIRST boot only: the next boot is days0 or days512" };
+    }
+    if (plat.hasLid) s.lid = { cite: c ? "pokecrystal/engine/menus/intro_menu.asm:312-336" : "pokegold/engine/menus/intro_menu.asm:225-248", claim: "LoadOrRegenerateLuckyIDNumber rolls the Lucky ID with two Random calls only when SRAM's sLuckyNumberDay is not wCurDay + 1, which after a clear it never is: the FIRST New Game after the clear; a later New Game returns the earlier Lucky ID" };
+    return s;
+  }
+  function footnotesFor(plat) {
+    var s = sourcesFor(plat);
+    return FN.footnotes(s, SOURCE_ORDER.filter(function (k) { return !!s[k]; }));
+  }
+  function idMarks(plat) { return plat.hasSid ? ["poll", "tidRoll", "crystalSid"] : ["poll", "tidRoll"]; }
+
   // ---- bins and their text --------------------------------------------------------------------
   function binInfo(plat, b) {
     var r = G.lookup(DATA_OF(plat), plat.gameKey, plat.platformKey, plat.state, b);
@@ -212,7 +250,7 @@
     var tag = setTag(plat, r.tid, r.lid, r.sid);
     return "bin " + b + " (A down " + r.visible[0] + ".." + r.visible[1] + " frames after the visible menu box, aim " + f(r.aimV, 1) + " = " + fmtSf(r.aimS) + ") -> " + idsText(plat, r) +
       (tag ? "   route target (" + tag + "; the published protocol for it is a community script, not this single tap)" : "") +
-      (plat.reachable ? "" : "   [RTC state " + plat.state + ": first boot only]") + "   methodology " + plat.methodologyId;
+      (plat.reachable ? "" : "   [RTC state " + plat.state + ": first boot only]") + "   methodology " + plat.methodologyId + footnotesFor(plat).mark(idMarks(plat));
   }
 
   function methodologyLines(plat, conditions, indent) {
@@ -271,6 +309,7 @@
   function protocolLines(plat, anchor, b, sched, correctionMs, beeps, spacing) {
     var r = binInfo(plat, b), m = plat.methodology, t = plat.timing;
     var holdLo = framesToS(t.hold_lo_frame), holdHi = framesToS(t.hold_hi_frame);
+    var fn = footnotesFor(plat), c = plat.gameKey === "crystal";
     var lines = [
       "PROTOCOL  (" + plat.gameName + " on " + plat.name + ", target bin " + b + " -> " + idsText(plat, r) + ")",
       "    Methodology: " + plat.methodologyId + "   (" + (m.name || "") + "; v" + m.version + ", " + m.date + ")",
@@ -280,41 +319,42 @@
       "    a different, deterministic result that this table does not cover.",
       "    NOTE: " + NO_HARDWARE_LINE,
       "    NOTE (" + plat.name + "): " + plat.validation,
-      "    RTC state: " + stateLabel(DATA_OF(plat), plat.gameKey, plat.state) + (plat.reachable ? "" : ". This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512."),
+      "    RTC state: " + stateLabel(DATA_OF(plat), plat.gameKey, plat.state) + (plat.reachable ? "" : ". This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512.") + fn.mark(c ? ["crystalImmune"] : ["startClock", "fixDays", "haltClear"]),
       ""
     ];
     lines.push(
       " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
       "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
-      "    only to the FIRST New Game after the clear.");
+      "    only to the FIRST New Game after the clear." + fn.mark(plat.hasLid ? ["lid"] : []));
     if (plat.key === "gse") lines.push("    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.");
     if (anchor === G.ANCHOR_MENU) {
       lines.push(
         " 2. " + (plat.key === "gse" ? "Power on (Ctrl+R hard reset on GSE)" : "Power on") + ". " + m.landmark,
-        "    Hold window: START down between " + f(holdLo, 2) + " s and " + f(holdHi, 2) + " s after the boot starts (frames " + t.hold_lo_frame + "-" + t.hold_hi_frame + "); anywhere inside it gives the same menu frame.",
-        " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame " + t.visible_menu_frame + ", " + f(plat.visibleMenuS, 2) + " s after the boot starts).",
+        "    Hold window: START down between " + f(holdLo, 2) + " s and " + f(holdHi, 2) + " s after the boot starts (frames " + t.hold_lo_frame + "-" + t.hold_hi_frame + "); anywhere inside it gives the same menu frame." + fn.mark(["holdStart", "roll"]),
+        " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame " + t.visible_menu_frame + ", " + f(plat.visibleMenuS, 2) + " s after the boot starts)." + fn.mark(["roll"]),
         "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
         " 4. You will hear " + beeps + " short beeps " + f(spacing, 1) + " s apart, then one long high beep (the screen flashes with each).",
-        "    On the long high beep " + tapText() + ".",
-        "    Target: bin " + b + " = A down " + r.visible[0] + ".." + r.visible[1] + " frames after the visible menu box (aim " + f(r.aimV, 1) + " = " + fmtSf(r.aimS) + ").",
+        "    On the long high beep " + tapText() + "." + fn.mark(["poll", "heldInput"]),
+        "    Target: bin " + b + " = A down " + r.visible[0] + ".." + r.visible[1] + " frames after the visible menu box (aim " + f(r.aimV, 1) + " = " + fmtSf(r.aimS) + ")." + fn.mark(idMarks(plat).concat(["stir"])),
         "    The beep is " + fmtMs(correctionMs) + " early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).");
     } else {
       if (anchor === G.ANCHOR_RESET) lines.push(" 2. Press the ANCHOR button (or Space) at the SAME instant you press " + resetActionName(plat) + " (" + f(sched.holdLo, 3) + " s of fade and stall are added to every time below).");
       else lines.push(" 2. Press the ANCHOR button (or Space) at the SAME instant you flip the power on" + (plat.key === "gba" ? " (INFERRED on a handheld GBA: the power-on-to-boot delay is not measured; prefer the menu anchor until a sample settles it)" : "") + ".");
       lines.push(
-        " 3. Two low beeps mark the START-hold window (" + f(sched.holdLo, 2) + " s and " + f((sched.holdLo + sched.holdHi) / 2.0, 2) + " s after your anchor): HOLD START on the first low beep and keep holding.",
+        " 3. Two low beeps mark the START-hold window (" + f(sched.holdLo, 2) + " s and " + f((sched.holdLo + sched.holdHi) / 2.0, 2) + " s after your anchor): HOLD START on the first low beep and keep holding." + fn.mark(["holdStart", "roll"]),
         "    " + m.landmark,
-        " 4. A double blip at " + f(sched.menu, 2) + " s marks when the NEW GAME / OPTION menu box should appear (visible on frame " + t.visible_menu_frame + " of the boot): release START as it appears.",
+        " 4. A double blip at " + f(sched.menu, 2) + " s marks when the NEW GAME / OPTION menu box should appear (visible on frame " + t.visible_menu_frame + " of the boot): release START as it appears." + fn.mark(["roll"]),
         "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
-        " 5. Then " + (beeps - sched.droppedCountIn) + " short beeps " + f(spacing, 1) + " s apart and one long high beep. On the long high beep " + tapText() + ".",
-        "    Target: bin " + b + " = A down " + r.visible[0] + ".." + r.visible[1] + " frames after the visible menu box (aim " + f(r.aimV, 1) + ") = " + fmtSf(sched.menu + r.aimS) + " after your anchor.",
+        " 5. Then " + (beeps - sched.droppedCountIn) + " short beeps " + f(spacing, 1) + " s apart and one long high beep. On the long high beep " + tapText() + "." + fn.mark(["poll", "heldInput"]),
+        "    Target: bin " + b + " = A down " + r.visible[0] + ".." + r.visible[1] + " frames after the visible menu box (aim " + f(r.aimV, 1) + ") = " + fmtSf(sched.menu + r.aimS) + " after your anchor." + fn.mark(idMarks(plat).concat(["stir"])),
         "    The beep is " + fmtMs(correctionMs) + " early for the audio delay (this anchor's correction).");
       if (sched.droppedCountIn) lines.push("    (" + plural(sched.droppedCountIn, "count-in beep") + " left out: they would have sounded before the menu.)");
     }
     lines.push(" 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo)" +
       (plat.hasLid ? " and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only)." : "."),
-      "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit.");
-    return lines;
+      "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit." + fn.mark(plat.hasLid ? ["tidRoll", "lid"] : ["tidRoll"]));
+    lines.push("");
+    return lines.concat(fn.lines());
   }
   function scheduleLines(sched, b, correctionMs, plat) {
     var r = binInfo(plat, b);
@@ -326,8 +366,9 @@
     if (sched.countInTimes.length) lines.push("  count-in beeps      " + sched.countInTimes.map(function (t) { return f(t, 3); }).join(", "));
     lines.push("  A cue (long beep)   " + f(sched.tA, 3) + " s   = aim " + f(r.aimV, 1) + " frames after the visible menu (" + fmtSf(r.aimS) + ")" +
       (sched.anchor === G.ANCHOR_MENU ? "" : ", from your anchor") + " minus correction " + fmtMs(correctionMs));
-    lines.push("  A window (bin " + b + ") " + f(sched.aWindow[0], 3) + " - " + f(sched.aWindow[1], 3) + " s   (A down inside it, before the correction)");
-    lines.push("  tap " + f(sched.tapMs[0], 0) + "-" + f(sched.tapMs[1], 0) + " ms, then nothing for " + f(sched.rollSettleS, 2) + " s");
+    var fn = footnotesFor(plat);
+    lines.push("  A window (bin " + b + ") " + f(sched.aWindow[0], 3) + " - " + f(sched.aWindow[1], 3) + " s   (A down inside it, before the correction)" + fn.mark(["poll", "roll"]));
+    lines.push("  tap " + f(sched.tapMs[0], 0) + "-" + f(sched.tapMs[1], 0) + " ms, then nothing for " + f(sched.rollSettleS, 2) + " s" + fn.mark(["heldInput"]));
     return lines;
   }
   function buildSchedule(plat, anchor, b, correctionMs, beeps, spacing) {
@@ -475,18 +516,19 @@
     lid = isNil(lid) ? null : lid;
     var opts = invertScopeOpts(plat, scope, lid);
     var inv = G.invert(data, plat.gameKey, tid, opts);
+    var fn = footnotesFor(plat);
     var lines = ["TID " + fmtId(tid) + (lid === null ? "" : " + Lucky ID " + fmtLid(lid)) + " on " + plat.name + " (" + plat.gameName + "), scope: " + invertScopeText(plat, scope) + ": " + G.verdictText(tid, lid, null, plat.targetSets)];
     lines = lines.concat(methodologyLines(plat, false));
     if (!inv.candidates.length) {
       lines.push("  no candidate: these IDs are absent from every table in scope. Wrong platform (SGB, 3DS Virtual Console, a header-renamed ROM),",
-        "  a dead-battery clock state, or a violated protocol (a longer tap, START down at the roll, a CONTINUE menu): ask for a second boot.");
+        "  a dead-battery clock state, or a violated protocol (a longer tap, START down at the roll, a CONTINUE menu): ask for a second boot." + fn.mark(plat.rtcDependent ? ["tidRoll", "heldInput", "startClock"] : ["tidRoll", "heldInput"]));
     } else {
       inv.candidates.forEach(function (c) {
         var vis = [c.offsets[0] - G.VISIBLE_MENU_LAG_FRAMES, c.offsets[1] - G.VISIBLE_MENU_LAG_FRAMES];
         lines.push("  " + c.table + " bin " + c.bin + ": A down " + vis[0] + ".." + vis[1] + " frames after the visible menu box (" + fmtSf(framesToS((vis[0] + vis[1]) / 2.0)) + ") -> TID " + fmtId(c.tid) +
           (plat.hasLid ? ", LID " + fmtLid(c.lid) : "") + (plat.hasSid && !isNil(c.sid) ? ", SID " + fmtId(c.sid) : "") + "; " + c.family + " clock" +
           (c.members.length > 1 ? "; the same table as " + c.members.slice(1).map(function (m) { return m[0] + "/" + m[1]; }).join(", ") : "") +
-          (c.reachableAfterFirstBoot ? "" : "   [first boot only]"));
+          (c.reachableAfterFirstBoot ? "" : "   [first boot only]") + fn.mark(idMarks(plat).concat(c.reachableAfterFirstBoot ? [] : ["haltClear"])));
       });
       if (inv.candidates.length === 1) lines.push("  one candidate: the bin and the state are settled.");
       else if (inv.resolved) lines.push("  " + inv.candidates.length + " candidates; the two-state prior (" + G.TWO_STATE_PRIOR.join(", ") + ") picks " + inv.resolved.table + " bin " + inv.resolved.bin + " for a cartridge booted before.");
@@ -498,7 +540,7 @@
     lines.push("Ambiguity over this scope (" + plural(amb.tables, "distinct table") + ", " + amb.entries + " (table, bin) entries): " + amb.distinctTids + " distinct TIDs, " + amb.ambiguousTids +
       " with more than one candidate (" + amb.ambiguousEntries + " entries" + (amb.entries ? " = " + f(100.0 * amb.ambiguousEntries / amb.entries, 1) + " %" : "") + ", max " + amb.maxCandidates + "), " +
       amb.pairCollisions + " (TID, LID) pair collision" + (amb.pairCollisions === 1 ? "" : "s") + (amb.pairCollisions ? " (" + amb.pairCollisionList.join(", ") + (amb.pairCollisions > amb.pairCollisionList.length ? ", ..." : "") + ")" : "") + ".");
-    return { inversion: inv, ambiguity: amb, lines: lines };
+    return { inversion: inv, ambiguity: amb, lines: lines.concat([""], fn.lines()) };
   }
 
   // ---- verify (moderators; human-measured input) ------------------------------------------------
@@ -506,18 +548,19 @@
     var data = DATA_OF(plat);
     lid = isNil(lid) ? null : lid;
     var r = G.verify(data, plat.gameKey, plat.platformKey, tid, lid, menuToPressS, { state: outcomeState(plat) });
+    var fn = footnotesFor(plat);
     var lines = ["TID " + fmtId(tid) + (lid === null ? "" : " + Lucky ID " + fmtLid(lid)) + " on " + plat.name + " (" + plat.gameName + "): " + G.verdictText(tid, lid, null, plat.targetSets)];
     lines = lines.concat(methodologyLines(plat, true));
-    lines.push("  measured VISIBLE menu box -> A press: " + f(menuToPressS, 3) + " s = offset " + f(r.predictedOffset, 1) + " (" + f(menuToPressS, 3) + " s x " + f(FPS, 4) + " fps + " + G.VISIBLE_MENU_LAG_FRAMES + ") -> bin " + (r.predictedBin === null ? "none (outside the table)" : r.predictedBin) + "; scope " + verifyScopeText(plat));
+    lines.push("  measured VISIBLE menu box -> A press: " + f(menuToPressS, 3) + " s = offset " + f(r.predictedOffset, 1) + " (" + f(menuToPressS, 3) + " s x " + f(FPS, 4) + " fps + " + G.VISIBLE_MENU_LAG_FRAMES + ") -> bin " + (r.predictedBin === null ? "none (outside the table)" : r.predictedBin) + "; scope " + verifyScopeText(plat) + fn.mark(["poll", "roll"]));
     if (!r.inTable) {
-      lines.push("  these IDs are produced by NO bin in scope on this platform: INCONSISTENT with the tables");
-      return { consistent: false, result: r, lines: lines };
+      lines.push("  these IDs are produced by NO bin in scope on this platform: INCONSISTENT with the tables" + fn.mark(idMarks(plat)));
+      return { consistent: false, result: r, lines: lines.concat([""], fn.lines()) };
     }
-    lines.push("  the tables produce them at bin" + (r.bins.length > 1 ? "s " : " ") + r.bins.join(", "));
+    lines.push("  the tables produce them at bin" + (r.bins.length > 1 ? "s " : " ") + r.bins.join(", ") + fn.mark(idMarks(plat)));
     lines.push("  nearest bin " + r.nearest + " is " + (r.differenceBins === null ? "n/a" : r.differenceBins + " bin" + (Math.abs(r.differenceBins) === 1 ? "" : "s")) + " from the measurement (tolerance +-1 bin): " + (r.consistent ? "CONSISTENT" : "INCONSISTENT"));
     lines.push("  (no press-to-visible lag is known for Gen 2: no hardware sample exists; measure the press itself, from the button overlay or a hand cam)",
       "  (this checks timing against the tables only, and only under the methodology above; it says nothing else about the run)");
-    return { consistent: r.consistent, result: r, lines: lines };
+    return { consistent: r.consistent, result: r, lines: lines.concat([""], fn.lines()) };
   }
 
   var api = {
@@ -529,6 +572,7 @@
     outcomeState: outcomeState, outcomeScopeText: outcomeScopeText, verifyScopeText: verifyScopeText, binInfo: binInfo, idsText: idsText, setTag: setTag, describeBin: describeBin,
     methodologyLines: methodologyLines, allMethodologyLines: allMethodologyLines, targetSetLines: targetSetLines, targetRows: targetRows,
     protocolLines: protocolLines, scheduleLines: scheduleLines, buildSchedule: buildSchedule,
+    SOURCE_ORDER: SOURCE_ORDER, statusWord: statusWord, sourcesFor: sourcesFor, footnotesFor: footnotesFor, idMarks: idMarks, procedureProblems: FN.procedureProblems,
     calKey: calKey, calStoreKey: calStoreKey, loadCalibration: loadCalibration, saveCalibration: saveCalibration, allSamples: allSamples, samplesFor: samplesFor,
     ignoredSamples: ignoredSamples, correctionInForce: correctionInForce, ignoredSampleLines: ignoredSampleLines, recordOutcome: recordOutcome,
     dropLastSample: dropLastSample, clearSamples: clearSamples, sampleLine: sampleLine, hitSummary: hitSummary, statsLines: statsLines,
@@ -868,6 +912,25 @@
       report.targetInfo = $("g2-target-info").textContent;
       report.protocolHasMethodology = $("g2-protocol").textContent.indexOf("Methodology: gold/gbp/hold-start-v1") !== -1;
       report.protocolHasNoHardware = $("g2-protocol").textContent.indexOf("NOTE: No hardware sample exists") !== -1;
+      var g2proto = $("g2-protocol").textContent;
+      report.footnoteCount = (g2proto.match(/^  \[\^\d+\] /gm) || []).length;
+      report.footnoteSteps = (g2proto.match(/^ [1-6]\. .*\[\^\d+\]$/gm) || []).length + (g2proto.match(/^    (Hold window|only to the FIRST|On the long high beep|Target: bin|Each answer).*\[\^\d+\]$/gm) || []).length;
+      report.footnotePoll = /^  \[\^2\] pokegold\/engine\/menus\/main_menu\.asm:142-152 \(docs\/FACTS\.md: Gen 1\/2 \(Game Boy\) \/ Gen 2 Trainer ID \/ Lucky ID \/ The boot path with START held, and the 4-frame poll\): MainMenuJoypadLoop goes through SetUpMenu/m.test(g2proto);
+      report.footnoteStatusGse = /^  \[\^3\] EMULATOR-EXACT \(no decomp line; the tables' derivation on pokemon-speedrunning\/gambatte-core, docs\/FACTS\.md Gen 2 Trainer ID \/ Lucky ID \(hold-START single-tap methodologies\)\): hold START on any frame 0-355 and the menu box is visible on frame 450; the roll is 13 frames after the accepting poll/m.test(g2proto);
+      report.footnoteRtc = /^  \[\^7\] pokegold\/engine\/rtc\/rtc\.asm:91-101,103-115 \(docs\/FACTS\.md: .*RTC dependence of Gold\/Silver\): StartClock runs before the LCD/m.test(g2proto) && /^  \[\^9\] pokegold\/engine\/rtc\/rtc\.asm:13-22 \(docs\/FACTS\.md: .*\): StartRTC, run at the end of StartClock on every boot, clears the RTC halt bit/m.test(g2proto);
+      report.footnoteTidRoll = /^  \[\^4\] pokegold\/engine\/menus\/intro_menu\.asm:1-7,28-49 \(docs\/FACTS\.md: .*Where the IDs come from\): NewGame -> _ResetWRAM writes wPlayerID .*hRandomSub on one frame is the high byte/m.test(g2proto);
+      report.footnoteHeaderStatus = g2proto.indexOf(FN.HEADER + FN.STATUS_NOTE) !== -1;
+      report.footnoteProblems = FN.procedureProblems(g2proto).length;
+      report.registryLoaded = FN.citationsLoaded();
+      report.targetInfoMarked = /methodology gold\/gbp\/hold-start-v1 \[\^2\] \[\^4\]$/.test($("g2-target-info").textContent);
+      report.scheduleMarked = /A window \(bin 300\) .* \[\^2\] \[\^3\]$/m.test($("g2-schedule").textContent) && /^  tap 67-134 ms, then nothing for 0\.35 s \[\^6\]$/m.test($("g2-schedule").textContent);
+      var fullRegistry = root.ShinyCitations;
+      FN.setCitations({ entries: (fullRegistry && fullRegistry.entries || []).filter(function (e) { return e.cite !== "pokegold/engine/menus/main_menu.asm:142-152"; }) });
+      refreshAnchor();
+      report.registryCutProblems = FN.procedureProblems($("g2-protocol").textContent);
+      FN.setCitations(fullRegistry);
+      refreshAnchor();
+      report.registryRestoredProblems = FN.procedureProblems($("g2-protocol").textContent).length;
       report.scheduleA = ($("g2-schedule").textContent.match(/A cue \(long beep\)\s+([0-9.]+) s/) || [])[1];
       report.anchorEnabled = !$("g2-anchor-btn").disabled;
       $("g2-got").value = String(G.lookup(DATA, "gold", "gbp", "days0", 302).tid); $("g2-got-lid").value = "";
@@ -911,6 +974,9 @@
       report.crystalAnchors = Array.prototype.map.call($("g2-anchor").options, function (o) { return o.value; });
       setTarget(300);
       report.crystalTarget = $("g2-target-info").textContent;
+      report.crystalFootnotes = /^  \[\^1\] pokecrystal\/engine\/menus\/intro_menu\.asm:1138-1200 \(docs\/FACTS\.md: /m.test($("g2-protocol").textContent) && /^  \[\^3\] EMPIRICAL \(no decomp line; .*the roll is 14 frames after the accepting poll/m.test($("g2-protocol").textContent) &&
+        /^  \[\^7\] pokecrystal\/home\/init\.asm:131,143,155-159 \(docs\/FACTS\.md: .*\): Crystal switches the LCD on before StartClock/m.test($("g2-protocol").textContent) && /^  \[\^9\] pokecrystal\/engine\/menus\/intro_menu\.asm:130-134 \(docs\/FACTS\.md: .*\): Crystal then rolls wSecretID/m.test($("g2-protocol").textContent) &&
+        /methodology crystal\/gbc\/hold-start-v1 \[\^2\] \[\^4\] \[\^9\]$/.test($("g2-target-info").textContent) && FN.procedureProblems($("g2-protocol").textContent).length === 0;
       // back to Gold on GSE: one Space on this tab anchors the Gen 2 cue (the Gen 1 tab's handler stays quiet)
       $("g2-game").value = "gold"; $("g2-game").dispatchEvent(new Event("change"));
       $("g2-platform").value = "gse"; $("g2-platform").dispatchEvent(new Event("change"));

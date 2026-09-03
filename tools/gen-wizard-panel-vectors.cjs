@@ -20,6 +20,7 @@ globalThis.ShinyGen4 = require(path.join(root, "core", "gen4.js"));
 globalThis.ShinySeedTime4 = require(path.join(root, "core", "seedtime4.js"));
 globalThis.ShinyGenerators = require(path.join(root, "core", "generators.js"));
 globalThis.ShinyTimers = require(path.join(root, "core", "timers.js"));
+globalThis.ShinyFootnotes = require(path.join(root, "webapp", "footnotes.js"));
 const W = require(path.join(root, "webapp", "wizard-ui.js"));
 const core = globalThis.ShinyCore, MODE = globalThis.ShinyMode, ST = globalThis.ShinySeedTime4, T = globalThis.ShinyTimers, gen4 = globalThis.ShinyGen4, G = globalThis.ShinyGenerators;
 const loadGen = (g) => ({

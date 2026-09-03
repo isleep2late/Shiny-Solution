@@ -282,6 +282,53 @@ public static class Gen2TidText
     static double FramesToS(double frames) => frames / Gen2Tid.Fps;
     public static string Now() => Gen1TidText.Now();
 
+    // ---- the sources the protocol, the target line, the schedule, invert and verify rest on: footnotes [^n] over the
+    // citation registry (Citations.cs), numbered in this fixed order (the keys a game lacks are left out) so every line
+    // of the panel carries the Sources block's numbers; the web tab's sources (webapp/gen2tid-ui.js sourcesFor) word for
+    // word. The decomp lines are pokegold's or pokecrystal's; the tables' roll and the held-input rule are measured
+    // sources under the console's status word from gen2-tid.json (EMULATOR-EXACT on GSE, EMPIRICAL on every console:
+    // no hardware sample exists) ----
+    public static readonly string[] SourceOrder = { "holdStart", "poll", "roll", "tidRoll", "stir", "heldInput", "startClock", "fixDays", "haltClear", "crystalImmune", "lid", "crystalSid" };
+    public static string StatusWord(Gen2Platform p) => p.Status == "emulator-exact" ? "EMULATOR-EXACT" : "EMPIRICAL";
+    public static Dictionary<string, Citations.CiteSource> SourcesFor(Gen2Platform p)
+    {
+        bool c = p.GameKey == "crystal";
+        string repo = c ? "pokecrystal" : "pokegold";
+        var t = p.Timing;
+        var s = new Dictionary<string, Citations.CiteSource>
+        {
+            ["holdStart"] = new(c ? "pokecrystal/engine/menus/intro_menu.asm:1138-1200" : "pokegold/engine/menus/intro_menu.asm:968-1000", null, "TitleScreenMain accepts START or A by level on its first frame" + (c ? " (Crystal after a 28-frame scroll-in)" : "") + ", and the splash and the intro skip on any button from their first frame, so START held from inside the window opens the NEW GAME menu on one fixed frame"),
+            ["poll"] = new(c ? "pokecrystal/engine/menus/main_menu.asm:240-252" : "pokegold/engine/menus/main_menu.asm:142-152", null, "MainMenuJoypadLoop goes through SetUpMenu, which disables the joypad filter, so _ScrollingMenuJoypad returns after one poll and the loop comes back through WaitBGMap: the menu reads the pad once every 4 frames, and the target is the 4-frame bin the A tap lands in, not a frame"),
+            ["roll"] = new(null, null,
+                "hold START on any frame " + t.HoldLoFrame + "-" + t.HoldHiFrame + " and the menu box is visible on frame " + t.VisibleMenuFrame + "; the roll is " + (c ? "14" : "13") + " frames after the accepting poll (Crystal 14, Gold and Silver 13) and constant inside a bin, 599 bins of 4 frames per table under " + p.MethodologyId + "; " + p.Name + ": " + p.Status,
+                "the tables' derivation on pokemon-speedrunning/gambatte-core, docs/FACTS.md Gen 2 Trainer ID / Lucky ID (hold-START single-tap methodologies)", StatusWord(p)),
+            ["tidRoll"] = new(c ? "pokecrystal/engine/menus/intro_menu.asm:61-68,102-128" : "pokegold/engine/menus/intro_menu.asm:1-7,28-49", null, "NewGame -> _ResetWRAM writes wPlayerID right after the WRAM clear: hRandomSub on one frame is the high byte, hRandomAdd one DelayFrame later the low byte"),
+            ["stir"] = new(repo + "/home/vblank.asm:68-79", null, "the only RNG is the VBlank stir, hRandomAdd += DIV and hRandomSub -= DIV over HRAM cleared at Init, so the IDs are a function of the frame of the accepting poll and of the DIV phase the boot fixes"),
+            ["heldInput"] = new(null, null,
+                c ? "Crystal's IDs do not change with the tap length or with START still down at the roll; the 4-8-frame tap is what selects one bin" : "a 4-8-frame tap reproduces every table; a longer tap or START still down at the roll changes the Trainer ID on hundreds of offsets, so nothing may be down from 7 frames after the accepting poll until the roll",
+                "the held-input sweeps of every table, docs/FACTS.md Held input changes Gold/Silver IDs", StatusWord(p)),
+        };
+        if (c)
+        {
+            s["crystalImmune"] = new("pokecrystal/home/init.asm:131,143,155-159", null, "Crystal switches the LCD on before StartClock and clears rIF before ei, so the day count never moves its table: one RTC state");
+            s["crystalSid"] = new("pokecrystal/engine/menus/intro_menu.asm:130-134", null, "Crystal then rolls wSecretID with two Random calls a frame apart; it is not shown in the game and has no shiny role in Gen 2");
+        }
+        else
+        {
+            s["startClock"] = new("pokegold/engine/rtc/rtc.asm:91-101,103-115", null, "StartClock runs before the LCD is switched on, so the cycles FixDays spends on the day count move the LCD's phase against DIV: one table per bracket (0-139, 140-255, 256-279, 280-419, 420-511 days, and the same five with the carry bit)");
+            s["fixDays"] = new("pokegold/home/time.asm:61-120,205-250", null, "FixDays loops once per 140 days and SetClock writes the count back, so a 140-511-day bracket lasts one boot; the carry bit is written back unchanged");
+            s["haltClear"] = new("pokegold/engine/rtc/rtc.asm:13-22", null, "StartRTC, run at the end of StartClock on every boot, clears the RTC halt bit unconditionally, so a halted cartridge is halted for its FIRST boot only: the next boot is days0 or days512");
+        }
+        if (p.HasLid) s["lid"] = new(c ? "pokecrystal/engine/menus/intro_menu.asm:312-336" : "pokegold/engine/menus/intro_menu.asm:225-248", null, "LoadOrRegenerateLuckyIDNumber rolls the Lucky ID with two Random calls only when SRAM's sLuckyNumberDay is not wCurDay + 1, which after a clear it never is: the FIRST New Game after the clear; a later New Game returns the earlier Lucky ID");
+        return s;
+    }
+    public static Citations.Footnotes FootnotesFor(Gen2Platform p)
+    {
+        var s = SourcesFor(p);
+        return new Citations.Footnotes(s, SourceOrder.Where(s.ContainsKey));
+    }
+    static string[] IdMarks(Gen2Platform p) => p.HasSid ? new[] { "poll", "tidRoll", "crystalSid" } : new[] { "poll", "tidRoll" };
+
     // ---- bins and their text --------------------------------------------------------------------
     public sealed class BinInfo
     {
@@ -316,7 +363,7 @@ public static class Gen2TidText
         string tag = SetTag(p, r.Tid, r.Lid, r.Sid);
         return $"bin {bin} (A down {r.Visible[0]}..{r.Visible[1]} frames after the visible menu box, aim {F(r.AimV, 1)} = {FmtSf(r.AimS)}) -> {IdsText(p, r)}" +
             (tag != "" ? "   route target (" + tag + "; the published protocol for it is a community script, not this single tap)" : "") +
-            (p.Reachable ? "" : "   [RTC state " + p.State + ": first boot only]") + "   methodology " + p.MethodologyId;
+            (p.Reachable ? "" : "   [RTC state " + p.State + ": first boot only]") + "   methodology " + p.MethodologyId + FootnotesFor(p).Mark(IdMarks(p));
     }
 
     public static List<string> MethodologyLines(Gen2Platform p, bool conditions, string indent = "  ")
@@ -410,6 +457,8 @@ public static class Gen2TidText
         var t = p.Timing;
         double holdLo = FramesToS(t.HoldLoFrame), holdHi = FramesToS(t.HoldHiFrame);
         string landmark = J.S(m, "landmark");
+        var fn = FootnotesFor(p);
+        bool c = p.GameKey == "crystal";
         var lines = new List<string>
         {
             $"PROTOCOL  ({p.GameName} on {p.Name}, target bin {bin} -> {IdsText(p, r)})",
@@ -420,22 +469,22 @@ public static class Gen2TidText
             "    a different, deterministic result that this table does not cover.",
             "    NOTE: " + NoHardwareLine,
             "    NOTE (" + p.Name + "): " + p.Validation,
-            "    RTC state: " + Gen2Platform.StateLabel(p.Data, p.GameKey, p.State) + (p.Reachable ? "" : ". This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512."),
+            "    RTC state: " + Gen2Platform.StateLabel(p.Data, p.GameKey, p.State) + (p.Reachable ? "" : ". This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512.") + (c ? fn.Mark("crystalImmune") : fn.Mark("startClock", "fixDays", "haltClear")),
             "",
             " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
             "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
-            "    only to the FIRST New Game after the clear."
+            "    only to the FIRST New Game after the clear." + (p.HasLid ? fn.Mark("lid") : "")
         };
         if (p.Key == "gse") lines.Add("    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.");
         if (anchor == Gen2Tid.AnchorMenu)
         {
             lines.Add(" 2. " + (p.Key == "gse" ? "Power on (Ctrl+R hard reset on GSE)" : "Power on") + ". " + landmark);
-            lines.Add($"    Hold window: START down between {F(holdLo, 2)} s and {F(holdHi, 2)} s after the boot starts (frames {t.HoldLoFrame}-{t.HoldHiFrame}); anywhere inside it gives the same menu frame.");
-            lines.Add($" 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame {t.VisibleMenuFrame}, {F(p.VisibleMenuS, 2)} s after the boot starts).");
+            lines.Add($"    Hold window: START down between {F(holdLo, 2)} s and {F(holdHi, 2)} s after the boot starts (frames {t.HoldLoFrame}-{t.HoldHiFrame}); anywhere inside it gives the same menu frame." + fn.Mark("holdStart", "roll"));
+            lines.Add($" 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame {t.VisibleMenuFrame}, {F(p.VisibleMenuS, 2)} s after the boot starts)." + fn.Mark("roll"));
             lines.Add("    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.");
             lines.Add($" 4. You will hear {beeps} short beeps {F(spacing, 1)} s apart, then one long high beep (the screen flashes with each).");
-            lines.Add("    On the long high beep " + TapText() + ".");
-            lines.Add($"    Target: bin {bin} = A down {r.Visible[0]}..{r.Visible[1]} frames after the visible menu box (aim {F(r.AimV, 1)} = {FmtSf(r.AimS)}).");
+            lines.Add("    On the long high beep " + TapText() + "." + fn.Mark("poll", "heldInput"));
+            lines.Add($"    Target: bin {bin} = A down {r.Visible[0]}..{r.Visible[1]} frames after the visible menu box (aim {F(r.AimV, 1)} = {FmtSf(r.AimS)})." + fn.Mark(IdMarks(p).Append("stir").ToArray()));
             lines.Add($"    The beep is {FmtMs(correctionMs)} early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).");
         }
         else
@@ -443,18 +492,20 @@ public static class Gen2TidText
             double hLo = sched.HoldLo ?? 0, hHi = sched.HoldHi ?? 0, mn = sched.Menu ?? 0;
             if (anchor == Gen2Tid.AnchorReset) lines.Add($" 2. Press the ANCHOR button (or Space) at the SAME instant you press {ResetActionName(p)} ({F(hLo, 3)} s of fade and stall are added to every time below).");
             else lines.Add(" 2. Press the ANCHOR button (or Space) at the SAME instant you flip the power on" + (p.Key == "gba" ? " (INFERRED on a handheld GBA: the power-on-to-boot delay is not measured; prefer the menu anchor until a sample settles it)" : "") + ".");
-            lines.Add($" 3. Two low beeps mark the START-hold window ({F(hLo, 2)} s and {F((hLo + hHi) / 2.0, 2)} s after your anchor): HOLD START on the first low beep and keep holding.");
+            lines.Add($" 3. Two low beeps mark the START-hold window ({F(hLo, 2)} s and {F((hLo + hHi) / 2.0, 2)} s after your anchor): HOLD START on the first low beep and keep holding." + fn.Mark("holdStart", "roll"));
             lines.Add("    " + landmark);
-            lines.Add($" 4. A double blip at {F(mn, 2)} s marks when the NEW GAME / OPTION menu box should appear (visible on frame {t.VisibleMenuFrame} of the boot): release START as it appears.");
+            lines.Add($" 4. A double blip at {F(mn, 2)} s marks when the NEW GAME / OPTION menu box should appear (visible on frame {t.VisibleMenuFrame} of the boot): release START as it appears." + fn.Mark("roll"));
             lines.Add("    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.");
-            lines.Add($" 5. Then {beeps - sched.DroppedCountIn} short beeps {F(spacing, 1)} s apart and one long high beep. On the long high beep {TapText()}.");
-            lines.Add($"    Target: bin {bin} = A down {r.Visible[0]}..{r.Visible[1]} frames after the visible menu box (aim {F(r.AimV, 1)}) = {FmtSf(mn + r.AimS)} after your anchor.");
+            lines.Add($" 5. Then {beeps - sched.DroppedCountIn} short beeps {F(spacing, 1)} s apart and one long high beep. On the long high beep {TapText()}." + fn.Mark("poll", "heldInput"));
+            lines.Add($"    Target: bin {bin} = A down {r.Visible[0]}..{r.Visible[1]} frames after the visible menu box (aim {F(r.AimV, 1)}) = {FmtSf(mn + r.AimS)} after your anchor." + fn.Mark(IdMarks(p).Append("stir").ToArray()));
             lines.Add($"    The beep is {FmtMs(correctionMs)} early for the audio delay (this anchor's correction).");
             if (sched.DroppedCountIn > 0) lines.Add($"    ({Plural(sched.DroppedCountIn, "count-in beep")} left out: they would have sounded before the menu.)");
         }
         lines.Add(" 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo)" +
             (p.HasLid ? " and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only)." : "."));
-        lines.Add("    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit.");
+        lines.Add("    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit." + (p.HasLid ? fn.Mark("tidRoll", "lid") : fn.Mark("tidRoll")));
+        lines.Add("");
+        lines.AddRange(fn.Lines());
         return lines;
     }
     public static List<string> ScheduleLines(Gen2Schedule sched, int bin, double correctionMs, Gen2Platform p)
@@ -469,8 +520,9 @@ public static class Gen2TidText
         if (sched.CountInTimes.Length > 0) lines.Add("  count-in beeps      " + string.Join(", ", sched.CountInTimes.Select(t => F(t, 3))));
         lines.Add($"  A cue (long beep)   {F(sched.TA, 3)} s   = aim {F(r.AimV, 1)} frames after the visible menu ({FmtSf(r.AimS)})" +
             (sched.Anchor == Gen2Tid.AnchorMenu ? "" : ", from your anchor") + " minus correction " + FmtMs(correctionMs));
-        lines.Add($"  A window (bin {bin}) {F(sched.AWindow[0], 3)} - {F(sched.AWindow[1], 3)} s   (A down inside it, before the correction)");
-        lines.Add($"  tap {F(sched.TapMs[0], 0)}-{F(sched.TapMs[1], 0)} ms, then nothing for {F(sched.RollSettleS, 2)} s");
+        var fn = FootnotesFor(p);
+        lines.Add($"  A window (bin {bin}) {F(sched.AWindow[0], 3)} - {F(sched.AWindow[1], 3)} s   (A down inside it, before the correction)" + fn.Mark("poll", "roll"));
+        lines.Add($"  tap {F(sched.TapMs[0], 0)}-{F(sched.TapMs[1], 0)} ms, then nothing for {F(sched.RollSettleS, 2)} s" + fn.Mark("heldInput"));
         return lines;
     }
     public static string AnnounceCue(Cue c) => Gen1TidText.AnnounceCue(c);
@@ -672,6 +724,7 @@ public static class Gen2TidText
     {
         var (fam, states) = InvertScope(p, family, state);
         var inv = Gen2Tid.Invert(p.Data, p.GameKey, tid, lid, null, p.PlatformKey, fam, states);
+        var fn = FootnotesFor(p);
         var lines = new List<string>
         {
             "TID " + FmtId(tid) + (lid is null ? "" : " + Lucky ID " + FmtLid(lid.Value)) + " on " + p.Name + " (" + p.GameName + "), scope: " + InvertScopeText(p, family, state) + ": " + Gen2Tid.VerdictText(tid, lid, null, p.TargetSets)
@@ -680,7 +733,7 @@ public static class Gen2TidText
         if (inv.Candidates.Count == 0)
         {
             lines.Add("  no candidate: these IDs are absent from every table in scope. Wrong platform (SGB, 3DS Virtual Console, a header-renamed ROM),");
-            lines.Add("  a dead-battery clock state, or a violated protocol (a longer tap, START down at the roll, a CONTINUE menu): ask for a second boot.");
+            lines.Add("  a dead-battery clock state, or a violated protocol (a longer tap, START down at the roll, a CONTINUE menu): ask for a second boot." + (p.RtcDependent ? fn.Mark("tidRoll", "heldInput", "startClock") : fn.Mark("tidRoll", "heldInput")));
         }
         else
         {
@@ -690,7 +743,7 @@ public static class Gen2TidText
                 lines.Add($"  {c.Table} bin {c.Bin}: A down {v0}..{v1} frames after the visible menu box ({FmtSf(FramesToS((v0 + v1) / 2.0))}) -> TID {FmtId(c.Tid)}" +
                     (p.HasLid ? ", LID " + FmtLid(c.Lid) : "") + (p.HasSid && c.Sid is not null ? ", SID " + FmtId(c.Sid.Value) : "") + "; " + c.Family + " clock" +
                     (c.Members.Length > 1 ? "; the same table as " + string.Join(", ", c.Members.Skip(1).Select(m => m[0] + "/" + m[1])) : "") +
-                    (c.ReachableAfterFirstBoot ? "" : "   [first boot only]"));
+                    (c.ReachableAfterFirstBoot ? "" : "   [first boot only]") + fn.Mark(c.ReachableAfterFirstBoot ? IdMarks(p) : IdMarks(p).Append("haltClear").ToArray()));
             }
             if (inv.Candidates.Count == 1) lines.Add("  one candidate: the bin and the state are settled.");
             else if (inv.Resolved is not null) lines.Add($"  {inv.Candidates.Count} candidates; the two-state prior ({string.Join(", ", Gen2Tid.TwoStatePrior)}) picks {inv.Resolved.Table} bin {inv.Resolved.Bin} for a cartridge booted before.");
@@ -702,6 +755,8 @@ public static class Gen2TidText
             $" with more than one candidate ({amb.AmbiguousEntries} entries" + (amb.Entries > 0 ? $" = {F(100.0 * amb.AmbiguousEntries / amb.Entries, 1)} %" : "") + $", max {amb.MaxCandidates}), " +
             $"{amb.PairCollisions} (TID, LID) pair collision" + (amb.PairCollisions == 1 ? "" : "s") +
             (amb.PairCollisions > 0 ? " (" + string.Join(", ", amb.PairCollisionList) + (amb.PairCollisions > amb.PairCollisionList.Length ? ", ..." : "") + ")" : "") + ".");
+        lines.Add("");
+        lines.AddRange(fn.Lines());
         return (inv, amb, lines);
     }
 
@@ -709,19 +764,24 @@ public static class Gen2TidText
     public static (bool Consistent, Gen2VerifyResult Result, List<string> Lines) VerifyLines(Gen2Platform p, int tid, int? lid, double menuToPressS)
     {
         var r = Gen2Tid.Verify(p.Data, p.GameKey, p.PlatformKey, tid, lid, menuToPressS, p.OutcomeState());
+        var fn = FootnotesFor(p);
         var lines = new List<string> { "TID " + FmtId(tid) + (lid is null ? "" : " + Lucky ID " + FmtLid(lid.Value)) + " on " + p.Name + " (" + p.GameName + "): " + Gen2Tid.VerdictText(tid, lid, null, p.TargetSets) };
         lines.AddRange(MethodologyLines(p, true));
         lines.Add($"  measured VISIBLE menu box -> A press: {F(menuToPressS, 3)} s = offset {F(r.PredictedOffset, 1)} ({F(menuToPressS, 3)} s x {F(Gen2Tid.Fps, 4)} fps + {Gen2Tid.VisibleMenuLagFrames}) -> bin " +
-            (r.PredictedBin is null ? "none (outside the table)" : r.PredictedBin.Value.ToString()) + "; scope " + p.VerifyScopeText());
+            (r.PredictedBin is null ? "none (outside the table)" : r.PredictedBin.Value.ToString()) + "; scope " + p.VerifyScopeText() + fn.Mark("poll", "roll"));
         if (!r.InTable)
         {
-            lines.Add("  these IDs are produced by NO bin in scope on this platform: INCONSISTENT with the tables");
+            lines.Add("  these IDs are produced by NO bin in scope on this platform: INCONSISTENT with the tables" + fn.Mark(IdMarks(p)));
+            lines.Add("");
+            lines.AddRange(fn.Lines());
             return (false, r, lines);
         }
-        lines.Add("  the tables produce them at bin" + (r.Bins.Length > 1 ? "s " : " ") + string.Join(", ", r.Bins));
+        lines.Add("  the tables produce them at bin" + (r.Bins.Length > 1 ? "s " : " ") + string.Join(", ", r.Bins) + fn.Mark(IdMarks(p)));
         lines.Add($"  nearest bin {r.Nearest} is " + (r.DifferenceBins is null ? "n/a" : r.DifferenceBins.Value + " bin" + (Math.Abs(r.DifferenceBins.Value) == 1 ? "" : "s")) + " from the measurement (tolerance +-1 bin): " + (r.Consistent ? "CONSISTENT" : "INCONSISTENT"));
         lines.Add("  (no press-to-visible lag is known for Gen 2: no hardware sample exists; measure the press itself, from the button overlay or a hand cam)");
         lines.Add("  (this checks timing against the tables only, and only under the methodology above; it says nothing else about the run)");
+        lines.Add("");
+        lines.AddRange(fn.Lines());
         return (r.Consistent, r, lines);
     }
 }

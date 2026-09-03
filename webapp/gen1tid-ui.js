@@ -13,7 +13,9 @@
   var DATA = root.ShinyGen1Data;
   var SID = root.ShinyGen3SidData;
   var MODE = root.ShinyMode;                                     // webapp/mode.js: the RUN / PRACTICE-HUNT wall's switch
+  var FN = root.ShinyFootnotes;                                  // webapp/footnotes.js: the citation footnotes over core/data/citations.json
   if (!MODE) throw new Error("webapp/mode.js (ShinyMode) must load before gen1tid-ui.js");
+  if (!FN) throw new Error("webapp/footnotes.js (ShinyFootnotes) must load before gen1tid-ui.js");
   var STORE_KEY_CAL = "shinySolution.gen1tid.calibration";      // RUN mode: {"<platform>/<anchor>": {"samples": [...]}} (RNG Solution's config.json shape)
   // PRACTICE / HUNT mode keeps its own store, STORE_KEY_CAL + ".practice" (calStoreKey): a mode never reads the other's.
   var STORE_KEY_PINS = "shinySolution.gen1tid.sidPins";         // {"<methodology>/<tid>": [{pid, shiny, note, when, mode}]}; PRACTICE / HUNT: + ".practice" (pinStoreKey)
@@ -142,8 +144,35 @@
     var tag = { "RUN": "route-valid (" + ANY_PERCENT + ": " + setTag(plat, tid) + ")", "40!": "TRAP: $40 but hard-locks", "no": "" }[v];
     var ver = derivationTag(plat, offset);
     return "offset " + offset + " -> " + G.formatTid(tid) + " : press A " + fmtSf(G.targetSeconds(offset)) + " after the menu" +
-      (tag ? "   " + tag : "") + (ver ? " " + ver : "");
+      (tag ? "   " + tag : "") + (ver ? " " + ver : "") + footnotesFor(plat).mark(["table", "tidRoll"]);
   }
+
+  // ---- the sources the protocol, the target line, the schedule and verify rest on: footnotes [^n] over the citation
+  // registry (webapp/footnotes.js), numbered in this fixed order so every line of the tab carries the Sources block's
+  // numbers. The decomp lines are pokered's (Blue is pret's pokered built for Blue) or pokeyellow's; the table is a
+  // measured source under the console's validation status word from gen1-tid.json (EMULATOR-EXACT on GSE,
+  // HARDWARE-VALIDATED n where the console was sampled, EMPIRICAL otherwise) ----
+  var SOURCE_ORDER = ["holdStart", "table", "menuInput", "tidRoll", "stir"];
+  function statusWord(plat) {
+    if (plat.status === "emulator-exact") return "EMULATOR-EXACT";
+    var m = /(\d+ of \d+)/.exec(plat.validation || "");
+    if (plat.status === "hardware-validated" && m) return "HARDWARE-VALIDATED " + m[1];
+    return "EMPIRICAL";
+  }
+  function sourcesFor(plat) {
+    var y = plat.gameKey === "yellow", repo = y ? "pokeyellow" : "pokered", t = plat.timing;
+    return {
+      holdStart: y
+        ? { cite: "pokeyellow/engine/movie/title.asm:166-175", claim: "Yellow's title loop tests hJoyHeld for A or START by level on every frame, so START held anywhere in the window is read on the title's first frame and the NEW GAME menu opens on one fixed frame" }
+        : { cite: "pokered/engine/movie/title.asm:227-239,266", claim: "the title screen waits on CheckForUserInterruption (one JoypadLowSensitivity poll per frame; START or A ends it), then the cry and the fade play before MainMenu, so START held anywhere in the window is read on the first poll and the NEW GAME menu opens on one fixed frame" },
+      table: { measured: "the table's derivation on pokemon-speedrunning/gambatte-core with START held inside the window, docs/FACTS.md Gen 1 Trainer ID (hold-START methodologies, RNG Solution)", status: statusWord(plat),
+        claim: "hold START on any frame " + t.hold_lo_frame + "-" + t.hold_hi_frame + " and the NEW GAME menu opens on frame " + t.menu_frame + "; the A press frame is the menu frame + 80 + the offset (the table's definition), one Trainer ID per offset under " + plat.methodologyId + "; " + plat.name + ": " + plat.status },
+      menuInput: { cite: repo + "/engine/menus/main_menu.asm:" + (y ? "63-66,84" : "64-68,85-86"), claim: "the NEW GAME menu waits in HandleMenuInput with A, B and START watched; A on NEW GAME goes to StartNewGame, so the frame of that press is the one the offset counts" },
+      tidRoll: { cite: repo + "/engine/movie/oak_speech/init_player_data.asm:1-10", claim: "InitPlayerData2, first thing in the Oak speech, rolls the Trainer ID with two Random calls: hRandomSub is the high byte, hRandomAdd the low byte" },
+      stir: { cite: repo + "/engine/math/random.asm:1-13", claim: "Random_ is the only RNG: hRandomAdd += rDIV and hRandomSub -= rDIV, called once per VBlank, so the Trainer ID is a function of the frame of the A press and of the DIV phase the hold-START boot fixes" }
+    };
+  }
+  function footnotesFor(plat) { return FN.footnotes(sourcesFor(plat), SOURCE_ORDER); }
 
   function methodologyLines(plat, conditions, indent) {
     indent = isNil(indent) ? "  " : indent;
@@ -185,6 +214,7 @@
     var holdLo = G.framesToSeconds(plat.timing.hold_lo_frame), holdHi = G.framesToSeconds(plat.timing.hold_hi_frame);
     var menu = G.framesToSeconds(plat.timing.menu_frame);
     var tid = plat.table[offset], m = plat.methodology;
+    var fn = footnotesFor(plat);
     var lines = [
       "PROTOCOL  (" + plat.gameName + " on " + plat.name + ", target offset " + offset + " -> " + G.formatTid(tid) + ")",
       "    Methodology: " + plat.methodologyId + "   (" + (m.name || "") + "; v" + m.version + ", " + m.date + ")",
@@ -202,14 +232,14 @@
     if (anchor === G.ANCHOR_MENU) {
       lines.push(
         " 2. " + powerOnPhrase(plat) + ". Touch nothing during the boot and intro.",
-        " 3. Between " + f(holdLo, 2) + " s and " + f(holdHi, 2) + " s after the boot starts (frames " + plat.timing.hold_lo_frame + "-" + plat.timing.hold_hi_frame + "), HOLD START and keep holding.",
+        " 3. Between " + f(holdLo, 2) + " s and " + f(holdHi, 2) + " s after the boot starts (frames " + plat.timing.hold_lo_frame + "-" + plat.timing.hold_hi_frame + "), HOLD START and keep holding." + fn.mark(["holdStart", "table"]),
         "    Anywhere inside that window gives the same result: this press is NOT timed.");
       if (m.landmark) lines.push("    Landmark: " + m.landmark);
       lines.push(
-        " 4. The NEW GAME menu opens at " + f(menu, 2) + " s (frame " + plat.timing.menu_frame + "). The INSTANT you see it, press the ANCHOR button (or Space).",
+        " 4. The NEW GAME menu opens at " + f(menu, 2) + " s (frame " + plat.timing.menu_frame + "). The INSTANT you see it, press the ANCHOR button (or Space)." + fn.mark(["table", "menuInput"]),
         "    Release START whenever you like; release timing does not matter.",
         " 5. You will hear " + beeps + " short beeps " + f(spacing, 1) + " s apart, then one long high beep (the screen flashes with each).",
-        "    Press A ON the long high beep. That is the only frame-exact action.",
+        "    Press A ON the long high beep. That is the only frame-exact action." + fn.mark(["tidRoll", "stir", "table"]),
         "    Target: A at " + fmtSf(G.targetSeconds(offset)) + " after the menu. The beep is " + fmtMs(correctionMs) + " early to cover your",
         "    reaction to the menu plus the audio delay (the correction; calibration tunes it).");
     } else {
@@ -219,12 +249,12 @@
       if (note) lines.push("    " + webNote(note));
       lines.push(
         "    Touch nothing during the boot and intro.",
-        " 3. Two low beeps mark the START-hold window (" + f(sched.holdLo, 2) + " s and " + f((sched.holdLo + sched.holdHi) / 2.0, 2) + " s after your anchor).",
+        " 3. Two low beeps mark the START-hold window (" + f(sched.holdLo, 2) + " s and " + f((sched.holdLo + sched.holdHi) / 2.0, 2) + " s after your anchor)." + fn.mark(["holdStart", "table"]),
         "    HOLD START on the first low beep and keep holding. Anywhere in " + f(sched.holdLo, 2) + "-" + f(sched.holdHi, 2) + " s is fine.",
-        " 4. A double blip at " + f(sched.menu, 2) + " s marks when the NEW GAME menu should appear (frame " + plat.timing.menu_frame + " of the boot).",
+        " 4. A double blip at " + f(sched.menu, 2) + " s marks when the NEW GAME menu should appear (frame " + plat.timing.menu_frame + " of the boot)." + fn.mark(["table", "menuInput"]),
         "    If the menu appears far from the blip, START was held outside the window: the",
         "    attempt is no good, reset and try again. Release START whenever.",
-        " 5. Then " + (beeps - sched.droppedCountIn) + " short beeps " + f(spacing, 1) + " s apart and one long high beep. Press A ON the long high beep.",
+        " 5. Then " + (beeps - sched.droppedCountIn) + " short beeps " + f(spacing, 1) + " s apart and one long high beep. Press A ON the long high beep." + fn.mark(["tidRoll", "stir", "table"]),
         "    Target: A at " + fmtSf(G.targetSeconds(offset)) + " after the menu = " + fmtSf(sched.menu + G.targetSeconds(offset)) + " after your anchor.",
         "    The beep is " + fmtMs(correctionMs) + " early for the audio delay (this anchor's correction).");
       if (sched.droppedCountIn) lines.push("    (" + plural(sched.droppedCountIn, "count-in beep") + " left out: they would have sounded before the menu.)");
@@ -237,8 +267,9 @@
       lines.push(" 6. Afterwards, type the Trainer ID you got below (read it off the Trainer Card, or a",
         "    Pokemon's status screen shows IDNo).");
     }
-    lines.push("    Each answer sharpens the correction.");
-    return lines;
+    lines.push("    Each answer sharpens the correction." + fn.mark(["table"]));
+    lines.push("");
+    return lines.concat(fn.lines());
   }
 
   function scheduleLines(sched, offset, correctionMs, plat) {
@@ -250,7 +281,7 @@
     }
     if (sched.countInTimes.length) lines.push("  count-in beeps      " + sched.countInTimes.map(function (t) { return f(t, 3); }).join(", "));
     lines.push("  A cue (long beep)   " + f(sched.tA, 3) + " s   = target " + fmtSf(G.targetSeconds(offset)) +
-      (sched.anchor === G.ANCHOR_MENU ? " after the menu" : " after the menu, from your anchor") + " minus correction " + fmtMs(correctionMs));
+      (sched.anchor === G.ANCHOR_MENU ? " after the menu" : " after the menu, from your anchor") + " minus correction " + fmtMs(correctionMs) + (plat ? footnotesFor(plat).mark(["table"]) : ""));
     return lines;
   }
 
@@ -543,19 +574,20 @@
     var rPress = G.verify(plat.table, tid, menuToPressS, toleranceFrames, 0.0, plat.targetSets);
     var rVis = G.verify(plat.table, tid, menuToPressS, toleranceFrames, lag, plat.targetSets);
     var r = fromVisible ? rVis : rPress, other = fromVisible ? rPress : rVis;
+    var fn = footnotesFor(plat);
     var lines = [G.formatTid(tid) + " on " + plat.name + " (" + plat.gameName + "): " + G.verdictText(tid, plat.targetSets)];
     lines = lines.concat(methodologyLines(plat, true));
     if (fromVisible) {
       lines.push("  measured menu -> first VISIBLE effect of the A press: " + f(menuToPressS, 3) + " s; minus the " + plat.familyKey.toUpperCase() + " press-to-visible lag",
-        "  of " + f(lag, 2) + " frames (" + (plat.visibleLagNote || "no lag known for this console") + ") = offset " + f(r.predictedOffset, 1));
+        "  of " + f(lag, 2) + " frames (" + (plat.visibleLagNote || "no lag known for this console") + ") = offset " + f(r.predictedOffset, 1) + fn.mark(["table"]));
     } else {
-      lines.push("  measured menu -> A press: " + f(menuToPressS, 3) + " s = offset " + f(r.predictedOffset, 1) + " (" + f(menuToPressS, 3) + " s x " + f(G.FPS, 4) + " fps - " + G.MENU_TO_TABLE_FRAMES + ")");
+      lines.push("  measured menu -> A press: " + f(menuToPressS, 3) + " s = offset " + f(r.predictedOffset, 1) + " (" + f(menuToPressS, 3) + " s x " + f(G.FPS, 4) + " fps - " + G.MENU_TO_TABLE_FRAMES + ")" + fn.mark(["table"]));
     }
     if (!r.inTable) {
-      lines.push("  this Trainer ID is produced by NO press time on this console: INCONSISTENT with the table");
-      return { consistent: false, lines: lines };
+      lines.push("  this Trainer ID is produced by NO press time on this console: INCONSISTENT with the table" + fn.mark(["table", "tidRoll"]));
+      return { consistent: false, lines: lines.concat([""], fn.lines()) };
     }
-    lines.push("  the table produces it at offset" + (r.offsets.length > 1 ? "s " : " ") + r.offsets.join(", "));
+    lines.push("  the table produces it at offset" + (r.offsets.length > 1 ? "s " : " ") + r.offsets.join(", ") + fn.mark(["table", "tidRoll"]));
     lines.push("  nearest offset " + r.nearest + " is " + f(r.differenceFrames, 1) + " frames from the measurement (tolerance +-" + toleranceFrames + " frames): " + (r.consistent ? "CONSISTENT" : "INCONSISTENT"));
     if (lag && other.consistent !== r.consistent) {
       lines.push("  NOTE: read the other way (measured from " + (fromVisible ? "the press" : "the visible effect") + ") it is " + f(other.differenceFrames, 1) + " frames off: " + (other.consistent ? "CONSISTENT" : "INCONSISTENT") + ".",
@@ -563,7 +595,7 @@
         "  (" + (plat.familyKey === "gba" ? "provisional" : "fitted on two runs") + "). Say which you measured.");
     }
     lines.push("  (this checks timing against the table only, and only under the methodology above; it says nothing else about the run)");
-    return { consistent: r.consistent, lines: lines };
+    return { consistent: r.consistent, lines: lines.concat([""], fn.lines()) };
   }
 
   // ---- Gen 3: the Secret ID from a typed Trainer ID (rngsolution/sidcli.py) --------------------
@@ -713,6 +745,7 @@
     supportedGames: supportedGames, platformMethodologies: platformMethodologies, platformsFor: platformsFor, resolve: resolve,
     targetSetKeys: targetSetKeys, otherTargetSetKeys: otherTargetSetKeys, derivationTag: derivationTag, setTag: setTag, describeTarget: describeTarget,
     methodologyLines: methodologyLines, targetSetLines: targetSetLines, protocolLines: protocolLines, scheduleLines: scheduleLines,
+    SOURCE_ORDER: SOURCE_ORDER, statusWord: statusWord, sourcesFor: sourcesFor, footnotesFor: footnotesFor, procedureProblems: FN.procedureProblems,
     announceCue: announceCue, buildSchedule: buildSchedule, renderCues: renderCues,
     calKey: calKey, calStoreKey: calStoreKey, loadCalibration: loadCalibration, saveCalibration: saveCalibration, allSamples: allSamples, samplesFor: samplesFor,
     ignoredSamples: ignoredSamples, correctionInForce: correctionInForce, ignoredSampleLines: ignoredSampleLines, recordOutcome: recordOutcome,
@@ -1221,6 +1254,40 @@
       report.targets = $("g1-targets-table").querySelectorAll("tr.pick").length;
       setTarget(358);
       report.protocolHasMethodology = $("g1-protocol").textContent.indexOf("Methodology: red/gba/hold-start-v1") !== -1;
+      // the footnotes: every step marked, the Sources block after the steps with the pokered title-loop line under its
+      // FACTS.md section and the table under EMULATOR-EXACT (GSE), the target line and the schedule's A cue marked, no
+      // problem; the registry without the hold-START line (the negative control) is reported as NOT IN THE REGISTRY and,
+      // restored, is clean; the GBA HD and the DMG print HARDWARE-VALIDATED n, Yellow its pokeyellow line and EMPIRICAL
+      var g1proto = $("g1-protocol").textContent;
+      report.footnoteCount = (g1proto.match(/^  \[\^\d+\] /gm) || []).length;
+      report.footnoteSteps = (g1proto.match(/^( [34]\. .*|    Press A ON the long high beep\. That is the only frame-exact action\.|    Each answer sharpens the correction\.)( \[\^\d+\])+$/gm) || []).length;
+      report.footnoteHoldStart = /^  \[\^1\] pokered\/engine\/movie\/title\.asm:227-239,266 \(docs\/FACTS\.md: Gen 1\/2 \(Game Boy\) \/ Gen 1 Trainer ID \/ Where the ID comes from\): the title screen waits on CheckForUserInterruption/m.test(g1proto);
+      report.footnoteStatusGse = /^  \[\^2\] EMULATOR-EXACT \(no decomp line; the table's derivation on pokemon-speedrunning\/gambatte-core with START held inside the window, docs\/FACTS\.md Gen 1 Trainer ID \(hold-START methodologies, RNG Solution\)\): hold START on any frame 1300-1475 and the NEW GAME menu opens on frame 1553; the A press frame is the menu frame \+ 80 \+ the offset/m.test(g1proto);
+      report.footnoteHeaderStatus = g1proto.indexOf(FN.HEADER + FN.STATUS_NOTE) !== -1;
+      report.footnoteProblems = FN.procedureProblems(g1proto).length;
+      report.registryLoaded = FN.citationsLoaded();
+      report.targetInfoMarked = /\[3x cold-boot verified\] \[\^2\] \[\^4\]$/.test($("g1-target-info").textContent);
+      report.scheduleMarked = /A cue \(long beep\) .* minus correction .* \[\^2\]$/m.test($("g1-schedule").textContent);
+      var fullRegistry = root.ShinyCitations;
+      FN.setCitations({ entries: (fullRegistry && fullRegistry.entries || []).filter(function (e) { return e.cite !== "pokered/engine/movie/title.asm:227-239,266"; }) });
+      refreshAnchor();
+      report.registryCutProblems = FN.procedureProblems($("g1-protocol").textContent);
+      FN.setCitations(fullRegistry);
+      refreshAnchor();
+      report.registryRestoredProblems = FN.procedureProblems($("g1-protocol").textContent).length;
+      $("g1-platform").value = "gba-hd"; $("g1-platform").dispatchEvent(new Event("change"));
+      setTarget(358);
+      report.footnoteStatusGbaHd = /^  \[\^2\] HARDWARE-VALIDATED 5 of 5 \(no decomp line; /m.test($("g1-protocol").textContent);
+      $("g1-platform").value = "dmg"; $("g1-platform").dispatchEvent(new Event("change"));
+      setTarget(517);
+      report.footnoteStatusDmg = /^  \[\^2\] HARDWARE-VALIDATED 5 of 6 \(no decomp line; /m.test($("g1-protocol").textContent) && $("g1-protocol").textContent.indexOf("hold START on any frame 1450-1640 and the NEW GAME menu opens on frame 1701") !== -1;
+      $("g1-game").value = "yellow"; $("g1-game").dispatchEvent(new Event("change"));
+      $("g1-platform").value = "gba-hd"; $("g1-platform").dispatchEvent(new Event("change"));
+      setTarget(358);
+      report.footnoteYellow = /^  \[\^1\] pokeyellow\/engine\/movie\/title\.asm:166-175 \(docs\/FACTS\.md: Gen 1\/2 \(Game Boy\) \/ Gen 1 Trainer ID \/ Where the ID comes from\): Yellow's title loop/m.test($("g1-protocol").textContent) && /^  \[\^2\] EMPIRICAL \(no decomp line; /m.test($("g1-protocol").textContent) && /^  \[\^4\] pokeyellow\/engine\/movie\/oak_speech\/init_player_data\.asm:1-10 \(docs\/FACTS\.md: /m.test($("g1-protocol").textContent);
+      $("g1-game").value = "red"; $("g1-game").dispatchEvent(new Event("change"));
+      $("g1-platform").value = "gse"; $("g1-platform").dispatchEvent(new Event("change"));
+      setTarget(358);
       report.scheduleA = ($("g1-schedule").textContent.match(/A cue \(long beep\)\s+([0-9.]+) s/) || [])[1];
       report.anchorEnabled = !$("g1-anchor-btn").disabled;
       $("g1-got").value = String(st.plat.table[360]);

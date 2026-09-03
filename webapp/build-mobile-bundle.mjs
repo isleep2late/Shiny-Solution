@@ -67,7 +67,7 @@ const swElement = html.match(/<script id="sw-register">[\s\S]*?<\/script>\n?/);
 if (!swElement) { console.error("index.html has no <script id=\"sw-register\"> element to strip"); process.exit(1); }
 html = html.replace(swElement[0], '<script>\nwindow.SHINY_NO_SERVICE_WORKER = "the mobile bundle is one HTML string for the Hub app, with no sw.js beside it";\n(function () { var el = document.getElementById("sw-status"); if (el) el.textContent = "offline copy: not registered: " + window.SHINY_NO_SERVICE_WORKER + " (build " + window.SHINY_BUILD + ")"; })();\n</script>\n');
 html = html.replace(/<link rel="(manifest|icon|apple-touch-icon)"[^>]*>\n?/g, "");
-for (const local of ["downloads.js", "mode.js", "app.js", "gen1tid-ui.js", "gen2tid-ui.js", "wizard-ui.js"]) {
+for (const local of ["downloads.js", "mode.js", "footnotes.js", "app.js", "gen1tid-ui.js", "gen2tid-ui.js", "wizard-ui.js"]) {
   const js = readFileSync(join(here, local), "utf8");
   html = html.replace(`<script src="${local}"></script>`, "<script>\n" + js + "\n</script>");
 }

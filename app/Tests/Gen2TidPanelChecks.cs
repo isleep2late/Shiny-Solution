@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using ShinySolution.App;
 using ShinySolution.Core;
 
@@ -106,11 +107,15 @@ static class Gen2TidPanelChecks
         }
     }
 
-    public static int Run(string vectorsPath)
+    public static int Run(string vectorsPath, string? citationsPath = null)
     {
         var V = JsonDocument.Parse(File.ReadAllText(vectorsPath)).RootElement;
         var data = Gen2TidData.LoadEmbedded();
         var data1 = Gen1TidData.LoadEmbedded();
+        // the decomp citation registry the footnotes are rendered over: the embedded copy, or the file given
+        // (app/run-core-tests.sh passes a copy without the 4-frame poll entry as its negative control)
+        Citations.LoadCitations(citationsPath);
+        Check("the citation registry is loaded", Citations.Loaded, "no registry");
         string when = S(V, "when"), player = S(V, "player");
         var cases = V.GetProperty("cases").EnumerateArray().ToList();
         Check("20 target inputs", cases.Count == 20, cases.Count.ToString());
@@ -188,7 +193,18 @@ static class Gen2TidPanelChecks
             CheckNum(label + ": roll settle", sched.RollSettleS, es.GetProperty("rollSettleS"));
             CheckStr(label + ": schedule methodology", sched.Methodology, es.GetProperty("methodology"));
             CheckLines(label + ": schedule lines", Gen2TidText.ScheduleLines(sched, bin, corr, plat), c.GetProperty("scheduleLines"));
-            CheckLines(label + ": protocol lines", Gen2TidText.ProtocolLines(plat, anchor, bin, sched, corr, beeps, spacing), c.GetProperty("protocolLines"));
+            var protocol = Gen2TidText.ProtocolLines(plat, anchor, bin, sched, corr, beeps, spacing);
+            CheckLines(label + ": protocol lines", protocol, c.GetProperty("protocolLines"));
+            // the footnotes: every protocol carries its Sources block with at least one footnote, the console's status
+            // word on the tables' roll (EMULATOR-EXACT on GSE, EMPIRICAL elsewhere: no hardware sample), the 4-frame poll
+            // and the wPlayerID roll under their FACTS.md sections, and no citation outside the registry
+            string statusWord = Gen2TidText.StatusWord(plat);
+            Check(label + ": the protocol lists its sources", protocol.Contains(Citations.Header + Citations.StatusNote) && protocol.Count(l => l.StartsWith("  [^")) >= 8, protocol.Count.ToString());
+            Check(label + ": the status word is the console's", statusWord == (S(inp, "platform") == "gse" ? "EMULATOR-EXACT" : "EMPIRICAL") && protocol.Any(l => l.StartsWith("  [^3] " + statusWord + " (no decomp line; the tables' derivation on pokemon-speedrunning/gambatte-core, ")), statusWord);
+            Check(label + ": the poll and the ID roll are registry lines", protocol.Any(l => l.StartsWith("  [^2] poke") && l.Contains("/engine/menus/main_menu.asm:") && l.Contains(" (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 2 Trainer ID / Lucky ID / The boot path with START held, and the 4-frame poll): MainMenuJoypadLoop"))
+                && protocol.Any(l => l.StartsWith("  [^4] poke") && l.Contains("/engine/menus/intro_menu.asm:") && l.Contains("Where the IDs come from): NewGame -> _ResetWRAM writes wPlayerID")));
+            Check(label + ": no footnote outside the registry", Citations.ProcedureProblems(protocol).Count == 0, string.Join("\n", Citations.ProcedureProblems(protocol)));
+            Check(label + ": the target line carries the poll and roll footnotes", Regex.IsMatch(Gen2TidText.DescribeBin(plat, bin), plat.HasSid ? @" \[\^2\] \[\^4\] \[\^9\]$" : @" \[\^2\] \[\^4\]$"));
             // the typed outcome into an empty store in RUN mode
             var cal = new Dictionary<string, Gen2CalEntry>();
             var o = Gen2TidText.RecordOutcome(cal, plat, anchor, bin, corr, I(c, "typedTid"), null, false, "a1", Modes.Run, when, player);
