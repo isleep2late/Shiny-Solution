@@ -39,7 +39,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
   <section id="tab-g3timer" class="tab active">
     <div class="card">
       <h2>Find TID targets (dead-battery Ruby/Sapphire, seed 0x5A0)</h2>
-      <div class="row">
+      <div class="row primary">
         <label>Target TID <input id="tid-target" type="number" min="0" max="65535" value="7777"></label>
         <label>Search window (minutes from power-on) <input id="tid-minutes" type="number" min="1" max="120" value="15"></label>
         <button id="tid-search">Find targets</button>
@@ -92,7 +92,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
   <section id="tab-g3check" class="tab">
     <div class="card">
       <h2>Shiny checker — is this PID shiny for my IDs?</h2>
-      <div class="row">
+      <div class="row primary">
         <label>PID (hex) <input id="ck-pid" class="mono" value="00000000"></label>
         <label>TID <input id="ck-tid" type="number" min="0" max="65535" value="0"></label>
         <label>SID <input id="ck-sid" type="number" min="0" max="65535" value="0"></label>
@@ -114,7 +114,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
   <section id="tab-g4" class="tab">
     <div class="card">
       <h2>Seed &amp; TID/SID calculator (D/P/Pt/HG/SS)</h2>
-      <div class="row">
+      <div class="row primary">
         <label>Boot date/time <input id="g4-date" type="datetime-local" step="1" value="2026-01-01T10:00:00"></label>
         <label>Delay <input id="g4-delay" type="number" min="0" max="65535" value="600"></label>
         <label>Elm skips <input id="g4-skips" type="number" min="0" max="50" value="0"></label>
@@ -152,7 +152,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <p id="g4-clock-note" class="result"></p>
       <p id="g4-phase"></p>
       <div id="g4-display" class="bigtime">--:--.---</div>
-      <div class="row">
+      <div class="row primary">
         <button id="g4-start">Start at clock confirm</button>
         <button id="g4-cancel">Cancel</button>
         <label>calibrated delay <input id="g4-cald" type="number" step="0.1" value="500"></label>
@@ -175,7 +175,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
   <section id="tab-g12" class="tab">
     <div class="card">
       <h2>Gen 2 shiny DV checker (also: will my Gen 1 mon be shiny in Gen 2?)</h2>
-      <div class="row">
+      <div class="row primary">
         <label>Attack DV <input id="dv-atk" type="number" min="0" max="15" value="10"></label>
         <label>Defense DV <input id="dv-def" type="number" min="0" max="15" value="10"></label>
         <label>Speed DV <input id="dv-spe" type="number" min="0" max="15" value="10"></label>
@@ -212,7 +212,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <p>Route-valid Trainer IDs under the target sets in force (click a row to aim at it), or type a Trainer ID for another category, or any offset.</p>
       <div id="g1-targets-table"></div>
       <p id="g1-table-note" class="hint"></p>
-      <div class="row">
+      <div class="row primary">
         <label>Trainer ID you want (decimal like 16387, or hex $4003) <input id="g1-tid" class="mono" value="16387"></label>
         <button id="g1-find">Find press times</button>
         <label>or any offset <input id="g1-offset" type="number" min="0" max="5999" value="358"></label>
@@ -241,7 +241,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       from one pre-rendered buffer on the audio clock, every tone on an exact sample; the screen flashes with
       each beep, and the long high beep is the A press. Space again cancels.</p>
       <div id="g1-display" class="bigtime">--</div>
-      <div class="row">
+      <div class="row primary">
         <button id="g1-anchor-btn" disabled>ANCHOR (Space)</button>
         <button id="g1-cancel" class="secondary">Cancel</button>
       </div>
@@ -365,7 +365,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <p>Bins that give a route target under the target sets in force (click a row to aim at it; a row in another RTC state switches the state, and is first boot only), or type a Trainer ID (and the Lucky ID if you want a pair), or any bin.</p>
       <div id="g2-targets-table"></div>
       <p id="g2-table-note" class="hint"></p>
-      <div class="row">
+      <div class="row primary">
         <label>Trainer ID you want (decimal like 20322, or hex $4F62) <input id="g2-tid" class="mono" value="20322"></label>
         <label>Lucky ID (optional) <input id="g2-lid" class="mono"></label>
         <button id="g2-find">Find bins</button>
@@ -395,7 +395,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       pre-rendered buffer on the audio clock (the Gen 1 tab's player: one AudioContext for the page), every tone on an
       exact sample; the screen flashes with each beep, and the long high beep is the A tap. Space again cancels.</p>
       <div id="g2-display" class="bigtime">--</div>
-      <div class="row">
+      <div class="row primary">
         <button id="g2-anchor-btn" disabled>ANCHOR (Space)</button>
         <button id="g2-cancel" class="secondary">Cancel</button>
       </div>
@@ -503,7 +503,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
         <label>Delay window <input id="wz-delay-min" type="number" min="0" max="16777215" value="0"><input id="wz-delay-max" type="number" min="0" max="16777215" value="65535"></label>
         <label>Target delay (nearest first) <input id="wz-delay-target" type="number" min="0" max="16777215" value="600"></label>
       </div>
-      <div class="row"><button id="wz-search">Search</button></div>
+      <div class="row primary"><button id="wz-search">Search</button></div>
       <pre id="wz-search-out" class="text"></pre>
       <div id="wz-results"></div>
       <p id="wz-target-info" class="result">Target: none yet (click a row)</p>
@@ -537,7 +537,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <p id="wz-timer-note" class="result pre"></p>
       <p id="wz-phase"></p>
       <div id="wz-display" class="bigtime">--:--.---</div>
-      <div class="row">
+      <div class="row primary">
         <button id="wz-start">Start (Space)</button>
         <button id="wz-cancel" class="secondary">Cancel</button>
       </div>
@@ -620,7 +620,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
 <script src="gen1tid-ui.js"></script>
 <script src="gen2tid-ui.js"></script>
 <script src="wizard-ui.js"></script>
-<script>window.SHINY_BUILD = "4330ba97ce3d";</script>
+<script>window.SHINY_BUILD = "abcd0c6cd89f";</script>
 <script id="sw-register">
 // The offline copy: sw.js is registered over http or https only. Under file:// (the Electron app, the headless
 // self-tests) nothing is registered and the status line says so; the mobile bundle has this element stripped

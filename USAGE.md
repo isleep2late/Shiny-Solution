@@ -546,7 +546,8 @@ available without installing anything:
   the page and every script, and keeps each wizard's table file from the first time that tab was
   opened online, so the Gen 3 / Gen 4 wizard works offline for the generations you opened once. The
   footer's status line says whether the offline copy controls the page and which build it is; a new
-  build replaces the old copy on the next online visit.
+  build replaces the old copy on the next online visit. On a phone the tab bar wraps, the rows stack
+  and each step's main button sticks to the bottom of the screen while its card is on screen.
 - **Hackmons Hub app** — Fun → Shiny Solution (same tools, beeps included; the wizard tab is there but its
   species, encounter and static tables are not inlined into the bundle, so it says to use the page or the desktop app;
   no service worker either: the bundle is one HTML string inside the app, and its status line says so).

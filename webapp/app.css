@@ -121,3 +121,40 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
 #mode-banner[hidden] { display: none; }
 #mode-toggle { font-size: 13px; color: var(--muted); }
 body.practice #tabs button.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+/* the phone layout (600 px and narrower, a 360 px phone included): the tab bar wraps into two columns, every row
+   stacks its fields full width with 16 px inputs (no zoom on focus), a table scrolls inside its card instead of
+   widening the page, the countdown digits shrink to fit, and each step's main control (.row.primary: the find /
+   search / compute button, the ANCHOR and Start buttons) is 48 px tall and sticks to the bottom of the screen while
+   its card is in view */
+@media (max-width: 600px) {
+  body { padding: 10px; }
+  header h1 { font-size: 22px; }
+  header p { margin-bottom: 10px; }
+  #tabs { flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  #tabs button { flex: 1 1 calc(50% - 6px); padding: 8px 6px; font-size: 14px; min-height: 44px; }
+  #mode-bar { margin-top: 0; }
+  .card { padding: 12px; margin-bottom: 12px; }
+  .card h2 { font-size: 16px; }
+  .row { gap: 8px; align-items: stretch; }
+  .row > label, .row > .field { flex: 1 1 100%; min-width: 0; }
+  .row > label > input, .row > label > select { width: 100%; min-width: 0; max-width: 100%; }
+  .row > label > input + input { margin-top: 4px; }
+  input, select { font-size: 16px; min-height: 44px; }
+  select { max-width: 100%; }
+  .row > button, .checks label { flex: 1 1 auto; }
+  button { min-height: 44px; padding: 9px 12px; }
+  .checks label, label.check { flex: 0 1 auto; }
+  table { display: block; overflow-x: auto; max-width: 100%; font-size: 13px; }
+  th, td { padding: 6px; white-space: nowrap; }
+  #timer-display { font-size: 40px; padding: 14px 0; }
+  .bigtime { font-size: 40px; padding: 12px 0; }
+  pre.text { font-size: 12px; }
+  .row.primary {
+    position: sticky; bottom: 0; z-index: 10;
+    margin: 8px -12px -12px; padding: 8px 12px 10px;
+    background: var(--panel); border-top: 1px solid var(--edge); border-radius: 0 0 10px 10px;
+  }
+  .row.primary button { min-height: 48px; font-size: 16px; }
+  .row.primary > label { flex: 1 1 100%; }
+}
