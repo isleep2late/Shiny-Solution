@@ -59,6 +59,26 @@ until the roll comes out shiny:
    Gen 1 note: shininess doesn't exist in Gen 1; the ""shiny"" target hunts the DVs
    that become shiny when traded to Gen 2.
 
+=== GEN 1 TRAINER ID (Red / Blue / Yellow), REAL CONSOLE OR GSE — the one timed A press ===
+TARGET mode, human input only: you say which Trainer ID (or table offset) you want, the tab
+says what to do, cues the one timed press, and learns from the ID you type afterwards.
+1. Pick the game, the console (GSE, GBA HD, GBA / GBA SP, Game Boy Player, original Game Boy)
+   and read the methodology: the input protocol the prediction is valid under (hold START in
+   the untimed window, the NEW GAME menu opens on a fixed frame, one timed A press).
+2. Aim at a route-valid row (the $40xx sled for the Any% save corruption; PSR sets are opt-in),
+   or type any Trainer ID and get its press time(s), or any offset.
+3. Choose the anchor (the menu appearing: recommended; the power switch; RESET on GSE / GBP)
+   and read the PROTOCOL. The correction starts at 200 ms (menu) / 100 ms (power-on, reset).
+4. Click ANCHOR (or press Space) at the anchor moment. Four short beeps, then the long high
+   beep: press A ON it. The whole cue is one pre-rendered buffer, so every beep is sample-exact.
+5. Type the Trainer ID you got: it inverts to the offset you hit, the implied correction is
+   averaged in (an ID more than 60 frames out, or the same attempt twice, is refused unless
+   forced), and P(hit), attempts per hit and a drift check are printed. Samples are kept per
+   console and anchor with their methodology id; samples are never mixed across methodologies.
+The same tab beats the save-corruption RESET/A (or A/power-off) metronome, verifies a run's
+Trainer ID against a hand-measured press time for moderators, and lists the Emerald / FireRed /
+LeafGreen Secret ID candidates from a typed Trainer ID (with the press cue and the pins).
+
 === GEN 4 (NDS) — searcher + timer ===
 Gen 4 seeds from the DS clock plus a frame-counter ""delay"" at Continue. The tab
 searches target seeds, gives you a calibrated timer, and verifies which seed you hit

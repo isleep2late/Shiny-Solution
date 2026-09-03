@@ -12,6 +12,7 @@ public sealed class MainForm : Form
         var tabs = new TabControl { Dock = DockStyle.Fill };
         tabs.TabPages.Add(Wrap("Gen 3 (GBA)", new Gen3Panel()));
         tabs.TabPages.Add(Wrap("Gen 1/2 (GB/GBC)", new GbPanel()));
+        tabs.TabPages.Add(Wrap("Gen 1 TID (R/B/Y)", new Gen1TidPanel()));
         tabs.TabPages.Add(Wrap("Gen 4 (NDS)", new Gen4Panel()));
         tabs.TabPages.Add(Wrap("Help", new HelpPanel()));
         Controls.Add(tabs);
