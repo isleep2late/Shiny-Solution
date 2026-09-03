@@ -841,6 +841,40 @@ fs.writeFileSync(process.argv[2], JSON.parse(m[1]));
   rm -rf "$wv"
   [ $wbad = 0 ] || exit 1
   echo "mobile bundle in a WebView (360x780, Android UA): no worker, the status line names the reason and build $stamp, no page error, the wizard says its tables are not in this build, 8 tab buttons"
+  # The phone layout at a true 360x780 (the static page in a 360 px iframe: headless Chrome opens no window that narrow):
+  # the tab bar is one row that scrolls inside its own box (every button on one line, the bar under 60 px tall, its
+  # scrollWidth wider than its box), the document is no wider than the viewport, and what follows the bar (the mode bar,
+  # then the first card) starts within 60 px of the bar's top edge; the numbers come from a probe appended to a copy of
+  # index.html and posted to the host page.
+  ph=$(mktemp -d)
+  cp -r ../webapp/. "$ph/webapp"
+  node -e '
+const fs = require("fs");
+const p = process.argv[1];
+const probe = "<script>\nwindow.addEventListener(\"load\", function () {\n  var r = function (el) { var b = el.getBoundingClientRect(); return { top: Math.round(b.top + window.scrollY), height: Math.round(b.height), width: Math.round(b.width) }; };\n  var tabs = document.getElementById(\"tabs\");\n  var out = { viewport: [window.innerWidth, window.innerHeight], docScrollWidth: document.documentElement.scrollWidth, tabs: r(tabs), tabsScrollWidth: tabs.scrollWidth, tabsClientWidth: tabs.clientWidth, buttonTops: Array.prototype.map.call(tabs.querySelectorAll(\"button\"), function (b) { return r(b).top; }), next: r(tabs.nextElementSibling), firstCard: r(document.querySelector(\".tab.active .card\")) };\n  window.parent.postMessage(JSON.stringify(out), \"*\");\n});\n</script>\n</body>";
+const src = fs.readFileSync(p, "utf8");
+if (src.split("</body>").length !== 2) { console.error("phone layout setup: index.html has not exactly one </body>"); process.exit(1); }
+fs.writeFileSync(p, src.replace("</body>", probe));
+' "$ph/webapp/index.html"
+  printf '%s' '<!doctype html><html><body style="margin:0"><iframe src="webapp/index.html" style="width:360px;height:780px;border:0"></iframe><pre id="measure"></pre><script>window.addEventListener("message", function (e) { document.getElementById("measure").textContent = String(e.data); });</script></body></html>' > "$ph/host.html"
+  timeout 120 google-chrome --headless=new --disable-gpu --user-data-dir="$ph/profile" --window-size=500,900 --virtual-time-budget=4000 --dump-dom "file://$ph/host.html" 2>/dev/null | grep -o '<pre id="measure">.*</pre>' | sed 's/<[^>]*>//g' > "$ph/measure"
+  node -e '
+const fs = require("fs");
+const un = (s) => s.replace(/&quot;/g, "\"").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+let m; try { m = JSON.parse(un(fs.readFileSync(process.argv[1], "utf8"))); } catch (e) { console.error("FAIL phone layout: no measurement: " + e.message); process.exit(1); }
+const checks = [
+  ["a true 360x780 viewport", m.viewport[0] === 360 && m.viewport[1] === 780],
+  ["the document is no wider than the viewport", m.docScrollWidth <= 360],
+  ["the tab bar is one row under 60 px", m.tabs.height < 60 && m.buttonTops.every((t) => t === m.buttonTops[0])],
+  ["the tab bar scrolls inside its own box", m.tabsScrollWidth > m.tabsClientWidth && m.tabs.width <= 360],
+  ["what follows the tab bar starts within 60 px of its top", m.next.top - m.tabs.top < 60]
+];
+let bad = 0;
+for (const [label, ok] of checks) if (!ok) { bad++; console.error("FAIL phone layout: " + label + " " + JSON.stringify(m)); }
+console.log("phone layout at 360x780: " + checks.length + " checks, " + bad + " failure" + (bad === 1 ? "" : "s") + " (tab bar " + m.tabs.height + " px tall at " + m.tabs.top + " px, " + m.tabsScrollWidth + " px wide inside a " + m.tabsClientWidth + " px box, the mode bar " + (m.next.top - m.tabs.top) + " px and the first card " + (m.firstCard.top - m.tabs.top) + " px below its top, document " + m.docScrollWidth + " px wide)");
+process.exit(bad ? 1 : 0);
+' "$ph/measure"
+  rm -rf "$ph"
 else
   echo "google-chrome not found; skipping the browser self-test"
 fi

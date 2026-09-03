@@ -40,6 +40,8 @@
   function switchTab(name) {
     document.querySelectorAll("#tabs button").forEach(function (b) {
       b.classList.toggle("active", b.dataset.tab === name);
+      // on a phone the tab bar scrolls sideways inside its own box (app.css): keep the active button in view
+      if (b.dataset.tab === name && b.scrollIntoView) b.scrollIntoView({ block: "nearest", inline: "nearest" });
     });
     document.querySelectorAll(".tab").forEach(function (t) {
       t.classList.toggle("active", t.id === "tab-" + name);

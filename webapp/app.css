@@ -122,17 +122,19 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
 #mode-toggle { font-size: 13px; color: var(--muted); }
 body.practice #tabs button.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 
-/* the phone layout (600 px and narrower, a 360 px phone included): the tab bar wraps into two columns, every row
-   stacks its fields full width with 16 px inputs (no zoom on focus), a table scrolls inside its card instead of
-   widening the page, the countdown digits shrink to fit, and each step's main control (.row.primary: the find /
-   search / compute button, the ANCHOR and Start buttons) is 48 px tall and sticks to the bottom of the screen while
-   its card is in view */
+/* the phone layout (600 px and narrower, a 360 px phone included): the tab bar is one row that scrolls sideways
+   inside its own box (no wrap, scroll-snap on each button, so the page never widens and the content starts within
+   60 px of the bar's top; app.js scrolls the active button into view), every row stacks its fields full width with
+   16 px inputs (no zoom on focus), a table scrolls inside its card instead of widening the page, the countdown digits
+   shrink to fit, and each step's main control (.row.primary: the find / search / compute button, the ANCHOR and Start
+   buttons) is 48 px tall and sticks to the bottom of the screen while its card is in view */
 @media (max-width: 600px) {
   body { padding: 10px; }
   header h1 { font-size: 22px; }
   header p { margin-bottom: 10px; }
-  #tabs { flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  #tabs button { flex: 1 1 calc(50% - 6px); padding: 8px 6px; font-size: 14px; min-height: 44px; }
+  #tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; gap: 6px; margin-bottom: 12px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  #tabs::-webkit-scrollbar { display: none; }
+  #tabs button { flex: 0 0 auto; scroll-snap-align: start; padding: 8px 12px; font-size: 14px; min-height: 44px; white-space: nowrap; }
   #mode-bar { margin-top: 0; }
   .card { padding: 12px; margin-bottom: 12px; }
   .card h2 { font-size: 16px; }
