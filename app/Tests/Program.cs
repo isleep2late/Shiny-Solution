@@ -16,7 +16,7 @@ void Check<T>(string label, T actual, T expected)
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> | --check-timer-vectors <timer-vectors.json> | --emit-timer-parity <out.json> [count] [seed]");
+    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> | --check-timer-vectors <timer-vectors.json> | --emit-timer-parity <out.json> [count] [seed] | --gen5 <gen5-vectors.json> | --emit-gen5-random <out.json>");
     return 2;
 }
 
@@ -68,6 +68,17 @@ if (args[0] == "--check-timer-vectors")
 if (args[0] == "--emit-timer-parity")
 {
     TimerChecks.EmitParity(args[1], args.Length > 2 ? int.Parse(args[2]) : 200, args.Length > 3 ? uint.Parse(args[3]) : 20260903u);
+    return 0;
+}
+
+if (args[0] == "--gen5")
+{
+    return ShinySolution.Tests.Gen5Checks.Run(args[1]);
+}
+
+if (args[0] == "--emit-gen5-random")
+{
+    ShinySolution.Tests.Gen5Checks.EmitRandom(args[1]);
     return 0;
 }
 

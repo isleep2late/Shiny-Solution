@@ -11,9 +11,13 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   dotnet run --project ../app/Tests -c Release -- --check-timer-vectors timer-vectors.json
   dotnet run --project ../app/Tests -c Release -- --emit-timer-parity timer-parity.json 200
   node test-timers.cjs timer-vectors.json timer-parity.json
+  dotnet run --project ../app/Tests -c Release -- --gen5 gen5-vectors.json
+  dotnet run --project ../app/Tests -c Release -- --emit-gen5-random gen5-random.json
+  node test-gen5.cjs gen5-vectors.json gen5-random.json
 else
-  echo "dotnet not found; skipping gen4 parity vectors and the JS/C# timer cross-check"
+  echo "dotnet not found; skipping gen4 parity vectors, the JS/C# timer cross-check and the C# gen5 checks"
   node test-timers.cjs timer-vectors.json
+  node test-gen5.cjs gen5-vectors.json gen5-random.json
 fi
 
 # Gen 1 Trainer ID / Gen 3 Secret ID / press-jitter engine against the vectors emitted by RNG Solution's

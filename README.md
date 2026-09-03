@@ -26,8 +26,8 @@ app's Help tab.
 | **Gen 3** R/S (E/FRLG experimental) | Fully automatic: the mGBA script reads the live RNG, self-calibrates with a throwaway press + savestate rewind, and presses A on the exact shiny/TID frame: starters, gifts, AND static legendaries; a brute-force hunt covers wild grass | Calibrated power-on timer for dead-battery R/S (every boot seeds 0x5A0); TID manip converges in a few attempts and reveals your SID | verified on Ruby under libmgba (`tests/harness/`) |
 | **Gen 3 Secret ID: Emerald / FireRed / LeafGreen** | | The Trainer ID cannot be chosen (a sub-frame Timer1 count); the Secret ID follows from the typed Trainer ID after k+1 LCRNG advances: one candidate per k, a press cue that pins k to a 27-frame window, pins (a PID seen shiny or not) that narrow it to one | `*/gba/typed-tid-sid-v1`: frame counts emulator-measured on mGBA 0.10.5 by two harnesses; hardware unverified |
 | **Gen 4** D/P/Pt/HG/SS | Assisted: seed searcher + verifiers | Two-phase timer, TID-target search by delay, coin-flip seed matching (DPPt) and Elm-call prediction (HGSS), Method-1 shiny search per seed | decomp-verified in Platinum/HGSS (DP's TID path inferred) |
-| **Timer models** (EonTimer's Gen 3 / Gen 4 / Gen 5 models, `core/timers.js` + `Timers.cs`) | on branch `rng-solution-phase4-timers`, merging | | checked against EonTimer-generated vectors |
-| **Gen 5** engine (SHA-1 seeding into MT) | on branch `rng-solution-phase8-gen5`, merging | | |
+| **Timer models** (EonTimer's Gen 3 / Gen 4 / Gen 5 models, `core/timers.js` + `Timers.cs`) | Engine only (no tab yet): the frame, delay, second, C-Gear, Entralink and custom models, function-for-function in EonTimer's operation order | Same engine; the webapp and the desktop app still run the `gen4.js` / `Gen4Timer` model, within half a frame of EonTimer ([docs/FACTS.md](docs/FACTS.md), Timer models) | checked against 469 vectors computed by EonTimer's own TypeScript (47 of them its Python unit tests) and a 200-parameter-set JS/C# parity check |
+| **Gen 5** B/W/B2/W2 (`core/gen5.js` + `Gen5.cs`) | Engine only in this release (no tab yet): the SHA-1 boot seed, the 64-bit LCRNG, the boot advances, TID/SID rows and the profile searcher (Timer0/VCount/VFrame/GxStat from typed IVs or save needles), ported from PokeFinder and vector-tested in JS and C# | Same engine; the console workflow (profile first, then date/time/keys for a wanted TID) arrives with the UI phase | PokeFinder's own vectors, the RNGWriteups worked seed and 200 random inputs answered by C# reproduced in JS; **not validated on a DS** (a DS Lite session is the gate) |
 
 ## TARGET and PREDICT modes, and the methodology contract
 
@@ -66,6 +66,8 @@ RNG Solution's registry and tables and embedded in every head.
 | `lua/shiny-solution.lua`, `lua/shiny-solution-gb.lua` | The Gen 3 mGBA auto-manip script and the Gen 1/2 hunt bot (also usable standalone). |
 | `core/gen1tid.js` + `app/Core/Gen1Tid.cs` | The Gen 1 Trainer ID engine (cue schedules for the menu / power-on / reset anchors, target sets and verdicts, inversion, calibration with the 60-frame outlier and duplicate guards, the reset metronome, verify, the runner's press-jitter model: P(hit), drift, fusion) and the Gen 3 typed-TID -> SID model, ported from RNG Solution's Python and checked against the vectors it emits (`tests/gen1tid-vectors.json`, about 1,840 cases: integers, strings and error classes exact, floats to 1e-9 relative). Target sets are never defaulted (a verdict needs the game's sets), and every number is checked at the JS boundary. |
 | `core/rng.js` + `core/gen4.js` + `core/gen12.js` + `app/Core/` | The Gen 3 LCRNG / Method 1, Gen 4 seed / MT19937 / timer and Gen 1-2 DV engines, parity-tested between JS and C#. |
+| `core/gen5.js` + `app/Core/Gen5.cs` | The Gen 5 engine: the SHA-1 boot seed, LCRNG64, the boot advances, TID/SID rows and the profile searcher (Timer0/VCount/VFrame/GxStat from typed IVs or save needles), a port of PokeFinder's code (Admiral-Fish) credited in the file headers and in `docs/FACTS.md`, bit-for-bit parity-tested between JS and C#. Engine only: no tab yet. |
+| `core/timers.js` + `app/Core/Timers.cs` | EonTimer's timer models (Gen 3 frame, Gen 4 delay, Gen 5 second / C-Gear / Entralink / Entralink+, custom phases) ported function-for-function, parity-tested between JS and C#; the shipped timers still run `gen4.js` (the gap is recorded in `docs/FACTS.md`). |
 | `docs/FACTS.md` | Every mechanic used, with decompilation citations and the hardware validation record. |
 | `tests/` | The test suites (below). |
 
@@ -81,6 +83,14 @@ RNG Solution's registry and tables and embedded in every head.
   inconsistent, the Emerald worked example `$B0AF` -> `$7F16` at k = 5478 kept by a shiny pin
   and dropped by a contradicting one) with a bundle stripped of the tab shown failing; and, when
   Google Chrome is installed, the tab driven headless through its own handlers.
+- `tests/test-timers.cjs` and `app/Tests --check-timer-vectors` (in both runners): both timer engines vs
+  `tests/timer-vectors.json` (469 vectors, every expected value computed by running EonTimer's own
+  TypeScript; 47 are its Python unit tests' literal assertions), a corrupted vector shown failing, plus
+  200 random parameter sets answered by C# (`--emit-timer-parity`) and re-checked in JS.
+- `tests/test-gen5.cjs` and `app/Tests --gen5` (in both runners): both Gen 5 engines vs `tests/gen5-vectors.json`
+  (PokeFinder's own test vectors, the RNGWriteups worked seed 0xb082b4a755192171, and
+  independent oracles; provenance per vector, builder `tests/build-gen5-vectors.py`), plus
+  200 random inputs answered by C# (`--emit-gen5-random`) and re-checked in JS.
 - `app/run-core-tests.sh`: the C# engine vs the same vectors, plus canonical MT19937 vectors,
   the Gen 4 seed/timer model, and `Gen1Tid.cs` vs the gen1tid vectors with its own negative
   control. `dotnet build app/App -c Release -p:EnableWindowsTargeting=true` compiles the
@@ -116,8 +126,10 @@ python3 tools/gen-gen1-data.py ../RNG-Solution                      # regenerate
 - **Dead-battery Ruby/Sapphire** on hardware: `rs/gba/boot-seed-v0` is defined, not implemented;
   the console timer exists and needs its hardware record. Gate: a dead-battery R/S cart.
 - **Gen 4**: one DS session to record the two-phase timer's calibration on hardware.
-- **Gen 5**: the engine and the timer model are on their branches; one DS Lite session validates
-  the seeding on hardware.
+- **Gen 5**: the engine and the timer model are merged (no tab yet); one DS Lite session validates
+  the seeding on hardware. Gen 5 UI: the profile branch of the console workflow over the ported
+  engine (the +2/+10 boot-advance question and a DS calibration session are open).
+- Gen 6+ needs memory reads or a CSPRNG and is out of scope.
 - Emerald / FRLG Secret ID frame counts on hardware (expected to transfer exactly: whole-VBlank
   counters), wild encounters, eggs and lead-ability aware searches for Gen 3/4, Gen 4 emulator
   automation, a hardware auto-mode through a Game Boy Player.
@@ -127,4 +139,7 @@ python3 tools/gen-gen1-data.py ../RNG-Solution                      # regenerate
 GPL-3.0. The implementations are original, written against the pret decompilations; the
 Gen 4 timing model follows EonTimer's MIT-licensed source (notice reproduced in
 `THIRD_PARTY_NOTICES.md`), and seed-inversion edge cases were cross-checked against
-PokeFinder (GPL-3.0), whose license this project shares.
+PokeFinder (GPL-3.0), whose license this project shares. The Gen 5
+engine (`core/gen5.js`, `app/Core/Gen5.cs`) is a port of PokeFinder's SHA-1 seeding, LCRNG64,
+initial-advance, TID/SID and profile-search code by Admiral-Fish, credited in the file headers
+and in `docs/FACTS.md`; its test vectors are PokeFinder's own.
