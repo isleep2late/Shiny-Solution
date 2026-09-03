@@ -55,6 +55,7 @@ public sealed class GenResult
     public int ItemRoll = -1;
     public string? ItemClass;
     public int PerfectIvTries;
+    public bool PerfectIvFound;        // Safari/Bug Contest: one of the (up to 4) creations had a 31 IV
     public long Advances = -1;         // egg: held advances (u32 as in PokeFinder for Emerald)
     public long HeldFrame;
     public long PickupAdvances = -1;
@@ -65,14 +66,14 @@ public sealed class GenResult
 
 public sealed class Gen3WildOptions
 {
-    public bool FeebasTile, Safari, Tanoby, Bike, NewMetatile, OddsRoll, Roamer;
+    public bool FeebasTile, FeebasMap, Safari, Tanoby, Bike, NewMetatile, OddsRoll, Roamer; // FeebasMap: Route 119, roll spent off the tile too
     public string? Item;               // white_flute, black_flute, cleanse_tag
     public (SpeciesInfo Species, int Level, int Probability)? Outbreak;
 }
 
 public sealed class Gen4WildOptions
 {
-    public bool FeebasTile, Safari, GreatMarsh, RadarShiny, RadarKeepChain = true, Sinjoh, UnownRadio;
+    public bool FeebasTile, FeebasMap, Safari, GreatMarsh, RadarShiny, RadarKeepChain = true, Sinjoh, UnownRadio; // FeebasMap: Mt. Coronet B1F
     public int Index;
     public int FishingBoost;
     public int UnownTable = 1;
@@ -282,6 +283,14 @@ public static class Generators
     }
     static bool IsFishing(string enc) => enc is "old_rod" or "good_rod" or "super_rod";
     static readonly Dictionary<string, int> FeebasSlot3 = new() { ["old_rod"] = 2, ["good_rod"] = 3, ["super_rod"] = 5 };
+    // feebasTile needs the Feebas pseudo-slot (species 349) appended at the index PokeFinder reports (docs/FACTS.md)
+    static void AssertFeebasSlot(string fn, IReadOnlyList<EncounterSlot> slots, int idx)
+    {
+        if (idx >= slots.Count || slots[idx].Species.Dex != 349)
+            throw new ArgumentException(fn + ": feebasTile requires the Feebas slot (species 349) at index " + idx + " of the rod table (the table has " + slots.Count + " slots)");
+    }
+    /// <summary>Gen 4 Everstone: LCRNG_Next() &lt; 0x7fff at trigger inherits (daycare.c:336-341, get_egg.c:241,247).</summary>
+    public const double Gen4EverstoneInheritChance = 32767.0 / 65536.0;
 
     public static readonly int[][] DpptUnownGroups =
     {
@@ -330,6 +339,7 @@ public static class Generators
         lead ??= Lead.None;
         options ??= new Gen3WildOptions();
         if (fam != "e" && IsFieldAbility(lead)) throw new ArgumentException(game + " has no lead ability effects (" + lead.Ability + ")");
+        if (options.FeebasTile && IsFishing(encounter) && fam != "frlg") AssertFeebasSlot("gen3Wild", slots, FeebasSlot3[encounter]);
         int? ltype = fam == "e" ? LeadType(lead) : null;
         var typed = ltype is int lt ? TypedSlots(slots, lt) : new List<int>();
         bool typedApplies = ltype != null && (encounter == "grass" || (encounter == "surf" && lead.Ability == "STATIC"));
@@ -374,7 +384,13 @@ public static class Generators
             }
             else
             {
-                if (IsFishing(encounter) && options.FeebasTile && fam != "frlg" && go.Mod(100) <= 49) { feebas = true; slot = FeebasSlot3[encounter]; }
+                if (IsFishing(encounter) && (options.FeebasTile || options.FeebasMap) && fam != "frlg")
+                {
+                    // CheckFeebas rolls before the spot comparison (pokeemerald :121-122,137; pokeruby :84-85,98): every cast on
+                    // Route 119 spends it (FeebasMap); only a cast on the tile (FeebasTile) can hit (D7, PokeFinder skips it off the tile)
+                    int feebasRoll = go.Mod(100);
+                    if (feebasRoll <= 49 && options.FeebasTile) { feebas = true; slot = FeebasSlot3[encounter]; }
+                }
                 if (!feebas)
                 {
                     bool forced = false;
@@ -542,7 +558,10 @@ public static class Generators
                 outList.Add(r);
             }
         }
-        outList.Sort((a, b) => a.Advances != b.Advances ? a.Advances.CompareTo(b.Advances) : a.PickupAdvances.CompareTo(b.PickupAdvances));
+        // Redraws breaks the (Advances, PickupAdvances) ties of redraw ranges; List.Sort is unstable, so without it the
+        // order of tied Emerald egg results was engine-dependent (PokeFinder's compare has no tiebreak either)
+        outList.Sort((a, b) => a.Advances != b.Advances ? a.Advances.CompareTo(b.Advances)
+            : a.PickupAdvances != b.PickupAdvances ? a.PickupAdvances.CompareTo(b.PickupAdvances) : a.Redraws.CompareTo(b.Redraws));
         return Apply(outList, filter);
     }
 
@@ -564,7 +583,7 @@ public static class Generators
         return (high << 16) | low;
     }
 
-    sealed class WildPid { public uint Pid; public int Nature; public bool CuteCharm; public int W1 = -1, W2 = -1, Tries; }
+    sealed class WildPid { public uint Pid; public int Nature; public bool CuteCharm; public int W1 = -1, W2 = -1, Tries; public bool Found; }
 
     static WildPid Gen4WildPid(Stream go, string method, Lead lead, SpeciesInfo species, bool forceOnePerfect)
     {
@@ -589,7 +608,8 @@ public static class Generators
                 var ivs = IvsFromWords(w1, w2);
                 if (ivs.Any(v => v == 31)) break;
             }
-            return new WildPid { Pid = pid, Nature = nature, W1 = w1, W2 = w2, Tries = Math.Min(t + 1, 4) };
+            // t == 4: all four creations missed a 31 -> 4 tries, Found false (JS parity)
+            return new WildPid { Pid = pid, Nature = nature, W1 = w1, W2 = w2, Tries = Math.Min(t + 1, 4), Found = t < 4 };
         }
         int nat = NatureRoll();
         uint p;
@@ -648,6 +668,7 @@ public static class Generators
         bool div = method == "J";
         lead ??= Lead.None;
         options ??= new Gen4WildOptions();
+        if (options.FeebasTile && IsFishing(encounter) && method == "J") AssertFeebasSlot("gen4Wild", slots, 5);
         int? ltype = LeadType(lead);
         var typed = ltype is int lt ? TypedSlots(slots, lt) : new List<int>();
         bool safari = options.Safari, bug = encounter == "bug_contest", honey = encounter == "honey_tree", radar = encounter == "radar";
@@ -693,7 +714,9 @@ public static class Generators
             else
             {
                 bool forced = false;
-                if (IsFishing(encounter) && options.FeebasTile && method == "J" && go.Div(2) != 0)
+                // PlayerAvatar_IsFacingFeebasTile's RandMod(2) is its first statement (feebas_fishing.c:37), reached on every
+                // cast on Mt. Coronet B1F (wild_encounters.c:407, map_header.c:194-196): FeebasMap spends it, FeebasTile can hit (D7)
+                if (IsFishing(encounter) && (options.FeebasTile || options.FeebasMap) && method == "J" && go.Div(2) != 0 && options.FeebasTile)
                 {
                     feebas = true; slot = 5;
                     if (ltype != null) go.Div(2);
@@ -731,14 +754,15 @@ public static class Generators
                     level = sl.MinLevel + go.Next() % range;
                     if (IsPressure(lead) && (div ? go.Div(2) : go.Mod(2)) != 0) level = sl.MaxLevel;
                 }
-                if (IsKeenEye(lead) && lead.Level > 5 && level <= lead.Level - 5 && (div ? go.Div(2) : go.Mod(2)) == 0)
+                // DoesAbilitySuppressEncounter runs on the regular (:920) and Safari (:966) paths; the Bug Contest (:976-986) never calls it
+                if (IsKeenEye(lead) && lead.Level > 5 && !bug && level <= lead.Level - 5 && (div ? go.Div(2) : go.Mod(2)) == 0)
                 {
                     outList.Add(Invalid(frame, "keen_eye", go.Calls)); continue;
                 }
             }
 
             uint pid; int w1, w2;
-            bool ccFlag = false; int tries = 0;
+            bool ccFlag = false; int tries = 0; bool found = false;
             if (radar && options.RadarShiny)
             {
                 int pick = -1, wantN = -1;
@@ -752,7 +776,7 @@ public static class Generators
             {
                 bool force = method == "K" && (safari || bug);
                 var res = Gen4WildPid(go, method, lead, species, force);
-                pid = res.Pid; ccFlag = res.CuteCharm; tries = res.Tries;
+                pid = res.Pid; ccFlag = res.CuteCharm; tries = res.Tries; found = res.Found;
                 if (res.W1 >= 0) { w1 = res.W1; w2 = res.W2; } else { w1 = go.Next(); w2 = go.Next(); }
             }
             int itemRoll = go.Mod(100);
@@ -777,7 +801,7 @@ public static class Generators
                 }
             }
             var r = Build(frame, pid, IvsFromWords(w1, w2), level, species, tid, sid);
-            r.EncounterSlot = slot; r.Form = form; r.Feebas = feebas; r.CuteCharm = ccFlag; r.PerfectIvTries = tries;
+            r.EncounterSlot = slot; r.Form = form; r.Feebas = feebas; r.CuteCharm = ccFlag; r.PerfectIvTries = tries; r.PerfectIvFound = found;
             r.ItemRoll = itemRoll; r.ItemClass = ItemClass(itemRoll, compound);
             r.CallsUsed = go.Calls; r.BattleAdvances = frame + go.Calls + bconst; r.Call = prng % 3; r.Chatot = ((prng % 8192) * 100) >> 13;
             r.Valid = valid;
@@ -796,8 +820,12 @@ public static class Generators
 
     // ---------------------------------------------------------------- Gen 4 eggs
     public static List<HeldEgg> Gen4EggHeld(uint seed, SpeciesInfo species, SpeciesInfo? speciesMale, long frameStart = 0, int frameCount = 10,
-        int? everstoneNature = null, bool masuda = false, uint tid = 0, uint sid = 0)
+        int? everstoneNature = null, bool masuda = false, uint tid = 0, uint sid = 0, bool everstoneProc = true)
     {
+        // The Everstone check is an LCRNG roll at trigger time (LCRNG_Next() >= 0xffff/2 -> no inheritance,
+        // pokeplatinum daycare.c:336-341; HGSS LCRandom() >= 0x7FFF, get_egg.c:241,247): it procs Gen4EverstoneInheritChance
+        // of the time. everstoneProc = false models the failed roll (plain MT PID); the trigger-time LCRNG is not tracked.
+        if (!everstoneProc) everstoneNature = null;
         var mt = new Mt19937(seed);
         for (long s = 0; s < frameStart; s++) mt.Next();
         int need = frameCount + (everstoneNature is null ? 0 : 2401);
@@ -863,6 +891,7 @@ public static class Generators
                 else inheritance = Inherit(ivs, parents, inh.ToArray(), par.ToArray(), hgss ? "index" : "fixed");
                 var r = Build(pickupStart + cnt, st.Pid, ivs, 1, st.Species, tid, sid);
                 r.Advances = st.Advances; r.PickupAdvances = pickupStart + cnt; r.Inheritance = inheritance;
+                r.EverstoneInherited = st.EverstoneInherited;
                 r.Call = prng % 3; r.Chatot = ((prng % 8192) * 100) >> 13; r.CallsUsed = go.Calls;
                 outList.Add(r);
             }

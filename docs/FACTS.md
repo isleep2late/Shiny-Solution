@@ -427,7 +427,7 @@ Call script from the frame, in order. Rolls marked *opt* are outside PokeFinder'
 | encounter odds *opt* / rock smash always | `Random()%2880 < rate*16` (`:493,502`; bike ×80% `:504`, flutes/Cleanse Tag, cap 2880); rock smash `WildEncounterCheck(rate, TRUE)` `:680` | `:379,405-424`, rock smash `:531` | odds on the **separate** wild RNG `:304,669` (no main call); rock smash `:453` |
 | roamer *opt* | `Random()%4 == 0` (`src/roamer.c:216`) | `src/roamer.c:183` | `TryStartRoamerEncounter` |
 | outbreak *opt* | `Random()%100 < probability` (`:487`) | `:371` | none |
-| Feebas (fishing on the tile) | `Random()%100 > 49` -> no Feebas (`:137`), else Feebas 20-25 (`:67,784-790`) | `:98` | none |
+| Feebas (fishing on Route 119) | `Random()%100 > 49` -> no Feebas (`:137`), else Feebas 20-25 (`:67,784-790`); the roll follows the map check (`:121-122`) and precedes the spot comparison, so every cast on the map spends it (`feebasMap`) and only a cast on the tile can hit (`feebasTile`; D7) | `:84-85,98` | none |
 | typed slot | Magnet Pull on land, Static on land and water, nothing on rocks (`:432,440,445-446`): `Random()%2 != 0` -> no (`:947`), else `Random()%count` over the Steel/Electric slots unless none or all (`:931-934`) | none | none |
 | slot | `Random()%100` over 20/20/10/10/10/10/5/5/4/4/1/1 land, 60/30/5/4/1 water and rock, 70/30, 60/20/20, 40/40/15/4/1 rods (`:182-262`) | `:144-230` | `:71-130` |
 | level | `Random()%range` (`:286`); Pressure/Hustle/Vital Spirit `Random()%2 == 0` -> max, else `rand--` if nonzero (`:292-297`) | `:254` | `:172` |
@@ -441,7 +441,9 @@ Call script from the frame, in order. Rolls marked *opt* are outside PokeFinder'
 RS and FRLG have no lead effects on slot, level, nature or gender (only Stench/Illuminate on
 the odds, `pokeruby:413-419`, `pokefirered:334-346`); `gen3Wild` refuses a field ability for
 those games instead of applying it. Fishing slots are reported per rod list (old 0-1, good 0-2,
-super 0-4) as PokeFinder does; a Feebas hit reports the inserted pseudo-slot 2/3/5.
+super 0-4) as PokeFinder does; a Feebas hit reports the inserted pseudo-slot 2/3/5, which
+`feebasTile` requires (species 349) at that index of the rod table - a table without it is
+refused with the requirement in the message.
 
 ## Gen 3 eggs: `gen3EggEmerald`, `gen3EggRSFRLG`
 
@@ -489,9 +491,12 @@ bit 15 of the PID is set (`pokeemerald:784-791`).
 `pokeplatinum/src/overlay006/wild_encounters.c`; every roll is `RandMod` (division) unless noted.
 
 1. Fishing: `RandMod(100) >= rate` -> no bite (`:396`); the frame still generates, reported
-   `valid: false` (PokeFinder convention). Feebas tile: `RandMod(2) == 0` -> not a Feebas tile
-   (`feebas_fishing.c:37`); otherwise the whole table is Feebas 10-20 (`:407-420`) and the
-   normal slot roll (and the lead's typed check) still happens; reported as pseudo-slot 5.
+   `valid: false` (PokeFinder convention). Feebas: `RandMod(2) == 0` -> not a Feebas tile is the
+   first statement of `PlayerAvatar_IsFacingFeebasTile` (`feebas_fishing.c:37`), reached on every
+   cast on Mt. Coronet B1F (`:407`, `map_header.c:194-196`): `feebasMap` spends it off the tile
+   too and only `feebasTile` can hit (D7); on a hit the whole table is Feebas 10-20 (`:407-420`)
+   and the normal slot roll (and the lead's typed check) still happens; reported as pseudo-slot
+   5, which `feebasTile` requires at index 5 of the rod table.
 2. Typed slot: Magnet Pull (Steel) then Static (Electric): `RandMod(2) == 0` (`:1319`) then
    `LCRNG_Next() % count` over the matching slots unless none or all (`:1308-1312`). On water
    and fishing the Magnet Pull result is overwritten by the Static check (`:1113-1115`, BUG
@@ -540,12 +545,14 @@ Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
    `:893` is the rock-smash case). Rock smash, surf, fishing, headbutt: `LCRandom() % range`
    then Pressure `LCRandRange(2) == 0` keeps it else max (`:754-756`); Bug Contest level
    `LCRandom() % range` with no Pressure roll (`overlay_bug_contest.c:186`).
-5. Keen Eye/Intimidate *opt* (`:1153`).
+5. Keen Eye/Intimidate *opt* (`:1153`), on the regular (`:920`) and Safari (`:966`) paths only:
+   the Bug Contest path (`:976-986`) never calls `DoesAbilitySuppressEncounter`.
 6. Cute Charm `LCRandRange(3) != 0` (`:837`), nature `LCRandRange(25)` (Synchronize
    `LCRandRange(2) == 0`, `:734-737`), arithmetic PID via letter 0
    (`:846`, `pokemon.c:275,292`), IVs.
 7. Safari and Bug Contest without Cute Charm: up to four full creations (nature, PID loop,
-   IVs) until one IV is 31 (`:856-869`); `perfectIvTries` reports how many.
+   IVs) until one IV is 31 (`:856-869`); `perfectIvTries` reports how many (1..4) and
+   `perfectIvFound` whether the last one carried a 31 (false when all four missed).
 8. Held item `LCRandom() % 100` (`pokemon.c:3748`, via `:1350`).
 9. Unown: Sinjoh event hall `LCRandom() % 2` over `!`/`?` (`:1312`, map
    `MAP_RUINS_OF_ALPH_HALL_ENTRANCE_SINJOH_EVENT` = encounter bank 13,
@@ -555,10 +562,16 @@ Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
 
 ## Gen 4 eggs: `gen4EggHeld`, `gen4EggPickup`, `gen4Egg`
 
-Trigger: Everstone check on the LCRNG (`LCRNG_Next() >= 0x7fff` -> no inheritance,
-`pokeplatinum/src/overlay005/daycare.c:327-336`; HGSS `get_egg.c:235-240`), then the PID is one
-MT19937 output (`daycare.c:353`, `get_egg.c:262`), or the first MT output with the parent's
-nature and nonzero, 2400 tries (`daycare.c:361-367`, `get_egg.c:266-267`). Masuda: up to four
+Trigger: the Everstone check is an LCRNG roll, not an MT call: `LCRNG_Next() >= 0xffff/2`
+(= 0x7fff) -> no inheritance (`pokeplatinum/src/overlay005/daycare.c:336-341`; HGSS
+`LCRandom() >= 0x7FFF`, `get_egg.c:241,247`, preceded by `LCRandom() % 2` picking the holder
+when both parents hold one, `:235-240`), so the parent's nature passes only 32767/65536 of the
+time (`GEN4_EVERSTONE_INHERIT_CHANCE`). Then the PID is one MT19937 output (`daycare.c:353`,
+`get_egg.c:262`), or - when the roll passed - the first MT output with the parent's nature and
+nonzero, 2400 tries (`daycare.c:361-367`, `get_egg.c:266-267`). `everstoneNature` models the
+passed roll and `everstoneProc: false` the failed one (plain MT PID); held and pickup results
+carry `everstoneInherited`. The trigger-time LCRNG state (one call, two with two Everstones in
+HGSS) is not tracked: pickup runs on its own seed. Masuda: up to four
 ARNG rerolls until shiny (`daycare.c:722-724`, `get_egg.c:601-604`). Pickup: IV1, IV2 from
 `Pokemon_InitWith`/`CreateMon` (`daycare.c:734,764`, `get_egg.c:611,631`), then `%6 %5 %4`
 and three `%2` parents (`daycare.c:405-410`, `get_egg.c:317-325`); DPPt removes position `i`
@@ -596,9 +609,12 @@ Flawless table (IV1 state, PID, nature, PSV; frame = `lcrngDistance(seed, ivStat
 | 4 | 7FFF8D6E / FFFF8D6E | 995ABC94 / 195A3C94 | Naive / Careful | 25CE | 356,047,747 / 2,503,531,395 | 2,040,409,059 / 4,187,892,707 |
 
 So the first flawless Method 1 frame is 176,562,488 from Emerald's seed 0 (34.2 days) and
-353,872,079 from RS 0x5A0; only nine natures can be flawless (Calm, Careful, Docile, Hardy,
-Lax, Modest, Naive, Rash, Timid) and a flawless shiny needs TID^SID in one of eight 8-wide
-blocks (25C8, 29E8, 6AA8, 79F8, 8CD8, 9400, 9630, B378) - the design doc's numbers reproduce.
+353,872,079 from RS 0x5A0. The flawless natures and TID^SID blocks are per method: Method 1
+Calm/Docile/Modest/Timid with the 8-wide blocks 79F8/9630/B378, Method 2 Careful/Hardy/Lax/
+Naive/Rash with 29E8/6AA8/8CD8, Method 4 Careful/Modest/Naive/Timid with 25C8/9400. The design
+doc's "nine natures, eight blocks" (Calm, Careful, Docile, Hardy, Lax, Modest, Naive, Rash,
+Timid; 25C8, 29E8, 6AA8, 79F8, 8CD8, 9400, 9630, B378) is the union over Methods 1, 2 and 4, so
+a readout must show the set of the method in use (each set is pinned by a test).
 
 ## Reachability
 
@@ -625,7 +641,8 @@ blocks (25C8, 29E8, 6AA8, 79F8, 8CD8, 9400, 9630, B378) - the design doc's numbe
 | D3 | HGSS Bug Contest with a Pressure-family lead | slot and level only (`overlay_bug_contest.c:178-186`) | adds the Pressure `nextUShort(2)` roll (`calculateLevel<true, true>` with force) | Pressure lead in the contest (`pin D3`) |
 | D4 | HGSS Safari surf/fishing with a Pressure-family lead | slot swap on land only (`encounter_check.c:961-965`) | `Grass \|\| safari` -> swap roll on water too | Pressure lead in Safari water (`pin D4`) |
 | D5 | DPPt surf/fishing with Magnet Pull | typed pick overwritten by the Static check (`wild_encounters.c:1113-1115`) | forces the Steel slot | needs a Steel type in a water table (none shipped); pinned with a synthetic table (`pin D5`) |
-| D6 | Gen 4 Everstone | MT loops until the parent's nature (`daycare.c:353-367`, `get_egg.c:259-274`) | `EggGenerator4` ignores the parents' items | our `everstoneNature` option; the oracle vectors run with it off (`pin D6`) |
+| D6 | Gen 4 Everstone | LCRNG roll at trigger, `>= 0x7fff` fails (`daycare.c:336-341`, `get_egg.c:241,247`), then MT loops until the parent's nature (`daycare.c:353-367`, `get_egg.c:259-274`) | `EggGenerator4` ignores the parents' items | our `everstoneNature` / `everstoneProc` options; the oracle vectors run with them off (`pin D6`) |
+| D7 | Feebas roll off the tile | Route 119: `Random()%100` after the map check and before the spot comparison (`pokeemerald/src/wild_encounter.c:121-122,137`, `pokeruby:84-85,98`); Mt. Coronet B1F: `RandMod(2)` first in `PlayerAvatar_IsFacingFeebasTile` (`feebas_fishing.c:37`, via `wild_encounters.c:407`, `map_header.c:194-196`) | `feebasLocation && feebasTile` gates the roll (`WildGenerator3.cpp`, `WildGenerator4.cpp`), so an off-tile cast on the map spends no call | every off-tile cast on the map is one call later than PokeFinder's; `feebasMap` spends it, `feebasTile` can hit (`pin D7`) |
 
 Not a mechanic but a label: PokeFinder folds the four Ruins of Alph interior banks into one
 location and uses **10** for the Sinjoh-event hall (`hgss.py`, "Ruins of Alpha interior all
@@ -643,6 +660,15 @@ vector builder maps PokeFinder location 10 to `sinjoh: true`.
   land there); the decomp allows 2400 tries with the VBlank call interleaving at an unknown
   point. `maxNatureTries` defaults to 17 for parity; the `pid != 0` condition (`:477`) is applied.
 - Held items: only the roll and its class (none/common/rare); characteristics: not derived.
+- HGSS two-Everstone parents: an extra `LCRandom() % 2` at trigger picks the holder
+  (`get_egg.c:235-240`); with the trigger-time LCRNG untracked it changes nothing here. The
+  two-Ditto coin flips (`pokeemerald/src/daycare.c:437-442`, `pokeplatinum daycare.c:326-331`)
+  are dead code: two Dittos are `PARENTS_INCOMPATIBLE` in all three games
+  (`pokeemerald/src/daycare.c:1039-1040`, `pokeplatinum daycare.c:836-838`,
+  `pokeheartgold/src/get_egg.c:687-689`).
+- Emerald egg results with a redraw range are ordered by (advances, pickupAdvances, redraws);
+  PokeFinder's compare (`EggGenerator3.cpp`) has no tiebreak, so no oracle order exists for the
+  ties (`cnt - 3*redraw` collides).
 - DP battle-advance constants (+4 quick claw) come from PokeFinder, pokediamond has no C for it.
 - Safari Pokeblocks (Emerald nature shuffle), Battle Pike/Pyramid tables, double battles.
 
@@ -656,9 +682,16 @@ vector builder maps PokeFinder location 10 to `sinjoh: true`.
   ability, abilityIndex, gender, hiddenPower, hiddenPowerStrength, level, nature, shiny,
   advances, specie, encounterSlot, form, valid, battleAdvances, call, chatot, inheritance,
   pickupAdvances, redraws. Not compared: item, characteristic.
-- `node tests/test-generators.cjs`: 1955 assertions green (2256 with the C# cross file);
-  `GEN_TEST_NEGATIVE=1` corrupts one oracle PID and fails with exit 1 (2 assertions).
-- `dotnet run --project app/Tests -- --generators`: 1929 assertions green on the same
+- `node tests/test-generators.cjs`: 1986 assertions green (2287 with the C# cross file);
+  `GEN_TEST_NEGATIVE=1` corrupts one oracle PID and fails with exit 1.
+- `dotnet run --project app/Tests -- --generators`: 1959 assertions green on the same
   vectors; it writes `tests/generators-cross.json` (300 random seed/frame/method cases over
-  the vector inputs) which the JS suite recomputes bit for bit.
-- `python3 tools/check-generator-citations.py`: all 300 citations present.
+  the vector inputs, Emerald eggs with redraw ranges 0-2, Gen 4 eggs with and without the
+  Everstone roll) which the JS suite recomputes bit for bit on pid, ivs, level, slot, form,
+  advances, pickupAdvances, inheritance, perfectIvTries/Found, cuteCharm, itemRoll, redraws
+  and everstoneInherited (the first cross file omitted the last six, which hid a JS 5 vs C# 4
+  `perfectIvTries` split on Safari frames that missed all four creations).
+- Disagreement pins D1-D7 plus the Keen Eye Bug Contest, Everstone-roll, redraw-order,
+  per-method flawless-nature and Feebas-precondition checks run in both engines; each was run
+  against the pre-fix engine (or a wrong expectation) and shown to fail there.
+- `python3 tools/check-generator-citations.py`: all 323 citations present.

@@ -156,6 +156,86 @@ public static class GeneratorTests
         Check("countIvStates flawless M1", Generators.CountIvStates(new GenFilter { MinIv = 31 }, "M1").Count, 6L);
         Check("countIvStates all >= 30", Generators.CountIvStates(new GenFilter { MinIv = 30 }, "M1").Count, 260L);
         Check("exactly five 31s", Generators.FiveThirtyOneStates("M1").Count, 738);
+        // per-method flawless natures / TID^SID blocks (the "nine natures / eight blocks" is the M1+M2+M4 union)
+        string[] NatureNames = { "Hardy", "Lonely", "Brave", "Adamant", "Naughty", "Bold", "Docile", "Relaxed", "Impish", "Lax", "Timid", "Hasty", "Serious", "Jolly", "Naive", "Modest", "Mild", "Quiet", "Bashful", "Rash", "Calm", "Gentle", "Sassy", "Careful", "Quirky" };
+        string[] Natures(string m) => Generators.FlawlessTable(m).Select(t => NatureNames[t.Nature]).Distinct().OrderBy(n => n, StringComparer.Ordinal).ToArray();
+        string[] Blocks(string m) => Generators.FlawlessTable(m).Select(t => (t.Psv & 0xFFF8).ToString("X4")).Distinct().OrderBy(n => n, StringComparer.Ordinal).ToArray();
+        Check("flawless Method 1 natures", Natures("M1"), new[] { "Calm", "Docile", "Modest", "Timid" });
+        Check("flawless Method 1 TID^SID blocks", Blocks("M1"), new[] { "79F8", "9630", "B378" });
+        Check("flawless Method 2 natures", Natures("M2"), new[] { "Careful", "Hardy", "Lax", "Naive", "Rash" });
+        Check("flawless Method 4 natures", Natures("M4"), new[] { "Careful", "Modest", "Naive", "Timid" });
+        Check("flawless Method 4 TID^SID blocks", Blocks("M4"), new[] { "25C8", "9400" });
+        {
+            // D3 extension: the Bug Contest path (encounter_check.c:976-986) never calls DoesAbilitySuppressEncounter
+            var bugCase = V.GetProperty("wild4").EnumerateArray().First(c => S(c, "encounter") == "bug_contest");
+            var bslots = Slots(bugCase.GetProperty("slots"));
+            var noLead = Generators.Gen4Wild(0x1234, "heartgold", "K", "bug_contest", bslots, 0, null, null, 0, 40, tid, sid);
+            var keenEye = Generators.Gen4Wild(0x1234, "heartgold", "K", "bug_contest", bslots, 0, new Lead("KEEN_EYE", 0, 'M', 40), null, 0, 40, tid, sid);
+            Check("pin D3: bug contest Keen Eye lead adds no suppress roll", keenEye.Select(r => (r.Valid, r.Pid, r.Level, r.CallsUsed)).ToList(), noLead.Select(r => (r.Valid, r.Pid, r.Level, r.CallsUsed)).ToList());
+            // Safari/Bug Contest 4x retry: tries in 1..4, found iff the final IVs hold a 31, and some frame misses all four
+            Check("bug contest perfectIvTries within 1..4", noLead.All(r => r.PerfectIvTries >= 1 && r.PerfectIvTries <= 4), true);
+            Check("bug contest perfectIvFound iff an IV is 31", noLead.Select(r => r.PerfectIvFound).ToList(), noLead.Select(r => r.Ivs.Contains(31)).ToList());
+            Check("bug contest some frame misses all four tries", noLead.Any(r => r.PerfectIvTries == 4 && !r.PerfectIvFound), true);
+        }
+        {
+            // D6 extension: the Everstone check is an LCRNG roll at trigger (daycare.c:336-341, get_egg.c:241,247);
+            // everstoneProc = false is the failed branch (plain MT PIDs)
+            var elec = Species(V.GetProperty("wild4").EnumerateArray().First().GetProperty("slots")[0].GetProperty("species"));
+            var plain = Generators.Gen4EggHeld(0, elec, null, 0, 5, null, false, tid, sid);
+            var inherit = Generators.Gen4EggHeld(0, elec, null, 0, 5, 7, false, tid, sid);
+            var failed = Generators.Gen4EggHeld(0, elec, null, 0, 5, 7, false, tid, sid, everstoneProc: false);
+            Check("pin D6: everstone egg PIDs carry the nature", inherit.Select(h => (int)(h.Pid % 25)).ToList(), new List<int> { 7, 7, 7, 7, 7 });
+            Check("pin D6: failed Everstone roll gives the plain MT PIDs", failed.Select(h => h.Pid).ToList(), plain.Select(h => h.Pid).ToList());
+            Check("pin D6: everstoneInherited flags", (inherit.All(h => h.EverstoneInherited), failed.Any(h => h.EverstoneInherited)), (true, false));
+            Check("pin D6: inherit chance is 32767/65536", Generators.Gen4EverstoneInheritChance, 32767.0 / 65536.0);
+            var parents = new EggParents { Ivs = new[] { new[] { 31, 31, 31, 31, 31, 31 }, new int[6] } };
+            var pick = Generators.Gen4EggPickup(0, inherit.Take(2).ToList(), "platinum", parents, 0, 1, tid, sid);
+            Check("pin D6: pickup results carry everstoneInherited", pick.Select(r => (r.EverstoneInherited, r.Nature)).ToList(), new List<(bool, int)> { (true, 7), (true, 7) });
+        }
+        {
+            // D7: the Feebas roll is spent on every cast on the Feebas map (pokeemerald wild_encounter.c:121-122,137;
+            // pokeplatinum feebas_fishing.c:37 via wild_encounters.c:407); FeebasMap spends it, only FeebasTile can hit
+            var f3 = V.GetProperty("wild3").EnumerateArray().First(c => S(c, "name") == "Emerald Route 119 Feebas");
+            var s3 = Slots(f3.GetProperty("slots"));
+            var off = Generators.Gen3Wild(U(f3, "seed"), "emerald", S(f3, "encounter")!, s3, I(f3, "rate"), null, new Gen3WildOptions(), "M1", 0, 40, tid, sid);
+            var map = Generators.Gen3Wild(U(f3, "seed"), "emerald", S(f3, "encounter")!, s3, I(f3, "rate"), null, new Gen3WildOptions { FeebasMap = true }, "M1", 0, 40, tid, sid);
+            var tile = Generators.Gen3Wild(U(f3, "seed"), "emerald", S(f3, "encounter")!, s3, I(f3, "rate"), null, new Gen3WildOptions { FeebasTile = true }, "M1", 0, 40, tid, sid);
+            // nothing precedes the Feebas roll in the Gen 3 script: frame f with FeebasMap is plain frame f+1, one call longer
+            static (uint, int[], int, int, int) Proj(GenResult r) => (r.Pid, r.Ivs, r.Level, r.EncounterSlot, r.CallsUsed);
+            Check("pin D7: Emerald feebasMap frame f is plain frame f+1 plus one call", map.Take(39).Select(Proj).ToList(), off.Skip(1).Select(r => (r.Pid, r.Ivs, r.Level, r.EncounterSlot, r.CallsUsed + 1)).ToList());
+            Check("pin D7: Emerald feebasMap never yields Feebas", map.All(r => !r.Feebas && r.EncounterSlot < 2), true);
+            Check("pin D7: Emerald feebasMap differs from the no-roll run", map.Where((r, i) => r.Pid != off[i].Pid).Any(), true);
+            Check("pin D7: Emerald feebasTile hits iff Random()%100 <= 49", tile.Select(r => r.Feebas).ToList(), tile.Select(r => (int)((Lcrng.Jump(U(f3, "seed"), (ulong)r.Frame + 1) >> 16) % 100) <= 49).ToList());
+            Check("pin D7: Emerald feebasTile hits on some frames", tile.Any(r => r.Feebas), true);
+            Check("pin D7: Emerald off-tile results equal the tile's non-Feebas frames", map.Where((r, i) => !tile[i].Feebas).Select(Proj).ToList(), tile.Where(r => !r.Feebas).Select(Proj).ToList());
+            var f4 = V.GetProperty("wild4").EnumerateArray().First(c => S(c, "name") == "Mt Coronet Feebas");
+            var s4 = Slots(f4.GetProperty("slots"));
+            var off4 = Generators.Gen4Wild(U(f4, "seed"), "platinum", "J", S(f4, "encounter")!, s4, I(f4, "rate"), null, new Gen4WildOptions(), 0, 40, tid, sid);
+            var map4 = Generators.Gen4Wild(U(f4, "seed"), "platinum", "J", S(f4, "encounter")!, s4, I(f4, "rate"), null, new Gen4WildOptions { FeebasMap = true }, 0, 40, tid, sid);
+            var tile4 = Generators.Gen4Wild(U(f4, "seed"), "platinum", "J", S(f4, "encounter")!, s4, I(f4, "rate"), null, new Gen4WildOptions { FeebasTile = true }, 0, 40, tid, sid);
+            // J script: call f+1 nibble, then (FeebasMap) call f+2 RandMod(2) and call f+3 slot RandMod(100); without it the slot is call f+2
+            static int Div(uint s, int n) => (int)((s >> 16) / (uint)(0xFFFF / n + 1));
+            uint cs = U(f4, "seed");
+            Check("pin D7: DPPt plain slot is RandMod(100) at call f+2", off4.Select(r => r.EncounterSlot).ToList(), off4.Select(r => Generators.JSlot(Div(Lcrng.Jump(cs, (ulong)r.Frame + 2), 100), "super_rod")).ToList());
+            Check("pin D7: DPPt feebasMap slot is RandMod(100) at call f+3", map4.Select(r => r.EncounterSlot).ToList(), map4.Select(r => Generators.JSlot(Div(Lcrng.Jump(cs, (ulong)r.Frame + 3), 100), "super_rod")).ToList());
+            Check("pin D7: DPPt feebasMap never yields Feebas", map4.All(r => !r.Feebas && r.EncounterSlot < 5), true);
+            Check("pin D7: DPPt feebasTile hits iff RandMod(2) at call f+2 is nonzero", tile4.Select(r => r.Feebas).ToList(), tile4.Select(r => Div(Lcrng.Jump(cs, (ulong)r.Frame + 2), 2) != 0).ToList());
+            Check("pin D7: DPPt feebasTile hits on some frames", tile4.Any(r => r.Feebas), true);
+            Check("pin D7: DPPt off-tile results equal the tile's non-Feebas frames", map4.Where((r, i) => !tile4[i].Feebas).Select(Proj).ToList(), tile4.Where(r => !r.Feebas).Select(Proj).ToList());
+            string msg3 = "", msg4 = "";
+            try { Generators.Gen3Wild(0, "emerald", "old_rod", s3.Take(2).ToList(), 30, null, new Gen3WildOptions { FeebasTile = true }); } catch (ArgumentException e) { msg3 = e.Message; }
+            try { Generators.Gen4Wild(0, "platinum", "J", "super_rod", s4.Take(5).ToList(), 25, null, new Gen4WildOptions { FeebasTile = true }); } catch (ArgumentException e) { msg4 = e.Message; }
+            Check("feebasTile precondition names the Feebas slot (gen3)", msg3.Contains("feebasTile requires the Feebas slot (species 349) at index 2"), true);
+            Check("feebasTile precondition names the Feebas slot (gen4)", msg4.Contains("feebasTile requires the Feebas slot (species 349) at index 5"), true);
+        }
+        {
+            // Emerald egg redraw ranges tie on (Advances, PickupAdvances); the order is (Advances, PickupAdvances, Redraws)
+            var e3 = V.GetProperty("egg3").EnumerateArray().First(c => B(c, "emerald"));
+            var r3 = Generators.Gen3EggEmerald(0, S(e3, "method")!, 18, 0, 2, 70, Species(e3.GetProperty("species")), null, Parents(e3), 0, 10, 0, 5, tid, sid);
+            var keys = r3.Select(x => (x.Advances, x.PickupAdvances, x.Redraws)).ToList();
+            Check("egg3 redraw range produces (advances, pickupAdvances) ties", keys.GroupBy(k => (k.Advances, k.PickupAdvances)).Any(g => g.Count() > 1), true);
+            Check("egg3 results ordered by (advances, pickupAdvances, redraws)", keys.Zip(keys.Skip(1)).All(p => p.First.CompareTo(p.Second) < 0), true);
+        }
         var fl = Generators.FlawlessTable("M1");
         Check("first flawless frame from Emerald seed 0", fl.Select(s => Generators.FrameForIvState(0, s.IvState)).Min(), 176562488L);
         Check("first flawless frame from RS seed 0x5A0", fl.Select(s => Generators.FrameForIvState(0x5A0, s.IvState)).Min(), 353872079L);
@@ -242,16 +322,18 @@ public static class GeneratorTests
                 {
                     var all = V.GetProperty("egg4").EnumerateArray().ToList(); var c = all[(int)(Rand() % all.Count)];
                     int? ever = (Rand() % 2) == 0 ? null : (int)(Rand() % 25);
-                    var held = Generators.Gen4EggHeld(seed, Species(c.GetProperty("species")), null, frameStart, frameCount, ever, B(c, "masuda"), tid, sid);
+                    bool proc = ((Rand() >> 8) & 1) == 0; // not the low bit: this LCG's low bit alternates, which made proc always false
+                    var held = Generators.Gen4EggHeld(seed, Species(c.GetProperty("species")), null, frameStart, frameCount, ever, B(c, "masuda"), tid, sid, proc);
                     r = Generators.Gen4EggPickup(seed2, held, S(c, "game")!, Parents(c), 0, frameCount, tid, sid);
-                    inputs = new { seedPickup = seed2, game = S(c, "game"), species = c.GetProperty("species"), parentIvs = c.GetProperty("parentIvs"), masuda = B(c, "masuda"), everstoneNature = ever };
+                    inputs = new { seedPickup = seed2, game = S(c, "game"), species = c.GetProperty("species"), parentIvs = c.GetProperty("parentIvs"), masuda = B(c, "masuda"), everstoneNature = ever, everstoneProc = proc };
                     break;
                 }
                 case "egg3e":
                 {
                     var c = egg3e[(int)(Rand() % egg3e.Count)];
-                    r = Generators.Gen3EggEmerald(seed, S(c, "method")!, I(c, "calibration"), 0, 0, I(c, "compatibility"), Species(c.GetProperty("species")), null, Parents(c), frameStart, frameCount, 0, frameCount, tid, sid);
-                    inputs = new { method = S(c, "method"), calibration = I(c, "calibration"), compatibility = I(c, "compatibility"), species = c.GetProperty("species"), parentIvs = c.GetProperty("parentIvs"), parentGenders = c.GetProperty("parentGenders"), parentItems = c.GetProperty("parentItems"), parentNatures = c.GetProperty("parentNatures") };
+                    int maxRedraw = (int)(Rand() % 3); // 0..2: redraw ranges create (advances, pickupAdvances) ties whose order is pinned
+                    r = Generators.Gen3EggEmerald(seed, S(c, "method")!, I(c, "calibration"), 0, maxRedraw, I(c, "compatibility"), Species(c.GetProperty("species")), null, Parents(c), frameStart, frameCount, 0, frameCount, tid, sid);
+                    inputs = new { method = S(c, "method"), calibration = I(c, "calibration"), maxRedraw, compatibility = I(c, "compatibility"), species = c.GetProperty("species"), parentIvs = c.GetProperty("parentIvs"), parentGenders = c.GetProperty("parentGenders"), parentItems = c.GetProperty("parentItems"), parentNatures = c.GetProperty("parentNatures") };
                     break;
                 }
                 default:
@@ -263,7 +345,8 @@ public static class GeneratorTests
                 }
             }
             var results = r.Select(x2 => x2.Valid
-                ? (object)new { frame = x2.Frame, pid = x2.Pid, ivs = x2.Ivs, level = x2.Level, slot = x2.EncounterSlot, form = x2.Form, adv = x2.Advances, pick = x2.PickupAdvances, inh = x2.Inheritance, valid = true }
+                ? (object)new { frame = x2.Frame, pid = x2.Pid, ivs = x2.Ivs, level = x2.Level, slot = x2.EncounterSlot, form = x2.Form, adv = x2.Advances, pick = x2.PickupAdvances, inh = x2.Inheritance,
+                    tries = x2.PerfectIvTries, found = x2.PerfectIvFound, cc = x2.CuteCharm, item = x2.ItemRoll, redraws = x2.Redraws, ever = x2.EverstoneInherited, valid = true }
                 : new { frame = x2.Frame, valid = false }).ToList();
             var caseObj = new Dictionary<string, object?> { ["kind"] = kind, ["seed"] = seed, ["frameStart"] = frameStart, ["frameCount"] = frameCount, ["tid"] = tid, ["sid"] = sid, ["results"] = results };
             foreach (var p in inputs.GetType().GetProperties()) caseObj[p.Name] = p.GetValue(inputs);

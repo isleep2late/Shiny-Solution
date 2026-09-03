@@ -290,6 +290,14 @@
     }
   }
   var FEEBAS_SLOT3 = { old_rod: 2, good_rod: 3, super_rod: 5 };
+  // feebasTile needs the Feebas pseudo-slot (species 349) appended at the index PokeFinder reports
+  // (docs/FACTS.md, Gen 3 wild / Method J); fail early with the requirement instead of "slot N missing"
+  function assertFeebasSlot(fn, slots, idx) {
+    var s = slots[idx];
+    if (!s || !s.species || s.species.dex !== 349) {
+      throw new Error(fn + ": feebasTile requires the Feebas slot (species 349) at index " + idx + " of the rod table (the table has " + slots.length + " slots)");
+    }
+  }
   function isFishing(enc) { return enc === "old_rod" || enc === "good_rod" || enc === "super_rod"; }
 
   // pokeplatinum/src/overlay006/wild_encounters.c:116-179 (index = table id - 1)
@@ -354,6 +362,7 @@
     }
     var method = (o.method || "M1").toUpperCase();
     var opt = o.options || {};
+    if (opt.feebasTile && isFishing(enc) && game !== "frlg") assertFeebasSlot("gen3Wild", slots, FEEBAS_SLOT3[enc]);
     var tid = o.tid || 0, sid = o.sid || 0;
     var start = o.frameStart || 0;
     var count = o.frameCount === undefined ? 10 : o.frameCount;
@@ -412,9 +421,12 @@
       if (outbreakHit) {
         speciesRec = opt.outbreak.species; level = opt.outbreak.level; slot = -1;
       } else {
-        if (isFishing(enc) && opt.feebasTile && game !== "frlg") {
-          // CheckFeebas: pokeemerald :137, pokeruby :98
-          if (go.mod(100) <= 49) { feebas = true; slot = FEEBAS_SLOT3[enc]; }
+        if (isFishing(enc) && (opt.feebasTile || opt.feebasMap) && game !== "frlg") {
+          // CheckFeebas: the 50% roll comes right after the Route 119 map check and BEFORE the spot
+          // comparison (pokeemerald :121-122,137; pokeruby :84-85,98), so every cast on the map spends it
+          // (feebasMap); only a cast on the tile (feebasTile) can hit. PokeFinder skips it off the tile (D7).
+          var feebasRoll = go.mod(100);
+          if (feebasRoll <= 49 && opt.feebasTile) { feebas = true; slot = FEEBAS_SLOT3[enc]; }
         }
         if (!feebas) {
           var forced = false;
@@ -628,7 +640,9 @@
         out.push(r);
       }
     }
-    out.sort(function (a, b) { return a.advances - b.advances || a.pickupAdvances - b.pickupAdvances; });
+    // redraws breaks the (advances, pickupAdvances) ties that redraw ranges create (cnt - 3*redraw collides);
+    // PokeFinder's compare (EggGenerator3.cpp) has no tiebreak, so no oracle order exists for them
+    out.sort(function (a, b) { return a.advances - b.advances || a.pickupAdvances - b.pickupAdvances || a.redraws - b.redraws; });
     return applyFilter(out, c.filter);
   }
 
@@ -731,7 +745,8 @@
         var ivs = ivsFromWords(w1, w2);
         if (ivs.hp === 31 || ivs.atk === 31 || ivs.def === 31 || ivs.spe === 31 || ivs.spa === 31 || ivs.spd === 31) break;
       }
-      return { pid: pid, nature: nature, cuteCharm: false, w1: w1, w2: w2, tries: t + 1 };
+      // t == 4 means all four creations missed a 31: report 4 tries and perfectIvFound false (C# parity)
+      return { pid: pid, nature: nature, cuteCharm: false, w1: w1, w2: w2, tries: Math.min(t + 1, 4), found: t < 4 };
     }
     nature = natureRoll();
     do { var lo = go.next(); var hi = go.next(); pid = u32((hi << 16) | lo); } while (pid % 25 !== nature);
@@ -763,6 +778,7 @@
     var slots = o.slots || [];
     var lead = normalizeLead(o.lead);
     var opt = o.options || {};
+    if (opt.feebasTile && isFishing(enc) && method === "J") assertFeebasSlot("gen4Wild", slots, 5);
     var tid = o.tid || 0, sid = o.sid || 0;
     var start = o.frameStart || 0;
     var count = o.frameCount === undefined ? 10 : o.frameCount;
@@ -816,10 +832,13 @@
         sl = slots[slot]; species = sl.species; level = sl.maxLevel;
       } else {
         var forced = false;
-        if (isFishing(enc) && opt.feebasTile && method === "J") {
-          // PlayerAvatar_IsFacingFeebasTile: overlay006/feebas_fishing.c:37 (RandMod(2)==0 -> not Feebas);
-          // the whole table is then Feebas (:407-420) and the normal slot roll still happens (:1121-1127)
-          if (go.div(2) !== 0) {
+        if (isFishing(enc) && (opt.feebasTile || opt.feebasMap) && method === "J") {
+          // PlayerAvatar_IsFacingFeebasTile: overlay006/feebas_fishing.c:37 (RandMod(2)==0 -> not Feebas) is the
+          // first statement of the function, reached on every cast on Mt. Coronet B1F (wild_encounters.c:407,
+          // map_header.c:194-196) whether or not the tile matches (feebasMap); a hit needs the tile (feebasTile).
+          // The whole table is then Feebas (:407-420) and the normal slot roll still happens (:1121-1127).
+          var feebasRoll4 = go.div(2);
+          if (feebasRoll4 !== 0 && opt.feebasTile) {
             feebas = true; slot = 5;
             if (ltype !== null) go.div(2); // TryGetSlotForTypeMatchAbility for the lead's ability (:1319)
             go.div(100); // GetRodEncounterSlot (:872)
@@ -869,8 +888,9 @@
           level = sl.minLevel + rand;
           if (isPressure(lead)) { if ((div ? go.div(2) : go.mod(2)) !== 0) level = sl.maxLevel; }
         }
-        if (isKeenEye(lead) && lead.level > 5 && enc !== "honey_tree") {
-          // FirstMonAbilityPreventsEncounter :1359-1378 / DoesAbilitySuppressEncounter :1144-1160
+        if (isKeenEye(lead) && lead.level > 5 && enc !== "honey_tree" && !bug) {
+          // FirstMonAbilityPreventsEncounter :1359-1378 / DoesAbilitySuppressEncounter :1144-1160, called from the
+          // regular (:920) and Safari (:966) paths only: the Bug Contest path (:976-986) never rolls it
           if (level <= lead.level - 5 && (div ? go.div(2) : go.mod(2)) === 0) {
             out.push(invalid(frame, "keen_eye", go.calls)); continue;
           }
@@ -891,7 +911,7 @@
         var force = method === "K" && (safari || bug);
         var res = gen4WildPid(go, method, lead, species, force);
         pid = res.pid; nature = res.nature;
-        if (res.w1 !== undefined) { w1 = res.w1; w2 = res.w2; extra.perfectIvTries = res.tries; }
+        if (res.w1 !== undefined) { w1 = res.w1; w2 = res.w2; extra.perfectIvTries = res.tries; extra.perfectIvFound = res.found; }
         else { w1 = go.next(); w2 = go.next(); }
         extra.cuteCharm = res.cuteCharm;
       }
@@ -955,6 +975,12 @@
     var count = o.frameCount === undefined ? 10 : o.frameCount;
     var tid = o.tid || 0, sid = o.sid || 0;
     var everstone = o.everstoneNature === undefined ? null : o.everstoneNature;
+    // The Everstone check is an LCRNG roll at trigger time, not an MT call: LCRNG_Next() >= 0xffff/2 (= 0x7fff)
+    // -> no inheritance (pokeplatinum/src/overlay005/daycare.c:336-341; HGSS LCRandom() >= 0x7FFF, get_egg.c:241,247),
+    // so the parent's nature passes only GEN4_EVERSTONE_INHERIT_CHANCE (32767/65536) of the time. everstoneProc: false
+    // models the failed roll (the PID is the plain MT output). The trigger-time LCRNG state itself is not tracked.
+    var proc = o.everstoneProc === undefined ? true : !!o.everstoneProc;
+    if (!proc) everstone = null;
     var mt = new gen4.Mt19937(seed >>> 0);
     for (var s = 0; s < start; s++) mt.next();
     var buf = [];
@@ -977,7 +1003,7 @@
           for (var m = 0; m < 4; m++) { pid = arngNext(pid); if (core.isShiny(pid, tid, sid)) break; }
         }
       }
-      held.push({ advances: start + i, pid: pid >>> 0, species: eggSpeciesFor(pid, o), natureTries: tries });
+      held.push({ advances: start + i, pid: pid >>> 0, species: eggSpeciesFor(pid, o), natureTries: tries, everstoneInherited: everstone !== null });
     }
     return held;
   }
@@ -1031,6 +1057,7 @@
         }
         out.push(buildResult(start + cnt, st.pid, ivs, 1, st.species, tid, sid, {
           advances: st.advances, pickupAdvances: start + cnt, inheritance: inheritance, inheritanceArray: ivArray(inheritance),
+          everstoneInherited: !!st.everstoneInherited,
           call: prng % 3, chatot: ((prng % 8192) * 100) >> 13, callsUsed: go.calls
         }));
       }
@@ -1247,6 +1274,7 @@
     gen4StarterTriple: gen4StarterTriple,
     gen4Wild: gen4Wild,
     radarShinyOdds: radarShinyOdds,
+    GEN4_EVERSTONE_INHERIT_CHANCE: 32767 / 65536, // LCRNG_Next() < 0x7fff at trigger (daycare.c:336-341, get_egg.c:241,247)
     gen4EggHeld: gen4EggHeld,
     gen4EggPickup: gen4EggPickup,
     gen4Egg: gen4Egg,
