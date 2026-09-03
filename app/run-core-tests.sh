@@ -157,6 +157,39 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# The desktop wizard panel's pure part (app/App/WizardSupport.cs, compiled into the test project) against
+# tests/wizard-panel-vectors.json, emitted from the web app's wizard tab by tools/gen-wizard-panel-vectors.cjs: the three
+# self-test scenarios (Groudon Method 4 at frame 3 with the typed outcome, the flawless Emerald limit, Route 111 at frame 7,
+# the gate seed 7B0448D1 at frame 0 with the coin flips and 500 -> 503, Route 222 Magnet Pull) and 20 random wanted-IV
+# searches: the hit / row lists, the cards, the procedures, the search lines, the store split, JavaScript's number formats.
+dotnet run --project app/Tests -c Release --no-build -- --wizard-panel tests/wizard-panel-vectors.json
+
+# Negative control: a corrupted copy (one Gen 3 hit's PID bumped, one Gen 4 row's delay bumped, one feasibility line's number
+# changed, the RUN value in force replaced by the practice sample's) must FAIL, and is shown failing.
+corrupted=$(mktemp --suffix=.json)
+python3 - tests/wizard-panel-vectors.json "$corrupted" <<'PY'
+import json, sys
+v = json.load(open(sys.argv[1]))
+s = v["scenarios"]
+h = s["groudon"]["hits"][0].split("|"); h[1] = "%08X" % ((int(h[1], 16) + 1) & 0xFFFFFFFF); s["groudon"]["hits"][0] = "|".join(h)
+r = s["gate"]["rows"][0].split("|"); r[3] = str(int(r[3]) + 1); s["gate"]["rows"][0] = "|".join(r)
+assert s["flawless"]["lines"][2].startswith("Feasibility: about 0.000140"), "negative control setup: the flawless feasibility line changed"
+s["flawless"]["lines"][2] = s["flawless"]["lines"][2].replace("0.000140", "0.000141", 1)
+st = v["store"]
+assert st["practice"]["value"]["calibratedDelay"] == 560, "negative control setup: the practice value is not 560"
+st["run"]["value"] = dict(st["practice"]["value"])
+json.dump(v, open(sys.argv[2], "w"))
+PY
+if dotnet run --project app/Tests -c Release --no-build -- --wizard-panel "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted wizard panel vectors, C#): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted wizard panel vectors, C#): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -5 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # SeedTime4.cs (Gen 4 seed-to-time, calibrate rows, advance planner, PKHeX-semantics LCRNG reversal, the
 # reachability search) against the same vectors the JS suite checks (tests/seedtime4-vectors.json).
 dotnet run --project app/Tests -c Release --no-build -- --seedtime4 tests/seedtime4-vectors.json

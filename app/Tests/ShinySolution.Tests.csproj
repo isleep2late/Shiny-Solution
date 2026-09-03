@@ -15,5 +15,9 @@
     <!-- the Gen 2 TID panel's pure part (Gen2TidSupport.cs: resolution, text, the bin guards and the store split), checked
          against the web tab's numbers and text in tests/gen2tid-panel-vectors.json by Gen2TidPanelChecks -->
     <Compile Include="../App/Gen2TidSupport.cs" Link="Gen2TidSupport.cs" />
+    <!-- the wanted-IVs wizard panel's pure part (WizardSupport.cs: the catalogue, the searches, the card, the procedures, the
+         typed outcome and the store split), checked against the web tab's numbers and text in tests/wizard-panel-vectors.json
+         by WizardPanelChecks -->
+    <Compile Include="../App/WizardSupport.cs" Link="WizardSupport.cs" />
   </ItemGroup>
 </Project>

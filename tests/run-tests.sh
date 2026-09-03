@@ -223,6 +223,11 @@ rm -f "$corrupted" "$corrupted.out"
 # functions must be byte-identical to the committed file, so the file always says what the tab says now.
 node ../tools/gen-gen2-panel-vectors.cjs | cmp - gen2tid-panel-vectors.json && echo "gen2tid panel vectors re-emitted from the web tab: byte-identical"
 
+# The desktop wizard panel is pinned to the web tab through tests/wizard-panel-vectors.json (what webapp/wizard-ui.js computes
+# for its self-test scenarios and 20 random wanted-IV searches; app/run-core-tests.sh checks WizardSupport.cs against it). A
+# re-emit from the tab's module must be byte-identical to the committed file, so the file always says what the tab says now.
+node ../tools/gen-wizard-panel-vectors.cjs | cmp - wizard-panel-vectors.json && echo "wizard panel vectors re-emitted from the web tab: byte-identical"
+
 # The PRACTICE / HUNT head (webapp/hunt/hunt-panel.js): its Gen 1 menu-box pipeline over the shared fixtures must equal
 # RNG Solution's, frame for frame and event for event (tests/fixtures/hunt/gen1-parity.json, emitted by RNG Solution's
 # tests/fixtures/hunt/emit_parity.py; the PNG poll gen1-gba-hd-menu/ and the real GBA HD timeline gba-timeline.csv).
