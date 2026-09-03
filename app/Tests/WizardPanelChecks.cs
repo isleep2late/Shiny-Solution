@@ -246,11 +246,15 @@ static class WizardPanelChecks
     static Dictionary<string, WizardCalEntry> StoreOf(JsonElement e) => JsonSerializer.Deserialize<Dictionary<string, WizardCalEntry>>(e.GetRawText()) ?? new();
     static WizardGen4Row RowOf(WizardGen4Result r, int index) => r.Rows[index];
 
-    public static int Run(string vectorsPath)
+    public static int Run(string vectorsPath, string? citationsPath = null)
     {
         var V = JsonDocument.Parse(File.ReadAllText(vectorsPath)).RootElement;
         Wizard.SetData(WizardData.LoadEmbedded(3));
         Wizard.SetData(WizardData.LoadEmbedded(4));
+        // the decomp citation registry the procedure footnotes are rendered over: the embedded copy, or the file given
+        // (app/run-core-tests.sh passes a copy with one entry removed as its negative control)
+        Wizard.LoadCitations(citationsPath);
+        Check("the citation registry is loaded", Wizard.CitationsLoaded, "no registry");
         string when = S(V, "when");
         const string RUN = Modes.Run, PRACTICE = Modes.Practice;
 

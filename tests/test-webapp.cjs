@@ -78,6 +78,19 @@ assert("hunt/sentinel.js defines the sentinel", !!sentinel);
 assert("bundle carries no hunt code (the sentinel is absent)", !!sentinel && !html.includes(sentinel));
 assert("bundle is not marked as a hunt build", !html.includes("SHINY_HUNT_BUNDLED"));
 assert("the static page loads nothing under hunt/ (no src or href into it)", !/(src|href)="([^"]*\/)?hunt\//.test(fs.readFileSync(path.join(root, "webapp", "index.html"), "utf8")));
+// the offline copy: the static page registers sw.js over http/https only, the bundle never (the element is stripped and
+// the status line told), the manifest and icon links are gone from the bundle, and both carry the error hook's element
+{
+  const page = fs.readFileSync(path.join(root, "webapp", "index.html"), "utf8");
+  assert("the static page links the manifest and sets the theme colour", page.includes('<link rel="manifest" href="manifest.webmanifest">') && page.includes('<meta name="theme-color" content="#101418">'));
+  assert("the static page registers sw.js only over http or https", page.includes('if (!/^https?:$/.test(location.protocol)) return say(') && page.indexOf('/^https?:$/.test(location.protocol)') < page.indexOf('navigator.serviceWorker.register("sw.js")'));
+  assert("the static page and sw.js carry the same build stamp", (page.match(/window\.SHINY_BUILD = "([0-9a-f]{12})"/) || [])[1] === (fs.readFileSync(path.join(root, "webapp", "sw.js"), "utf8").match(/^const BUILD = "([0-9a-f]{12})";/m) || [])[1]);
+  assert("bundle registers no service worker", !/serviceWorker\.register\(/.test(html) && !html.includes('id="sw-register"'));
+  assert("bundle says why the offline copy is not registered", html.includes('window.SHINY_NO_SERVICE_WORKER = "the mobile bundle is one HTML string'));
+  assert("bundle writes that reason into the status line (the page's own writer left with the stripped element)", html.includes('el.textContent = "offline copy: not registered: " + window.SHINY_NO_SERVICE_WORKER + " (build " + window.SHINY_BUILD + ")"') && html.indexOf('id="sw-status"') < html.indexOf('el.textContent = "offline copy: not registered: "'));
+  assert("bundle links no manifest or icon", !/<link rel="(manifest|icon|apple-touch-icon)"/.test(html));
+  assert("bundle keeps the status line and the error hook's element", html.includes('id="sw-status"') && html.includes('id="page-errors"') && html.includes('window.addEventListener("error", function (e)'));
+}
 
 // ---- 2. the pure module in node ---------------------------------------------------------------
 globalThis.ShinyCore = require(path.join(root, "core", "rng.js"));
@@ -398,6 +411,25 @@ let wthrew = null;
 try { W.staticEntries("emerald"); } catch (e) { wthrew = e.message; }
 assert("the wizard refuses to resolve before its tables are loaded", /not loaded/.test(wthrew || ""));
 W.setData(3, loadGen(3)); W.setData(4, loadGen(4));
+// the decomp citation registry (core/data/citations.json, tools/gen-citations.py from docs/FACTS.md): every decomp
+// source the procedures cite is an entry, every entry names a pret line the generator read, and the same file rides
+// in the bundle as window.ShinyCitations
+const registry = JSON.parse(fs.readFileSync(path.join(root, "core", "data", "citations.json"), "utf8"));
+W.setCitations(registry);
+{
+  const byCite = {};
+  registry.entries.forEach((e) => { byCite[e.cite] = e; });
+  assert("the registry is generated from docs/FACTS.md by tools/gen-citations.py", registry.source === "docs/FACTS.md" && registry.generator === "tools/gen-citations.py" && registry.entries.length > 100);
+  assert("every registry entry names its repository, path, lines, FACTS.md section and line, and the pret line's text", registry.entries.every((e) => e.cite === e.repo + "/" + e.path + ":" + e.lines && /^(pokeruby|pokeemerald|pokefirered|pokediamond|pokeplatinum|pokeheartgold|pokered|pokeyellow|pokecrystal|pokegold)$/.test(e.repo) && typeof e.section === "string" && e.section.length > 0 && Number.isInteger(e.facts_line) && typeof e.first_line === "string"));
+  assert("the registry entries are sorted by citation and unique", registry.entries.every((e, i) => i === 0 || registry.entries[i - 1].cite < e.cite));
+  for (const key of Object.keys(W.SOURCES)) {
+    const src = W.SOURCES[key];
+    if (src.synth) assert("source " + key + " is SYNTHESISED with the model or convention it rests on", /docs\/FACTS\.md/.test(src.synth) && src.claim.length > 10);
+    else assert("source " + key + " cites a registry entry: " + src.cite, !!byCite[src.cite]);
+  }
+  assert("the bundle carries the registry as window.ShinyCitations", html.includes("window.ShinyCitations = {") && html.includes(JSON.stringify(registry.entries[0].cite)));
+  assert("the static page's gen1-data.js carries the registry", fs.existsSync(path.join(root, "webapp", "gen1-data.js")) ? fs.readFileSync(path.join(root, "webapp", "gen1-data.js"), "utf8").includes("window.ShinyCitations = {") : true);
+}
 assert("ten games in the design's order", W.GAME_ORDER.join(",") === "ruby,sapphire,emerald,firered,leafgreen,diamond,pearl,platinum,heartgold,soulsilver");
 for (const g of W.GAME_ORDER) {
   const model = W.modelOf(g);
@@ -421,6 +453,28 @@ const cardA = W.cardLines(rA.hits[0], { gen: 3, species: groudon.species, hasIds
 assert("A: the result card", cardA.includes("Groudon L45  PID 8E4231B0  nature Bashful  gender none  ability DROUGHT (slot 1)") && cardA.includes("IVs 12/22/24/30/25/27") && cardA.includes("stats at L45 150/149/141/108/97/98") && cardA.includes("shiny: no for TID 12345 / SID 54321") && cardA.includes("seed model rs/gba/boot-seed-v0"));
 const procA = W.gen3Procedure(Object.assign({ staticLabel: groudon.label }, cfgA), rA.hits[0], { mode: "STANDARD", preTimer: 5000, targetFrame: 3, calibration: 0 }).join("\n");
 assert("A: the procedure is numbered under the seed model and says no hardware session", /^1\. /m.test(procA) && /^6\. /m.test(procA) && procA.startsWith("Procedure (rs/gba/boot-seed-v0; EMPIRICAL / model output: no hardware session"));
+// the footnotes: steps 1-5 marked in order, the sources block after the steps, the Ruby seed line with its FACTS.md
+// section and the pret line it names, the timer model SYNTHESISED, no problem
+assert("A: steps 1-5 carry footnote markers before the seed model label, step 6 none", [1, 2, 3, 4, 5].every((n) => new RegExp("^" + n + "\\. .* \\[\\^" + n + "\\] \\[rs/gba/boot-seed-v0\\]$", "m").test(procA)) && /^6\. [^\[]*\[rs\/gba\/boot-seed-v0\]$/m.test(procA));
+assert("A: the sources block follows the steps", /\n6\. .*\nSources: decomp lines from docs\/FACTS\.md through the registry core\/data\/citations\.json; SYNTHESISED marks a source with no decomp line\.\n  \[\^1\] /.test(procA));
+assert("A: the seed footnote is the registry's Ruby RTC line under its FACTS.md section", procA.includes("\n  [^2] pokeruby/src/rtc.c:13,134-140 (docs/FACTS.md: Gen 3 (Game Boy Advance) / When each game seeds): with a dead battery the RTC reports its power-failure flag"));
+assert("A: the idle advance footnote is pokeruby's VBlank Random()", procA.includes("\n  [^3] pokeruby/src/main.c:328 (docs/FACTS.md: Gen 3 (Game Boy Advance) / The idle advance): Random() runs once in every VBlank"));
+assert("A: the timer and calibration footnotes are SYNTHESISED, naming EonTimer", procA.includes("\n  [^4] SYNTHESISED (no decomp line; EonTimer's frame model, docs/FACTS.md Timer models): ") && procA.includes("\n  [^5] SYNTHESISED (no decomp line; EonTimer's frame calibration, docs/FACTS.md Timer models): "));
+assert("A: no footnote is outside the registry", W.procedureProblems(procA).length === 0);
+// the negative control, in memory: the registry without the Ruby RTC line makes that footnote NOT IN THE REGISTRY and
+// procedureProblems names it; with no registry at all every decomp footnote says so; the registry restored, none
+{
+  W.setCitations({ entries: registry.entries.filter((e) => e.cite !== "pokeruby/src/rtc.c:13,134-140") });
+  const cut = W.gen3Procedure(Object.assign({ staticLabel: groudon.label }, cfgA), rA.hits[0], { mode: "STANDARD", preTimer: 5000, targetFrame: 3, calibration: 0 });
+  const problems = W.procedureProblems(cut);
+  assert("negative control: a registry without the Ruby RTC line is reported (one problem naming the line)", problems.length === 1 && problems[0].startsWith("  [^2] pokeruby/src/rtc.c:13,134-140 NOT IN THE REGISTRY (core/data/citations.json carries no such line of docs/FACTS.md): "), problems);
+  assert("negative control: the other footnotes still resolve", cut.some((l) => l.startsWith("  [^3] pokeruby/src/main.c:328 (docs/FACTS.md: ")));
+  W.setCitations(null);
+  const none = W.gen3Procedure(Object.assign({ staticLabel: groudon.label }, cfgA), rA.hits[0], { mode: "STANDARD", preTimer: 5000, targetFrame: 3, calibration: 0 });
+  assert("negative control: with no registry loaded every decomp footnote says so and the SYNTHESISED ones stand", W.procedureProblems(none).length === 3 && none.every((l) => !/^  \[\^\d+\] pokeruby/.test(l) || l.includes(" NOT IN THE REGISTRY (no citation registry is loaded): ")) && none.filter((l) => l.startsWith("  [^") && l.includes("SYNTHESISED")).length === 2);
+  W.setCitations(registry);
+  assert("the registry restored, the procedure has no problem again", W.procedureProblems(W.gen3Procedure(Object.assign({ staticLabel: groudon.label }, cfgA), rA.hits[0], { mode: "STANDARD", preTimer: 5000, targetFrame: 3, calibration: 0 })).length === 0);
+}
 const idA = W.gen3IdentifyHit(cfgA, 3, { nature: 18, ivs: ivObj(groudonVec.results[3].ivs) }, 3000);
 assert("A: the typed outcome inverts to frame 3", idA.hit && idA.hit.frame === 3 && idA.candidates === 1);
 assert("A: the typed stats invert to frame 3 too", W.gen3IdentifyHit(cfgA, 3, { nature: 18, stats: ivObj(groudonVec.results[3].stats) }, 3000).hit.frame === 3);
@@ -471,6 +525,17 @@ const tmC = { targetDelay: gateRow.delay, targetSecond: gateRow.second, calibrat
 const planC = Object.assign(globalThis.ShinySeedTime4.planAdvances(10, 137, { partyCount: 3, tools: ["walk128", "journal", "chatot"] }), { current: 10, partyCount: 3 });
 const procC = W.gen4Procedure(Object.assign({ staticLabel: turtwig.label }, cfgC), gateRow, tmC, planC).join("\n");
 assert("C: the Gen 4 procedure sets the clock, the timer phases, the coin flips and the advance plan", procC.includes("2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute") && procC.includes("target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0)") && procC.includes("open the Poketch coin toss") && procC.includes("42 x walk128 (+3 each, STRUCTURAL), 1 x chatot (+1 each, STRUCTURAL) from frame 10"));
+assert("C: the Gen 4 footnotes cite Platinum's seed formula, Method 1, the coin toss, the 128-step cycle and Chatot, with the timer and calibration SYNTHESISED", procC.includes("\n  [^1] pokeplatinum/src/pokemon.c:412,452-470 (docs/FACTS.md: ") && procC.includes("\n  [^2] pokeplatinum/src/main.c:306-315 (docs/FACTS.md: Gen 4 (Nintendo DS) / The seed): seed = ((month*day + minute + second) << 24)") && procC.includes("\n  [^3] SYNTHESISED (no decomp line; EonTimer's delay model, ") && procC.includes("\n  [^4] pokeplatinum/src/applications/poketch/coin_toss/main.c:158 (docs/FACTS.md: Gen 4 (Nintendo DS) / Seed verification): ") && procC.includes("\n  [^5] SYNTHESISED (no decomp line; EonTimer's delay calibration, ") && procC.includes("\n  [^6] pokeplatinum/src/overlay005/field_control.c:759-760,871 (docs/FACTS.md: ") && procC.includes("\n  [^7] pokeplatinum/src/sound_chatot.c:80 (docs/FACTS.md: "));
+assert("C: step 5 marks the advance tools in the plan's order and step 4 the coin toss then the calibration", /^5\. Advance to frame .* \[\^6\] \[\^7\] \[dppt\/nds\/seed-to-time-v0\]$/m.test(procC) && /^4\. Verify the seed: .* \[\^4\] \[\^5\] \[dppt\/nds\/seed-to-time-v0\]$/m.test(procC));
+assert("C: no footnote is outside the registry", W.procedureProblems(procC).length === 0);
+// every procedure the panel vectors pin (the scenarios and the 20 random searches) has its sources block and no problem
+{
+  const vectors = JSON.parse(fs.readFileSync(path.join(root, "tests", "wizard-panel-vectors.json"), "utf8"));
+  const cases = Object.values(vectors.scenarios).concat(vectors.random).filter((c) => c && Array.isArray(c.procedure));
+  assert("the panel vectors carry procedures with footnotes", cases.length >= 10 && cases.every((c) => c.procedure.some((l) => l.startsWith("Sources: decomp lines from docs/FACTS.md")) && c.procedure.filter((l) => /^  \[\^\d+\] /.test(l)).length >= 4));
+  assert("no pinned procedure has a footnote outside the registry", cases.every((c) => W.procedureProblems(c.procedure).length === 0));
+  assert("every pinned procedure marks its numbered steps in order of first use", cases.every((c) => { const marks = c.procedure.join("\n").match(/\[\^(\d+)\]/g).map((m) => parseInt(m.slice(2, -1), 10)); let max = 0; return marks.slice(0, marks.length / 2).every((n) => { if (n > max + 1) return false; max = Math.max(max, n); return true; }); }));
+}
 assert("C: the timer phases are EonTimer's delay model", JSON.stringify(globalThis.ShinyTimers.gen4Phases({ console: "NDS_SLOT1" }, tmC)) === JSON.stringify(globalThis.ShinyTimers.delayPhases({ console: "NDS_SLOT1" }, 18641, 59, globalThis.ShinyTimers.createCalibration({ console: "NDS_SLOT1" }, 500, 14))));
 // the typed coin flips identify the delay hit: the target's own flips -> 18641; the neighbour 7B0448D5's -> 18645, calibrated delay 500 -> 503
 const targetC = { year: 2000, month: 1, day: 5, hour: 4, minute: 59, second: 59, delay: 18641, seed: gate.seed };

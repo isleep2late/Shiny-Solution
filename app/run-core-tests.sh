@@ -190,6 +190,28 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# Negative control: the citation registry with the Ruby RTC entry removed (the file given in place of the embedded copy)
+# must FAIL the same check, and is shown failing: the procedure's seed footnote then says NOT IN THE REGISTRY and no
+# longer matches the web tab's line.
+corrupted=$(mktemp --suffix=.json)
+python3 - core/data/citations.json "$corrupted" <<'PY'
+import json, sys
+v = json.load(open(sys.argv[1]))
+before = len(v["entries"])
+v["entries"] = [e for e in v["entries"] if e["cite"] != "pokeruby/src/rtc.c:13,134-140"]
+assert len(v["entries"]) == before - 1, "negative control setup: the Ruby RTC entry is not in the registry"
+json.dump(v, open(sys.argv[2], "w"))
+PY
+if dotnet run --project app/Tests -c Release --no-build -- --wizard-panel tests/wizard-panel-vectors.json "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (citation registry without the Ruby RTC line, C#): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (citation registry without the Ruby RTC line, C#): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /' | cut -c1-260
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # SeedTime4.cs (Gen 4 seed-to-time, calibrate rows, advance planner, PKHeX-semantics LCRNG reversal, the
 # reachability search) against the same vectors the JS suite checks (tests/seedtime4-vectors.json).
 dotnet run --project app/Tests -c Release --no-build -- --seedtime4 tests/seedtime4-vectors.json

@@ -9,9 +9,9 @@ using ShinySolution.Core;
 namespace ShinySolution.App;
 
 // The wanted-IVs wizard panel's pure part: a port of the web tab's module (webapp/wizard-ui.js) over
-// app/Core/Generators.cs, SeedTime4.cs, Timers.cs, Gen4.cs and the six core/data/{species,encounters,
-// statics}-gen{3,4}.json files (embedded in the Core assembly, a copy beside the executable preferred:
-// docs/DATA.md). The games, consoles and seed models with their decomp text and validation status; the
+// app/Core/Generators.cs, SeedTime4.cs, Timers.cs, Gen4.cs, the six core/data/{species,encounters,
+// statics}-gen{3,4}.json files and the decomp citation registry core/data/citations.json (embedded in the
+// Core assembly, a copy beside the executable preferred: docs/DATA.md). The games, consoles and seed models with their decomp text and validation status; the
 // static / gift catalogue with the method from the creation chain and the refusals with their reason; the
 // wild tables and slots by map, kind and time of day with each game's lead effects; the wanted filter and
 // its feasibility; the Gen 3 forward search from the fixed or typed seed with the honest limit and the
@@ -1017,7 +1017,127 @@ public static class Wizard
         => CardLines(mon, Game(cfg.Game).Gen, cfg.Kind == "static" ? cfg.Species : null, cfg.Wanted.Tid, cfg.Wanted.Sid, seed, ModelOf(cfg.Game), timeText);
 
     // ---- procedures (design 5.1 step 6), numbered, every step under the seed model id ---------------------
-    // every numbered step carries the seed model id it runs under (the header line names it first)
+    // ---- the decomp citation registry (core/data/citations.json, generated from docs/FACTS.md by tools/gen-citations.py):
+    // embedded in the Core assembly as data.citations, a copy beside the executable preferred, or the file given to
+    // LoadCitations (app/Tests). Each procedure step's sources are footnotes over it, the web tab's texts word for word:
+    // a decomp line is printed with the docs/FACTS.md section the registry files it under, a source with no decomp line
+    // is marked SYNTHESISED, and a citation the registry does not carry is printed as NOT IN THE REGISTRY, which
+    // ProcedureProblems reports ----
+    static Dictionary<string, string>? _citations;
+    static bool _citationsTried;
+    public static bool CitationsLoaded { get { EnsureCitations(); return _citations is not null; } }
+    public static void SetCitations(JsonElement? registry)
+    {
+        _citationsTried = true;
+        _citations = null;
+        if (registry is not JsonElement r || r.ValueKind != JsonValueKind.Object || !r.TryGetProperty("entries", out var entries) || entries.ValueKind != JsonValueKind.Array) return;
+        var by = new Dictionary<string, string>();
+        foreach (var e in entries.EnumerateArray()) by[WJ.S(e, "cite")] = WJ.S(e, "section");
+        _citations = by;
+    }
+    public static void LoadCitations(string? path = null)
+    {
+        var beside = Path.Combine(AppContext.BaseDirectory, "citations.json");
+        try
+        {
+            if (path is not null) SetCitations(JsonDocument.Parse(File.ReadAllText(path)).RootElement.Clone());
+            else if (File.Exists(beside)) SetCitations(JsonDocument.Parse(File.ReadAllText(beside)).RootElement.Clone());
+            else
+            {
+                using var stream = typeof(Generators).Assembly.GetManifestResourceStream("data.citations");
+                if (stream is null) { SetCitations(null); return; }
+                using var reader = new StreamReader(stream, Encoding.UTF8);
+                SetCitations(JsonDocument.Parse(reader.ReadToEnd()).RootElement.Clone());
+            }
+        }
+        catch (Exception) when (path is null) { SetCitations(null); }
+    }
+    static void EnsureCitations() { if (!_citationsTried) LoadCitations(); }
+
+    public sealed record WizardSource(string? Cite, string? Synth, string Claim);
+    const string IdleClaim = "Random() runs once in every VBlank, so the RNG advances once per frame from the seed";
+    const string Gen4SeedClaim = "seed = ((month*day + minute + second) << 24) + (hour << 16) + (year - 2000) + the VBlank count since boot (the delay), one u32 with natural overflow";
+    const string Gen4StaticClaim = "Method 1 on the LCRNG: PID low | PID high, IV word 1, IV word 2, the Mersenne Twister not involved";
+    const string Gen4WildClaim = "a wild encounter goes through the wild creator: the lead's effect, the nature, PIDs until the nature matches, the IVs, then one held-item roll after them";
+    const string ChatotClaim = "each Chatot cry takes one LCRNG output for its pitch";
+    const string WalkClaim = "every 128th step updates the friendship of every party member, one LCRNG output each";
+    public static readonly Dictionary<string, WizardSource> Sources = new()
+    {
+        ["rsSeed"] = new("pokeruby/src/rtc.c:13,134-140", null, "with a dead battery the RTC reports its power-failure flag and the dummy time 2000-01-01 00:00 is read instead, so every boot seeds 0x5A0"),
+        ["eSeed"] = new("pokeemerald/src/main.c:108-110", null, "Emerald's RTC seeding is compiled out (BUGFIX), so a retail cartridge boots with the RNG state 0"),
+        ["frlgSeed"] = new("pokefirered/src/title_screen.c:351", null, "FireRed / LeafGreen start Timer1 at the title screen and seed the RNG from it at a press, so there is no fixed seed and the typed one must be the one in force"),
+        ["rsIdle"] = new("pokeruby/src/main.c:328", null, IdleClaim),
+        ["frlgIdle"] = new("pokefirered/src/main.c:412", null, IdleClaim),
+        ["eIdle"] = new("pokeemerald/src/main.c:365-366", null, "Random() runs once in every VBlank outside link, frontier and recorded battles, so the RNG advances once per frame from the seed"),
+        ["gen3Static"] = new("pokeemerald/src/pokemon.c:2218,2277-2296", null, "a static or gift is created by CreateBoxMon: PID low, PID high, IV word 1, IV word 2 (Method 2 and Method 4 skip one call)"),
+        ["gen3Wild"] = new("pokeemerald/src/wild_encounter.c:595-661", null, "a wild encounter rolls the slot, the level and the nature, then PIDs until the nature matches (Method H), before the IVs"),
+        ["gen3Timer"] = new(null, "EonTimer's frame model, docs/FACTS.md Timer models", "phase 2 is the target frame in milliseconds at the console's rate plus the calibration, after the pre-timer; GBA 16777216 Hz / 280896 cycles per frame = 59.7275 fps is the community timer's constant, not a game line"),
+        ["gen3Calibrate"] = new(null, "EonTimer's frame calibration, docs/FACTS.md Timer models", "the calibration moves by (target - hit) frames in milliseconds"),
+        ["dpptSeed"] = new("pokeplatinum/src/main.c:306-315", null, Gen4SeedClaim),
+        ["hgssSeed"] = new("pokeheartgold/src/main.c:281-284", null, Gen4SeedClaim),
+        ["hgssRtc"] = new("pokeheartgold/include/gf_rtc.h:46-51", null, "RngSeedFromRTC folds the date and the time into the seed's high bytes"),
+        ["dpptStatic"] = new("pokeplatinum/src/pokemon.c:412,452-470", null, Gen4StaticClaim),
+        ["hgssStatic"] = new("pokeheartgold/src/pokemon.c:195,226-239", null, Gen4StaticClaim),
+        ["dpptWild"] = new("pokeplatinum/src/overlay006/wild_encounters.c:1227-1235,1462", null, Gen4WildClaim + " (Method J)"),
+        ["hgssWild"] = new("pokeheartgold/src/field/encounter_check.c:988-996,1350", null, Gen4WildClaim + " (Method K)"),
+        ["gen4Timer"] = new(null, "EonTimer's delay model, docs/FACTS.md Timer models", "phase 1 = target second x 1000 + calibration + 200 - ms(target delay), padded to whole minutes; phase 2 = ms(target delay) - calibration; calibration = ms(calibrated delay) - calibrated second x 1000; NDS 59.8261 fps is the community timer's constant, not a game line"),
+        ["coinToss"] = new("pokeplatinum/src/applications/poketch/coin_toss/main.c:158", null, "each Poketch coin flip is one Mersenne Twister output modulo 2 (1 = heads); the LCRNG frame does not move"),
+        ["elmCall"] = new("pokeheartgold/src/application/pokegear/phone/scripts/phone_scripts_prof_elm.c:84-86", null, "each call to Elm is one LCRNG output, modulo 3 for E / K / P on the story states that roll three ways, modulo 2 before"),
+        ["gen4Calibrate"] = new(null, "EonTimer's delay calibration, docs/FACTS.md Timer models", "the calibrated delay moves by (hit - target) delays, x 0.75 within 10 frames"),
+        ["walk128"] = new("pokeplatinum/src/overlay005/field_control.c:759-760,871", null, WalkClaim),
+        ["walk128Hgss"] = new("pokeheartgold/src/pokemon.c:2037", null, WalkClaim),
+        ["chatot"] = new("pokeplatinum/src/sound_chatot.c:80", null, ChatotClaim),
+        ["chatotHgss"] = new("pokeheartgold/src/sound_chatot.c:59", null, ChatotClaim),
+        ["journal"] = new(null, "EMPIRICAL, a community convention; docs/FACTS.md Advance costs finds no LCRNG call in pokeplatinum/src/journal.c", "a journal page flip counts as two advances"),
+    };
+    public static string FootnoteText(int n, string key)
+    {
+        var src = Sources[key];
+        string head = "[^" + n + "] ";
+        if (src.Synth is not null) return head + "SYNTHESISED (no decomp line; " + src.Synth + "): " + src.Claim;
+        EnsureCitations();
+        if (_citations is null || !_citations.TryGetValue(src.Cite!, out var section))
+            return head + src.Cite + " NOT IN THE REGISTRY (" + (_citations is not null ? "core/data/citations.json carries no such line of docs/FACTS.md" : "no citation registry is loaded") + "): " + src.Claim;
+        return head + src.Cite + " (docs/FACTS.md: " + section + "): " + src.Claim;
+    }
+    // one procedure's footnotes: Mark(keys) returns the markers for a step (numbered in order of first use), Lines() the block
+    sealed class Footnotes
+    {
+        readonly List<string> _keys = new();
+        public string Mark(params string[] keys)
+        {
+            var sb = new StringBuilder();
+            foreach (var k in keys)
+            {
+                if (!Sources.ContainsKey(k)) throw new ArgumentException("no source named " + k);
+                int i = _keys.IndexOf(k);
+                if (i < 0) { _keys.Add(k); i = _keys.Count - 1; }
+                sb.Append(" [^").Append(i + 1).Append(']');
+            }
+            return sb.ToString();
+        }
+        public List<string> Lines()
+        {
+            var out_ = new List<string> { "Sources: decomp lines from docs/FACTS.md through the registry core/data/citations.json; SYNTHESISED marks a source with no decomp line." };
+            for (int i = 0; i < _keys.Count; i++) out_.Add("  " + FootnoteText(i + 1, _keys[i]));
+            return out_;
+        }
+    }
+    static string[] AdvanceSourceKeys(string family, AdvancePlan plan)
+    {
+        var keys = new List<string>();
+        foreach (var p in plan.Needed <= 0 ? new List<AdvanceStep>() : plan.Plan)
+        {
+            string? k = p.Tool == "walk128" ? (family == "dppt" ? "walk128" : "walk128Hgss") : p.Tool == "chatot" ? (family == "dppt" ? "chatot" : "chatotHgss") : p.Tool == "journal" ? "journal" : p.Tool == "elmCall" ? "elmCall" : null;
+            if (k is not null && !keys.Contains(k)) keys.Add(k);
+        }
+        return keys.ToArray();
+    }
+    static readonly Regex ProblemLine = new(@"^  \[\^\d+\] .* NOT IN THE REGISTRY \(", RegexOptions.Compiled);
+    public static List<string> ProcedureProblems(IEnumerable<string> lines) => lines.Where(l => ProblemLine.IsMatch(l)).ToList();
+
+    // every numbered step carries the seed model id it runs under (the header line names it first); each step's sources
+    // are marked [^n] and listed after the steps
     static List<string> LabelSteps(List<string> lines, string id)
     {
         for (int i = 1; i < lines.Count; i++) lines[i] += " [" + id + "]";
@@ -1025,35 +1145,41 @@ public static class Wizard
     }
     public static List<string> Gen3Procedure(WizardCfg cfg, GenResult hit, Gen3Model timerModel)
     {
-        var model = ModelOf(cfg.Game); var game = Game(cfg.Game);
+        var model = ModelOf(cfg.Game); var game = Game(cfg.Game); string fam = game.Family;
         double ms = FrameToMs(hit.Frame, cfg.Console);
         var phases = Timers.Gen3Phases(Settings(cfg.Console), timerModel);
+        var fn = new Footnotes();
         var lines = new List<string>();
         uint seed = cfg.Seed ?? 0;
         lines.Add("Procedure (" + model.Id + "; " + NoHardware + ")");
-        lines.Add("1. Prepare the save: " + (cfg.Kind == "static" ? "stand where the encounter starts (" + cfg.StaticLabel + ") and save; the last A that starts the battle or the gift is the timed press." : "stand on the " + KindNames[cfg.Encounter] + " tile of " + cfg.TableName + " and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash)" + (cfg.Lead is not null ? "; lead " + LeadText(cfg.Lead) : "") + "."));
-        lines.Add("2. The seed: " + (model.Kind == "fixed" ? "power on (or A+B+Start+Select soft reset) and the game seeds " + Js.Hex8(seed) + " at frame 0 (" + model.Id + ")." : "the typed seed " + Js.Hex8(seed) + " must be the one in force (" + model.Id + ": " + model.Text + ")"));
-        lines.Add("3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.");
-        lines.Add("4. Timer: phase 1 " + Js.FmtMs(phases[0]) + " (the pre-timer: power on at its end, the first long beep), phase 2 " + Js.FmtMs(phases[1]) + " = frame " + hit.Frame + " x " + Js.Fixed(1000 / FpsOf(cfg.Console), 4) + " ms " + (timerModel.Calibration >= 0 ? "+ " : "- ") + Js.Num(Math.Abs(timerModel.Calibration)) + " ms calibration: press A on the last beep. Target " + Js.FmtMs(ms) + " after the seed" + (game.Family == "e" && cfg.Kind == "static" ? " (Emerald in battle advances twice per frame: the count here is up to the press that starts it)" : "") + ".");
-        lines.Add("5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).");
+        lines.Add("1. Prepare the save: " + (cfg.Kind == "static" ? "stand where the encounter starts (" + cfg.StaticLabel + ") and save; the last A that starts the battle or the gift is the timed press." : "stand on the " + KindNames[cfg.Encounter] + " tile of " + cfg.TableName + " and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash)" + (cfg.Lead is not null ? "; lead " + LeadText(cfg.Lead) : "") + ".") + fn.Mark(cfg.Kind == "static" ? "gen3Static" : "gen3Wild"));
+        lines.Add("2. The seed: " + (model.Kind == "fixed" ? "power on (or A+B+Start+Select soft reset) and the game seeds " + Js.Hex8(seed) + " at frame 0 (" + model.Id + ")." : "the typed seed " + Js.Hex8(seed) + " must be the one in force (" + model.Id + ": " + model.Text + ")") + fn.Mark(fam == "rs" ? "rsSeed" : fam == "e" ? "eSeed" : "frlgSeed"));
+        lines.Add("3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not." + fn.Mark(fam == "rs" ? "rsIdle" : fam == "e" ? "eIdle" : "frlgIdle"));
+        lines.Add("4. Timer: phase 1 " + Js.FmtMs(phases[0]) + " (the pre-timer: power on at its end, the first long beep), phase 2 " + Js.FmtMs(phases[1]) + " = frame " + hit.Frame + " x " + Js.Fixed(1000 / FpsOf(cfg.Console), 4) + " ms " + (timerModel.Calibration >= 0 ? "+ " : "- ") + Js.Num(Math.Abs(timerModel.Calibration)) + " ms calibration: press A on the last beep. Target " + Js.FmtMs(ms) + " after the seed" + (game.Family == "e" && cfg.Kind == "static" ? " (Emerald in battle advances twice per frame: the count here is up to the press that starts it)" : "") + "." + fn.Mark("gen3Timer"));
+        lines.Add("5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3)." + fn.Mark("gen3Calibrate"));
         lines.Add("6. Repeat until the frame hit equals the target; then the card above is what the game creates.");
-        return LabelSteps(lines, model.Id);
+        var labelled = LabelSteps(lines, model.Id);
+        labelled.AddRange(fn.Lines());
+        return labelled;
     }
     public static List<string> Gen4Procedure(WizardCfg cfg, WizardGen4Row row, Gen4Model timerModel, AdvancePlan plan, long current, int partyCount)
     {
-        var model = ModelOf(cfg.Game); var game = Game(cfg.Game);
+        var model = ModelOf(cfg.Game); var game = Game(cfg.Game); string fam = game.Family;
         var settings = Settings(cfg.Console);
         var phases = Timers.Gen4Phases(settings, timerModel);
         double minutes = Timers.Gen4MinutesBefore(settings, timerModel);
+        var fn = new Footnotes();
         var lines = new List<string>();
         lines.Add("Procedure (" + model.Id + "; " + NoHardware + ")");
-        lines.Add("1. Prepare the save: " + (cfg.Kind == "static" ? "in front of " + cfg.StaticLabel + ", the last A before the battle or the gift is the frame that matters." : "on the " + KindNames[cfg.Encounter] + " tile of " + cfg.TableName + (cfg.Lead is not null ? ", lead " + LeadText(cfg.Lead) : "") + ".") + " Save with the party you will advance with (" + Js.Plural(partyCount, "member") + ").");
-        lines.Add("2. DS clock: set " + row.Year + "-" + Js.Two(row.Month) + "-" + Js.Two(row.Day) + " " + Js.Two(row.Hour) + ":" + Js.Two(row.Minute) + " and confirm it " + Js.Num(minutes) + " minute" + (minutes == 1 ? "" : "s") + " before the target minute (the countdown spans that long); target second " + row.Second + ", target delay " + row.Delay + " -> seed " + Js.Hex8(row.Seed) + " (" + model.Id + ").");
-        lines.Add("3. Timer: start it as the clock confirms; phase 1 " + Js.FmtMs(phases[0]) + " ends on the first long beep: press A to load the game from the DS menu; phase 2 " + Js.FmtMs(phases[1]) + " ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay " + Js.Num(timerModel.CalibratedDelay) + ", calibrated second " + Js.Num(timerModel.CalibratedSecond) + "; EonTimer's delay model, core/timers.js).");
-        lines.Add("4. Verify the seed: " + (game.Family == "dppt" ? "open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below" : "call Elm (each call is one LCRNG advance: count them) and type the E/K/P letters below, with the roamers active on the save") + ": the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.");
-        lines.Add("5. Advance to frame " + row.Frame + ": " + (plan.Needed <= 0 ? "no advance needed from frame " + current + "." : string.Join(", ", plan.Plan.Select(p => p.Uses + " x " + p.Tool + " (+" + p.PerUse + " each, " + p.Label + ")")) + (plan.Remainder != 0 ? " and " + plan.Remainder + " left that no listed tool covers" : "") + " from frame " + current + " (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers).") + " Then trigger the encounter.");
+        lines.Add("1. Prepare the save: " + (cfg.Kind == "static" ? "in front of " + cfg.StaticLabel + ", the last A before the battle or the gift is the frame that matters." : "on the " + KindNames[cfg.Encounter] + " tile of " + cfg.TableName + (cfg.Lead is not null ? ", lead " + LeadText(cfg.Lead) : "") + ".") + " Save with the party you will advance with (" + Js.Plural(partyCount, "member") + ")." + fn.Mark(cfg.Kind == "static" ? (fam == "dppt" ? "dpptStatic" : "hgssStatic") : (fam == "dppt" ? "dpptWild" : "hgssWild")));
+        lines.Add("2. DS clock: set " + row.Year + "-" + Js.Two(row.Month) + "-" + Js.Two(row.Day) + " " + Js.Two(row.Hour) + ":" + Js.Two(row.Minute) + " and confirm it " + Js.Num(minutes) + " minute" + (minutes == 1 ? "" : "s") + " before the target minute (the countdown spans that long); target second " + row.Second + ", target delay " + row.Delay + " -> seed " + Js.Hex8(row.Seed) + " (" + model.Id + ")." + (fam == "dppt" ? fn.Mark("dpptSeed") : fn.Mark("hgssSeed", "hgssRtc")));
+        lines.Add("3. Timer: start it as the clock confirms; phase 1 " + Js.FmtMs(phases[0]) + " ends on the first long beep: press A to load the game from the DS menu; phase 2 " + Js.FmtMs(phases[1]) + " ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay " + Js.Num(timerModel.CalibratedDelay) + ", calibrated second " + Js.Num(timerModel.CalibratedSecond) + "; EonTimer's delay model, core/timers.js)." + fn.Mark("gen4Timer"));
+        lines.Add("4. Verify the seed: " + (game.Family == "dppt" ? "open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below" : "call Elm (each call is one LCRNG advance: count them) and type the E/K/P letters below, with the roamers active on the save") + ": the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target." + fn.Mark(fam == "dppt" ? "coinToss" : "elmCall", "gen4Calibrate"));
+        lines.Add("5. Advance to frame " + row.Frame + ": " + (plan.Needed <= 0 ? "no advance needed from frame " + current + "." : string.Join(", ", plan.Plan.Select(p => p.Uses + " x " + p.Tool + " (+" + p.PerUse + " each, " + p.Label + ")")) + (plan.Remainder != 0 ? " and " + plan.Remainder + " left that no listed tool covers" : "") + " from frame " + current + " (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers).") + " Then trigger the encounter." + fn.Mark(AdvanceSourceKeys(fam, plan)));
         lines.Add("6. Read the nature and stats: the card above says what frame " + row.Frame + " of seed " + Js.Hex8(row.Seed) + " creates.");
-        return LabelSteps(lines, model.Id);
+        var labelled = LabelSteps(lines, model.Id);
+        labelled.AddRange(fn.Lines());
+        return labelled;
     }
     public static string[] AdvanceToolsFor(string gameKey) => Game(gameKey).Family == "dppt" ? new[] { "walk128", "journal", "chatot" } : new[] { "walk128", "elmCall", "chatot" };
 

@@ -28,6 +28,7 @@ const loadGen = (g) => ({
   statics: JSON.parse(fs.readFileSync(path.join(root, "core", "data", "statics-gen" + g + ".json"), "utf8"))
 });
 W.setData(3, loadGen(3)); W.setData(4, loadGen(4));
+W.setCitations(JSON.parse(fs.readFileSync(path.join(root, "core", "data", "citations.json"), "utf8")));
 const WHEN = "2026-09-03 00:00:00";
 const IV = W.IV_KEYS;
 const hex8 = W.hex8, two = (n) => (n < 10 ? "0" : "") + n, f1 = (x) => (Math.round(x * 10) / 10).toFixed(1), plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");

@@ -1,6 +1,7 @@
 # Data module: `core/data/*.json`
 
-Six JSON files generated from the pret decompilations by one script. They are the data
+Six JSON files generated from the pret decompilations by one script, and the decomp citation
+registry `citations.json` generated from `docs/FACTS.md` (its own section at the end). They are the data
 layer for the RNG guide wizard (design doc section 6.3): species tables, wild encounter
 tables and the static/gift catalogue for Gen 3 and Gen 4. No engine reads the files: the
 generator engines (`core/generators.js`, `app/Core/Generators.cs`) take these species and
@@ -25,7 +26,10 @@ works over `file://` where `fetch` would be refused (the headless self-test `?wi
 `tests/run-tests.sh` loads them that way). The mobile bundle (`webapp/build-mobile-bundle.mjs`)
 inlines neither file: it is one HTML string with no file beside it, so it sets
 `window.SHINY_WIZARD_NO_DATA` before the tab's script and the tab states that its tables need the
-static page or the Electron app. A per-game split was not taken: the encounter files are the bulk
+static page or the Electron app. Served over http or https, the page's service worker (`webapp/sw.js`)
+caches `data/wizard-genN.js` the first time it is requested and serves it from that cache afterwards
+(cache-first, per build stamp), so the tables of a generation opened once online are there offline;
+a generation never opened is not, and the tab reports the failed load. A per-game split was not taken: the encounter files are the bulk
 and are read by one game at a time already, so splitting them would save a load only for a visitor
 who never changes game.
 
@@ -359,6 +363,31 @@ rows (`dp/...`, `d/legend/dialga`, `p/legend/palkia`, `gen4/event/manaphy-egg`) 
 script proves a level that PokeFinder gives as `DPPt`, the entry is a `dppt/...` row citing
 Platinum and noting that the D/P inclusion rests on PokeFinder (Riolu egg, Spiritomb, Uxie,
 Azelf, Mesprit and Cresselia roamers).
+
+## `citations.json`: the decomp citation registry
+
+Generated from `docs/FACTS.md` by `tools/gen-citations.py` (`python3 tools/gen-citations.py core/data/citations.json`,
+pret at `~/AI/pret` or `--pret`). One entry per distinct citation, sorted by citation:
+
+| key | content |
+|---|---|
+| `cite` | the citation as resolved, `repo/path:lines` (`pokeruby/src/rtc.c:13,134-140`) |
+| `repo`, `path`, `lines` | its parts; `lines` is the list as written (`13,134-140`) |
+| `as_written` | the text in FACTS.md (a bare `file.c:lines` inherits the repository of the previous full citation in its paragraph; `repo/.../file.c:lines` finds the one file of that name in the repository) |
+| `section` | the heading path of FACTS.md it sits under, `H1 / H2 / H3` with trailing parentheses and backticks dropped |
+| `facts_line` | the line of FACTS.md |
+| `context` | that line, whitespace collapsed, cut at 240 characters |
+| `first_line` | the text of the first cited line as read in pret, cut at 160 characters |
+| `count` | how many times FACTS.md cites it |
+
+The file also carries `pret` (the HEAD commit of each repository the entries were read in) and `skipped`: every
+citation the generator could not resolve (a bare path with no repository in its paragraph, a file name that is
+not unique) with the FACTS.md line and the reason, so nothing is dropped silently; a cited line past the end of its
+file is an error (exit 1), not a skip. Readers: `webapp/wizard-ui.js` (as `window.ShinyCitations`, written into
+`gen1-data.js` by `sync-core.sh` and inlined by the mobile bundle) and `app/App/WizardSupport.cs` (embedded as
+`data.citations`, a `citations.json` beside the executable preferred): each wizard procedure step's sources are
+footnotes over it, and a source the registry lacks is printed as NOT IN THE REGISTRY. `tests/run-tests.sh`
+regenerates the file when pret is present and requires it byte-identical to the committed one.
 
 ## Verification record (this checkout)
 

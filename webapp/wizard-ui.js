@@ -88,6 +88,94 @@
     NDS_SLOT1: { key: "NDS_SLOT1", gen: 4, name: "DS / DS Lite (59.8261 fps)" },
     DSI: { key: "DSI", gen: 4, name: "DSi / 3DS (59.8261 fps)" }
   };
+  // ---- the decomp citation registry (core/data/citations.json, generated from docs/FACTS.md by tools/gen-citations.py) ----
+  // The page reads it as window.ShinyCitations (webapp/sync-core.sh writes it into gen1-data.js, the mobile bundle
+  // inlines it); node callers pass the parsed file to setCitations. Each procedure step's sources are footnotes over
+  // it: a decomp line is printed with the docs/FACTS.md section the registry files it under; a source with no decomp
+  // line (a timer model, a measured constant, a community convention) is marked SYNTHESISED; a citation the registry
+  // does not carry is printed as NOT IN THE REGISTRY, which procedureProblems reports and the self-tests refuse.
+  var CITATIONS = null;
+  function setCitations(registry) {
+    CITATIONS = null;
+    if (!registry || !Array.isArray(registry.entries)) return;
+    var by = {};
+    registry.entries.forEach(function (e) { by[e.cite] = e; });
+    CITATIONS = { byCite: by, count: registry.entries.length };
+  }
+  function citationsLoaded() { return !!CITATIONS; }
+  if (root.ShinyCitations) setCitations(root.ShinyCitations);
+  var IDLE_CLAIM = "Random() runs once in every VBlank, so the RNG advances once per frame from the seed";
+  var GEN4_SEED_CLAIM = "seed = ((month*day + minute + second) << 24) + (hour << 16) + (year - 2000) + the VBlank count since boot (the delay), one u32 with natural overflow";
+  var GEN4_STATIC_CLAIM = "Method 1 on the LCRNG: PID low | PID high, IV word 1, IV word 2, the Mersenne Twister not involved";
+  var GEN4_WILD_CLAIM = "a wild encounter goes through the wild creator: the lead's effect, the nature, PIDs until the nature matches, the IVs, then one held-item roll after them";
+  var CHATOT_CLAIM = "each Chatot cry takes one LCRNG output for its pitch";
+  var WALK_CLAIM = "every 128th step updates the friendship of every party member, one LCRNG output each";
+  var SOURCES = {
+    rsSeed: { cite: "pokeruby/src/rtc.c:13,134-140", claim: "with a dead battery the RTC reports its power-failure flag and the dummy time 2000-01-01 00:00 is read instead, so every boot seeds 0x5A0" },
+    eSeed: { cite: "pokeemerald/src/main.c:108-110", claim: "Emerald's RTC seeding is compiled out (BUGFIX), so a retail cartridge boots with the RNG state 0" },
+    frlgSeed: { cite: "pokefirered/src/title_screen.c:351", claim: "FireRed / LeafGreen start Timer1 at the title screen and seed the RNG from it at a press, so there is no fixed seed and the typed one must be the one in force" },
+    rsIdle: { cite: "pokeruby/src/main.c:328", claim: IDLE_CLAIM },
+    frlgIdle: { cite: "pokefirered/src/main.c:412", claim: IDLE_CLAIM },
+    eIdle: { cite: "pokeemerald/src/main.c:365-366", claim: "Random() runs once in every VBlank outside link, frontier and recorded battles, so the RNG advances once per frame from the seed" },
+    gen3Static: { cite: "pokeemerald/src/pokemon.c:2218,2277-2296", claim: "a static or gift is created by CreateBoxMon: PID low, PID high, IV word 1, IV word 2 (Method 2 and Method 4 skip one call)" },
+    gen3Wild: { cite: "pokeemerald/src/wild_encounter.c:595-661", claim: "a wild encounter rolls the slot, the level and the nature, then PIDs until the nature matches (Method H), before the IVs" },
+    gen3Timer: { synth: "EonTimer's frame model, docs/FACTS.md Timer models", claim: "phase 2 is the target frame in milliseconds at the console's rate plus the calibration, after the pre-timer; GBA 16777216 Hz / 280896 cycles per frame = 59.7275 fps is the community timer's constant, not a game line" },
+    gen3Calibrate: { synth: "EonTimer's frame calibration, docs/FACTS.md Timer models", claim: "the calibration moves by (target - hit) frames in milliseconds" },
+    dpptSeed: { cite: "pokeplatinum/src/main.c:306-315", claim: GEN4_SEED_CLAIM },
+    hgssSeed: { cite: "pokeheartgold/src/main.c:281-284", claim: GEN4_SEED_CLAIM },
+    hgssRtc: { cite: "pokeheartgold/include/gf_rtc.h:46-51", claim: "RngSeedFromRTC folds the date and the time into the seed's high bytes" },
+    dpptStatic: { cite: "pokeplatinum/src/pokemon.c:412,452-470", claim: GEN4_STATIC_CLAIM },
+    hgssStatic: { cite: "pokeheartgold/src/pokemon.c:195,226-239", claim: GEN4_STATIC_CLAIM },
+    dpptWild: { cite: "pokeplatinum/src/overlay006/wild_encounters.c:1227-1235,1462", claim: GEN4_WILD_CLAIM + " (Method J)" },
+    hgssWild: { cite: "pokeheartgold/src/field/encounter_check.c:988-996,1350", claim: GEN4_WILD_CLAIM + " (Method K)" },
+    gen4Timer: { synth: "EonTimer's delay model, docs/FACTS.md Timer models", claim: "phase 1 = target second x 1000 + calibration + 200 - ms(target delay), padded to whole minutes; phase 2 = ms(target delay) - calibration; calibration = ms(calibrated delay) - calibrated second x 1000; NDS 59.8261 fps is the community timer's constant, not a game line" },
+    coinToss: { cite: "pokeplatinum/src/applications/poketch/coin_toss/main.c:158", claim: "each Poketch coin flip is one Mersenne Twister output modulo 2 (1 = heads); the LCRNG frame does not move" },
+    elmCall: { cite: "pokeheartgold/src/application/pokegear/phone/scripts/phone_scripts_prof_elm.c:84-86", claim: "each call to Elm is one LCRNG output, modulo 3 for E / K / P on the story states that roll three ways, modulo 2 before" },
+    gen4Calibrate: { synth: "EonTimer's delay calibration, docs/FACTS.md Timer models", claim: "the calibrated delay moves by (hit - target) delays, x 0.75 within 10 frames" },
+    walk128: { cite: "pokeplatinum/src/overlay005/field_control.c:759-760,871", claim: WALK_CLAIM },
+    walk128Hgss: { cite: "pokeheartgold/src/pokemon.c:2037", claim: WALK_CLAIM },
+    chatot: { cite: "pokeplatinum/src/sound_chatot.c:80", claim: CHATOT_CLAIM },
+    chatotHgss: { cite: "pokeheartgold/src/sound_chatot.c:59", claim: CHATOT_CLAIM },
+    journal: { synth: "EMPIRICAL, a community convention; docs/FACTS.md Advance costs finds no LCRNG call in pokeplatinum/src/journal.c", claim: "a journal page flip counts as two advances" }
+  };
+  function footnoteText(n, key) {
+    var src = SOURCES[key], head = "[^" + n + "] ";
+    if (src.synth) return head + "SYNTHESISED (no decomp line; " + src.synth + "): " + src.claim;
+    var e = CITATIONS && CITATIONS.byCite[src.cite];
+    if (!e) return head + src.cite + " NOT IN THE REGISTRY (" + (CITATIONS ? "core/data/citations.json carries no such line of docs/FACTS.md" : "no citation registry is loaded") + "): " + src.claim;
+    return head + src.cite + " (docs/FACTS.md: " + e.section + "): " + src.claim;
+  }
+  // one procedure's footnotes: mark(keys) returns the markers for a step (numbered in order of first use), lines() the block
+  function footnotes() {
+    var keys = [];
+    return {
+      mark: function (list) {
+        return list.map(function (k) {
+          if (!SOURCES[k]) throw new Error("no source named " + k);
+          var i = keys.indexOf(k);
+          if (i < 0) { keys.push(k); i = keys.length - 1; }
+          return " [^" + (i + 1) + "]";
+        }).join("");
+      },
+      lines: function () {
+        var out = ["Sources: decomp lines from docs/FACTS.md through the registry core/data/citations.json; SYNTHESISED marks a source with no decomp line."];
+        keys.forEach(function (k, i) { out.push("  " + footnoteText(i + 1, k)); });
+        return out;
+      }
+    };
+  }
+  function advanceSourceKeys(family, plan) {
+    var keys = [];
+    (plan.needed <= 0 ? [] : plan.plan).forEach(function (p) {
+      var k = p.tool === "walk128" ? (family === "dppt" ? "walk128" : "walk128Hgss") : p.tool === "chatot" ? (family === "dppt" ? "chatot" : "chatotHgss") : p.tool === "journal" ? "journal" : p.tool === "elmCall" ? "elmCall" : null;
+      if (k && keys.indexOf(k) < 0) keys.push(k);
+    });
+    return keys;
+  }
+  function procedureProblems(lines) {
+    return (Array.isArray(lines) ? lines : String(lines).split("\n")).filter(function (l) { return /^  \[\^\d+\] .* NOT IN THE REGISTRY \(/.test(l); });
+  }
+
   function consolesFor(gameKey) {
     var gen = GAMES[gameKey].gen;
     return Object.keys(CONSOLES).filter(function (k) { return CONSOLES[k].gen === gen; }).map(function (k) { return CONSOLES[k]; });
@@ -554,39 +642,42 @@
     return lines;
   }
 
-  // ---- procedures (design 5.1 step 6), numbered, every step labelled with the seed model id it runs under ----
+  // ---- procedures (design 5.1 step 6), numbered, every step labelled with the seed model id it runs under, each
+  // step's sources marked [^n] and listed as footnotes after the steps (the registry above) ----
   function labelSteps(lines, id) {
     for (var i = 1; i < lines.length; i++) lines[i] += " [" + id + "]";
     return lines;
   }
   function gen3Procedure(cfg, hit, timerModel) {
-    var model = modelOf(cfg.game), game = GAMES[cfg.game];
+    var model = modelOf(cfg.game), game = GAMES[cfg.game], fam = game.family;
     var ms = frameToMs(hit.frame, cfg.console);
     var phases = T.gen3Phases({ console: cfg.console }, timerModel);
+    var fn = footnotes();
     var lines = [];
     lines.push("Procedure (" + model.id + "; " + NO_HARDWARE + ")");
-    lines.push("1. Prepare the save: " + (cfg.kind === "static" ? "stand where the encounter starts (" + cfg.staticLabel + ") and save; the last A that starts the battle or the gift is the timed press." : "stand on the " + KIND_NAMES[cfg.encounter] + " tile of " + cfg.tableName + " and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash)" + (cfg.lead ? "; lead " + cfg.lead.ability.replace("_", " ").toLowerCase() : "") + "."));
-    lines.push("2. The seed: " + (model.kind === "fixed" ? "power on (or A+B+Start+Select soft reset) and the game seeds " + hex8(cfg.seed) + " at frame 0 (" + model.id + ")." : "the typed seed " + hex8(cfg.seed) + " must be the one in force (" + model.id + ": " + model.text + ")"));
-    lines.push("3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not.");
-    lines.push("4. Timer: phase 1 " + core.fmtMs(phases[0]) + " (the pre-timer: power on at its end, the first long beep), phase 2 " + core.fmtMs(phases[1]) + " = frame " + hit.frame + " x " + (1000 / fpsOf(cfg.console)).toFixed(4) + " ms " + (timerModel.calibration >= 0 ? "+ " : "- ") + Math.abs(timerModel.calibration) + " ms calibration: press A on the last beep. Target " + core.fmtMs(ms) + " after the seed" + (game.family === "e" && cfg.kind === "static" ? " (Emerald in battle advances twice per frame: the count here is up to the press that starts it)" : "") + ".");
-    lines.push("5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3).");
+    lines.push("1. Prepare the save: " + (cfg.kind === "static" ? "stand where the encounter starts (" + cfg.staticLabel + ") and save; the last A that starts the battle or the gift is the timed press." : "stand on the " + KIND_NAMES[cfg.encounter] + " tile of " + cfg.tableName + " and save; the timed press is the one that triggers the encounter (a step, a cast, a Rock Smash)" + (cfg.lead ? "; lead " + cfg.lead.ability.replace("_", " ").toLowerCase() : "") + ".") + fn.mark([cfg.kind === "static" ? "gen3Static" : "gen3Wild"]));
+    lines.push("2. The seed: " + (model.kind === "fixed" ? "power on (or A+B+Start+Select soft reset) and the game seeds " + hex8(cfg.seed) + " at frame 0 (" + model.id + ")." : "the typed seed " + hex8(cfg.seed) + " must be the one in force (" + model.id + ": " + model.text + ")") + fn.mark([fam === "rs" ? "rsSeed" : fam === "e" ? "eSeed" : "frlgSeed"]));
+    lines.push("3. Take the same input path every time from power-on to the press (title, CONTINUE, the last dialogue): the frame count runs from the seed, so a constant path is absorbed by the calibration and a variable one is not." + fn.mark([fam === "rs" ? "rsIdle" : fam === "e" ? "eIdle" : "frlgIdle"]));
+    lines.push("4. Timer: phase 1 " + core.fmtMs(phases[0]) + " (the pre-timer: power on at its end, the first long beep), phase 2 " + core.fmtMs(phases[1]) + " = frame " + hit.frame + " x " + (1000 / fpsOf(cfg.console)).toFixed(4) + " ms " + (timerModel.calibration >= 0 ? "+ " : "- ") + Math.abs(timerModel.calibration) + " ms calibration: press A on the last beep. Target " + core.fmtMs(ms) + " after the seed" + (game.family === "e" && cfg.kind === "static" ? " (Emerald in battle advances twice per frame: the count here is up to the press that starts it)" : "") + "." + fn.mark(["gen3Timer"]));
+    lines.push("5. Read what you got (nature and the six stats on the summary screen, or the IVs from a calculator) and type it below: the tool finds the frame you hit and moves the calibration by the difference (EonTimer's frame model, core/timers.js calibrateGen3)." + fn.mark(["gen3Calibrate"]));
     lines.push("6. Repeat until the frame hit equals the target; then the card above is what the game creates.");
-    return labelSteps(lines, model.id);
+    return labelSteps(lines, model.id).concat(fn.lines());
   }
   function gen4Procedure(cfg, row, timerModel, plan) {
-    var model = modelOf(cfg.game), game = GAMES[cfg.game];
+    var model = modelOf(cfg.game), game = GAMES[cfg.game], fam = game.family;
     var settings = { console: cfg.console };
     var phases = T.gen4Phases(settings, timerModel);
     var minutes = T.gen4MinutesBefore(settings, timerModel);
+    var fn = footnotes();
     var lines = [];
     lines.push("Procedure (" + model.id + "; " + NO_HARDWARE + ")");
-    lines.push("1. Prepare the save: " + (cfg.kind === "static" ? "in front of " + cfg.staticLabel + ", the last A before the battle or the gift is the frame that matters." : "on the " + KIND_NAMES[cfg.encounter] + " tile of " + cfg.tableName + (cfg.lead ? ", lead " + cfg.lead.ability.replace("_", " ").toLowerCase() : "") + ".") + " Save with the party you will advance with (" + plural(plan.partyCount, "member") + ").");
-    lines.push("2. DS clock: set " + row.year + "-" + two(row.month) + "-" + two(row.day) + " " + two(row.hour) + ":" + two(row.minute) + " and confirm it " + plural(minutes, "minute") + " before the target minute (the countdown spans that long); target second " + row.second + ", target delay " + row.delay + " -> seed " + hex8(row.seed) + " (" + model.id + ").");
-    lines.push("3. Timer: start it as the clock confirms; phase 1 " + core.fmtMs(phases[0]) + " ends on the first long beep: press A to load the game from the DS menu; phase 2 " + core.fmtMs(phases[1]) + " ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay " + timerModel.calibratedDelay + ", calibrated second " + timerModel.calibratedSecond + "; EonTimer's delay model, core/timers.js).");
-    lines.push("4. Verify the seed: " + (game.family === "dppt" ? "open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below" : "call Elm (each call is one LCRNG advance: count them) and type the E/K/P letters below, with the roamers active on the save") + ": the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.");
-    lines.push("5. Advance to frame " + row.frame + ": " + (plan.needed <= 0 ? "no advance needed from frame " + plan.current + "." : plan.plan.map(function (p) { return p.uses + " x " + p.tool + " (+" + p.perUse + " each, " + p.label + ")"; }).join(", ") + (plan.remainder ? " and " + plan.remainder + " left that no listed tool covers" : "") + " from frame " + plan.current + " (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers).") + " Then trigger the encounter.");
+    lines.push("1. Prepare the save: " + (cfg.kind === "static" ? "in front of " + cfg.staticLabel + ", the last A before the battle or the gift is the frame that matters." : "on the " + KIND_NAMES[cfg.encounter] + " tile of " + cfg.tableName + (cfg.lead ? ", lead " + cfg.lead.ability.replace("_", " ").toLowerCase() : "") + ".") + " Save with the party you will advance with (" + plural(plan.partyCount, "member") + ")." + fn.mark([cfg.kind === "static" ? (fam === "dppt" ? "dpptStatic" : "hgssStatic") : (fam === "dppt" ? "dpptWild" : "hgssWild")]));
+    lines.push("2. DS clock: set " + row.year + "-" + two(row.month) + "-" + two(row.day) + " " + two(row.hour) + ":" + two(row.minute) + " and confirm it " + plural(minutes, "minute") + " before the target minute (the countdown spans that long); target second " + row.second + ", target delay " + row.delay + " -> seed " + hex8(row.seed) + " (" + model.id + ")." + fn.mark(fam === "dppt" ? ["dpptSeed"] : ["hgssSeed", "hgssRtc"]));
+    lines.push("3. Timer: start it as the clock confirms; phase 1 " + core.fmtMs(phases[0]) + " ends on the first long beep: press A to load the game from the DS menu; phase 2 " + core.fmtMs(phases[1]) + " ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay " + timerModel.calibratedDelay + ", calibrated second " + timerModel.calibratedSecond + "; EonTimer's delay model, core/timers.js)." + fn.mark(["gen4Timer"]));
+    lines.push("4. Verify the seed: " + (game.family === "dppt" ? "open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below" : "call Elm (each call is one LCRNG advance: count them) and type the E/K/P letters below, with the roamers active on the save") + ": the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target." + fn.mark([fam === "dppt" ? "coinToss" : "elmCall", "gen4Calibrate"]));
+    lines.push("5. Advance to frame " + row.frame + ": " + (plan.needed <= 0 ? "no advance needed from frame " + plan.current + "." : plan.plan.map(function (p) { return p.uses + " x " + p.tool + " (+" + p.perUse + " each, " + p.label + ")"; }).join(", ") + (plan.remainder ? " and " + plan.remainder + " left that no listed tool covers" : "") + " from frame " + plan.current + " (type where you are after loading: DPPt sits a few frames in, HGSS more with roamers).") + " Then trigger the encounter." + fn.mark(advanceSourceKeys(fam, plan)));
     lines.push("6. Read the nature and stats: the card above says what frame " + row.frame + " of seed " + hex8(row.seed) + " creates.");
-    return labelSteps(lines, model.id);
+    return labelSteps(lines, model.id).concat(fn.lines());
   }
 
   // ---- the typed outcome: Gen 3 frame hit and Gen 4 delay hit ----------------------------------------
@@ -686,6 +777,7 @@
     leadOptions: leadOptions, makeLead: makeLead, buildFilter: buildFilter, ivCombos: ivCombos, feasibility: feasibility, feasibilityLines: feasibilityLines,
     searchGen3: searchGen3, gen3SearchLines: gen3SearchLines, gen3Run: gen3Run, searchGen4: searchGen4, gen4SearchLines: gen4SearchLines, gen4Run: gen4Run,
     cardLines: cardLines, gen3Procedure: gen3Procedure, gen4Procedure: gen4Procedure, gen3IdentifyHit: gen3IdentifyHit, gen4IdentifyHit: gen4IdentifyHit,
+    SOURCES: SOURCES, setCitations: setCitations, citationsLoaded: citationsLoaded, footnoteText: footnoteText, procedureProblems: procedureProblems,
     loadStore: loadStore, saveStore: saveStore, inForce: inForce, ignoredLines: ignoredLines, addSample: addSample, entryKey: entryKey,
     hex8: hex8, ivText: ivText, speciesName: speciesName, _storage: { get: storageGet, set: storageSet }
   };
@@ -1096,7 +1188,7 @@
   var tabButton = document.querySelector("button[data-tab=wizard]");
   if (tabButton) tabButton.addEventListener("click", ensureSetup);
   if ($("tab-wizard").classList.contains("active") || (root.location && root.location.search.indexOf("wizselftest") !== -1)) ensureSetup();
-  else setText("wz-status", "the species, encounter and static tables load when this tab is opened");
+  else setText("wz-status", root.SHINY_WIZARD_NO_DATA ? "this build carries no species, encounter or static tables (" + root.SHINY_WIZARD_NO_DATA + "): the wizard needs the static page or the Electron app" : "the species, encounter and static tables load when this tab is opened");
 
   // ?wizselftest: three end-to-end scenarios with known answers (tests/generators-vectors.json and
   // tests/seedtime4-vectors.json) driven through the tab's own handlers once the tables have loaded; the
@@ -1137,6 +1229,22 @@
         report.groudonCard = $("wz-card").textContent;
         report.groudonProcedure = $("wz-procedure").textContent;
         report.groudonTimerTotal = $("wz-display").textContent;
+        // the footnotes: every step but the last marked, the registry line for the Ruby seed with its FACTS.md section,
+        // the timer model marked SYNTHESISED, no problem; then the registry without that line (the negative control):
+        // the footnote says NOT IN THE REGISTRY and procedureProblems names it; the registry restored, the problem is gone
+        report.footnoteCount = (report.groudonProcedure.match(/^  \[\^\d+\] /gm) || []).length;
+        report.footnoteMarkers = (report.groudonProcedure.match(/ \[\^\d+\] \[rs\/gba\/boot-seed-v0\]$/gm) || []).length;
+        report.footnoteRegistryLine = /^  \[\^2\] pokeruby\/src\/rtc\.c:13,134-140 \(docs\/FACTS\.md: Gen 3 \(Game Boy Advance\) \/ When each game seeds\): with a dead battery/m.test(report.groudonProcedure);
+        report.footnoteSynthesised = /^  \[\^4\] SYNTHESISED \(no decomp line; EonTimer's frame model, docs\/FACTS\.md Timer models\): /m.test(report.groudonProcedure);
+        report.footnoteProblems = procedureProblems(report.groudonProcedure).length;
+        report.registryLoaded = citationsLoaded();
+        var fullRegistry = root.ShinyCitations;
+        setCitations({ entries: (fullRegistry && fullRegistry.entries || []).filter(function (e) { return e.cite !== "pokeruby/src/rtc.c:13,134-140"; }) });
+        refreshTimer();
+        report.registryCutProblems = procedureProblems($("wz-procedure").textContent);
+        setCitations(fullRegistry);
+        refreshTimer();
+        report.registryRestoredProblems = procedureProblems($("wz-procedure").textContent).length;
         // the typed outcome: nature Naive (18) and the vector's IVs -> frame 3 hit, calibration unchanged (0 frames off)
         $("wz-got-nature").value = "18"; IV_KEYS.forEach(function (k, i) { $("wz-got-iv-" + k).value = [12, 22, 24, 30, 25, 27][i]; });
         recordGen3();

@@ -223,6 +223,32 @@ rm -f "$corrupted" "$corrupted.out"
 # functions must be byte-identical to the committed file, so the file always says what the tab says now.
 node ../tools/gen-gen2-panel-vectors.cjs | cmp - gen2tid-panel-vectors.json && echo "gen2tid panel vectors re-emitted from the web tab: byte-identical"
 
+# The decomp citation registry core/data/citations.json is generated from docs/FACTS.md by tools/gen-citations.py, each entry
+# read in the pret checkout; when that checkout is present the registry is regenerated into a temp file and must be
+# byte-identical to the committed one, so the committed registry always says what FACTS.md and pret say now.
+if [ -d "$HOME/AI/pret/pokeemerald" ]; then
+  regen=$(mktemp --suffix=.json)
+  python3 ../tools/gen-citations.py "$regen" > /dev/null 2>&1 || { echo "gen-citations.py failed"; rm -f "$regen"; exit 1; }
+  cmp "$regen" ../core/data/citations.json && echo "citation registry regenerated from docs/FACTS.md and pret: byte-identical ($(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).entries.length)' "$regen") entries)"
+  rm -f "$regen"
+  # Negative control: a copy of FACTS.md citing a line past the end of pokeruby/src/rtc.c must make the generator FAIL, and
+  # is shown failing: a citation the checkout cannot read never lands in the registry silently.
+  facts_bad=$(mktemp --suffix=.md)
+  sed 's#pokeruby/src/rtc.c:13,134-140#pokeruby/src/rtc.c:13,134-999999#' ../docs/FACTS.md > "$facts_bad"
+  grep -q 'pokeruby/src/rtc.c:13,134-999999' "$facts_bad" || { echo "negative control setup: the Ruby RTC citation was not found in FACTS.md"; exit 1; }
+  if python3 ../tools/gen-citations.py --facts "$facts_bad" "$facts_bad.json" > "$facts_bad.out" 2>&1; then
+    echo "negative control (FACTS.md citing a line past the end of the file): DID NOT FAIL"
+    rm -f "$facts_bad" "$facts_bad.json" "$facts_bad.out"
+    exit 1
+  else
+    echo "negative control (FACTS.md citing a line past the end of the file): FAILED as required ->"
+    grep -E 'past the end' "$facts_bad.out" | head -2 | sed 's/^/      /'
+  fi
+  rm -f "$facts_bad" "$facts_bad.json" "$facts_bad.out"
+else
+  echo "no pret checkout at ~/AI/pret; the citation registry is not regenerated (the committed core/data/citations.json is used)"
+fi
+
 # The desktop wizard panel is pinned to the web tab through tests/wizard-panel-vectors.json (what webapp/wizard-ui.js computes
 # for its self-test scenarios and 20 random wanted-IV searches; app/run-core-tests.sh checks WizardSupport.cs against it). A
 # re-emit from the tab's module must be byte-identical to the committed file, so the file always says what the tab says now.
@@ -470,6 +496,28 @@ else
 fi
 rm -f "$bundle" "$bundle.cut" "$bundle.out"
 
+# The offline copy (webapp/sw.js) in a node sandbox with fake caches, fetch and clients (tests/test-sw.cjs): install
+# precaches every file index.html loads, activate drops the caches of other builds, and with the network gone the shell,
+# any navigation under the scope and a data file opened once are served from the caches; the build stamp in sw.js is the
+# one in index.html and the one the shipped sources hash to now.
+node test-sw.cjs
+
+# Negative control: sw.js with its data route cut out (the wizard's tables no longer cached on first use) must FAIL, and
+# is shown failing: the offline wizard rests on that route, and the check sees it gone.
+nodata=$(mktemp --suffix=.js)
+sed '/DATA ROUTE BEGIN/,/DATA ROUTE END/d' ../webapp/sw.js > "$nodata"
+grep -q "DATA ROUTE" "$nodata" && { echo "negative control setup: the data route was not cut out of sw.js"; exit 1; }
+grep -q "isDataFile(url)" "$nodata" && { echo "negative control setup: sw.js still routes data files"; exit 1; }
+if node test-sw.cjs "$nodata" > "$nodata.out" 2>&1; then
+  echo "negative control (sw.js without its data route): DID NOT FAIL"
+  rm -f "$nodata" "$nodata.out"
+  exit 1
+else
+  echo "negative control (sw.js without its data route): FAILED as required ->"
+  grep -E '^FAIL|failure' "$nodata.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$nodata" "$nodata.out"
+
 # The tabs in a real browser (headless Chrome, when installed): the Gen 1 TID tab's self-test drives the DOM through the
 # tab's own handlers (targets, protocol, an outcome recorded and persisted, Blue / DMG, the metronome, the Secret ID
 # listing, the mode switch with the reset adjustment and the pins, records of the other mode planted in the RUN stores),
@@ -646,6 +694,9 @@ const checks = [
   ["A: the Groudon Method 4 vector is the one hit in an hour from the typed seed 0 (frame 3, PID 8E4231B0)", r.groudonRows === 1 && !!r.groudonFirst && r.groudonFirst.frame === 3 && r.groudonFirst.pid === 2386702768 && JSON.stringify(r.groudonFirst.ivs) === "[12,22,24,30,25,27]" && r.groudonExactFirst === 3],
   ["A: the result card names the mon, the IVs, the stats, the seed model and EMPIRICAL", /Groudon L45  PID 8E4231B0  nature Bashful/.test(r.groudonCard || "") && /IVs 12\/22\/24\/30\/25\/27/.test(r.groudonCard || "") && /stats at L45 150\/149\/141\/108\/97\/98/.test(r.groudonCard || "") && /seed model rs\/gba\/boot-seed-v0/.test(r.groudonCard || "") && /EMPIRICAL/.test(r.groudonCard || "")],
   ["A: the procedure is numbered under the seed model and the timer totals the pre-timer plus frame 3", /^Procedure \(rs\/gba\/boot-seed-v0; EMPIRICAL/.test(r.groudonProcedure || "") && /\n6\. /.test(r.groudonProcedure || "") && r.groudonTimerTotal === "00:05.050"],
+  ["A: the procedure carries five footnotes, steps 1-5 marked, the registry loaded from the page", r.registryLoaded === true && r.footnoteCount === 5 && r.footnoteMarkers === 5],
+  ["A: the seed footnote is the registry line with its FACTS.md section, the timer footnote SYNTHESISED, no problem", r.footnoteRegistryLine === true && r.footnoteSynthesised === true && r.footnoteProblems === 0],
+  ["negative control: the registry without the Ruby RTC line is reported as NOT IN THE REGISTRY, and restored is clean", Array.isArray(r.registryCutProblems) && r.registryCutProblems.length === 1 && /^  \[\^2\] pokeruby\/src\/rtc\.c:13,134-140 NOT IN THE REGISTRY \(core\/data\/citations\.json carries no such line of docs\/FACTS\.md\): /.test(r.registryCutProblems[0]) && r.registryRestoredProblems === 0],
   ["A: the typed nature and IVs invert to frame 3 and the sample is stored under the model and mode", /^You hit frame 3, aimed 3: on the frame; 1 candidate/.test(r.groudonOutcome || "") && !!(r.groudonStored && r.groudonStored["ruby/GBA"] && r.groudonStored["ruby/GBA"].samples.length === 1 && r.groudonStored["ruby/GBA"].samples[0].model === "rs/gba/boot-seed-v0" && r.groudonStored["ruby/GBA"].samples[0].mode === "run")],
   ["Emerald seeds 0; a flawless Treecko has no frame in an hour and the exact first frame (34.2 days) is stated", r.emeraldSeed === "00000000" && r.flawlessRows === 0 && /No matching frame within the first 215019 frames \(60:00.000\)/.test(r.flawlessOut || "") && /frame 176562488 from this seed = 34.2 days/.test(r.flawlessOut || "")],
   ["B: the Route 111 wild vector at frame 7 (Trapinch, slot 1) with the slot share in the feasibility", r.wildRows === 1 && !!r.wildFirst && r.wildFirst.frame === 7 && r.wildFirst.pid === 1885610868 && r.wildFirst.slot === 1 && r.wildWanted.dex === 328 && r.wildOutHasShare === true && /Trapinch L20  PID 70642374/.test(r.wildCard || "")],
@@ -693,6 +744,32 @@ process.exit(bad ? 1 : 0);
   echo "$practice_dom" | grep -q '<main hidden' && { echo "FAIL hunt page: in PRACTICE / HUNT the panel is hidden"; hbad=1; }
   [ $hbad = 0 ] || exit 1
   echo "hunt page in the browser: no switch of its own; RUN: off, closing, no controls; PRACTICE / HUNT: panel mounted under the practice key"
+  # The mobile bundle as the Hub app's WebView sees it: the bundle's HTML written to a file and loaded from file:// with an
+  # Android WebView user agent at a phone's 360x780, no service worker registered and the status line saying why (the
+  # reason the builder wrote, with the build stamp), the wizard tab saying its tables are not in this build, every tab's
+  # button on the page and no uncaught error (the page's error hook writes them into #page-errors, hidden while empty).
+  wv=$(mktemp -d)
+  node ../webapp/build-mobile-bundle.mjs "$wv/bundle.ts" > /dev/null
+  node -e '
+const fs = require("fs");
+const ts = fs.readFileSync(process.argv[1], "utf8");
+const m = ts.match(/^export const shinySolutionHtml = ([\s\S]*);\n$/);
+if (!m) { console.error("the bundle is not one exported HTML string"); process.exit(1); }
+fs.writeFileSync(process.argv[2], JSON.parse(m[1]));
+' "$wv/bundle.ts" "$wv/bundle.html"
+  wv_dom=$(timeout 120 google-chrome --headless=new --disable-gpu --user-data-dir="$wv/profile" --window-size=360,780 \
+    --user-agent="Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/124.0.0.0 Mobile Safari/537.36 wv" \
+    --virtual-time-budget=5000 --dump-dom "file://$wv/bundle.html" 2>/dev/null)
+  stamp=$(grep -o 'window.SHINY_BUILD = "[0-9a-f]*"' ../webapp/index.html | grep -o '[0-9a-f]\{12\}')
+  rm -rf "$wv"
+  wbad=0
+  echo "$wv_dom" | grep -qF "<p id=\"sw-status\">offline copy: not registered: the mobile bundle is one HTML string for the Hub app, with no sw.js beside it (build $stamp)</p>" || { echo "FAIL WebView bundle: the status line does not say why the offline copy is not registered, with the build stamp"; wbad=1; }
+  echo "$wv_dom" | grep -q 'serviceWorker\.register(' && { echo "FAIL WebView bundle: a service worker registration is in the page"; wbad=1; }
+  echo "$wv_dom" | grep -qF '<pre id="page-errors" class="text" hidden></pre>' || { echo "FAIL WebView bundle: #page-errors is not empty and hidden"; echo "$wv_dom" | grep -o '<pre id="page-errors"[^<]*' | head -3; wbad=1; }
+  echo "$wv_dom" | grep -q 'id="wz-status">[^<]*carries no species, encounter or static tables' || { echo "FAIL WebView bundle: the wizard tab does not say its tables are not in this build"; wbad=1; }
+  for tab in g3timer g3check g4 g12 g1tid g2tid wizard about; do echo "$wv_dom" | grep -q "data-tab=\"$tab\"" || { echo "FAIL WebView bundle: no button for tab $tab"; wbad=1; }; done
+  [ $wbad = 0 ] || exit 1
+  echo "mobile bundle in a WebView (360x780, Android UA): no worker, the status line names the reason and build $stamp, no page error, the wizard says its tables are not in this build, 8 tab buttons"
 else
   echo "google-chrome not found; skipping the browser self-test"
 fi

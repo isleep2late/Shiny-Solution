@@ -37,6 +37,17 @@ The one exception is Gen 5 (last section): no decompilation exists, so that engi
 of PokeFinder (Admiral-Fish, GPL-3.0) and is labelled EMPIRICAL throughout, with PokeFinder
 file:line citations instead.
 
+The citations in this file are the registry the heads render as footnotes: `tools/gen-citations.py`
+reads every `repo/path:lines` citation here (a bare `file.c:lines` inherits the repository of the
+previous full citation in its paragraph; `repo/.../file.c:lines` finds the one file of that name),
+reads each cited line in the pret checkout, and writes `core/data/citations.json` with the citation,
+the section of this file it sits in, the line of this file and the text of the first cited line
+(`docs/DATA.md`). The wizard's procedure (the web tab and the desktop panel) marks each step's sources
+`[^n]` and lists them after the steps: a decomp line with the section it is filed under here, or
+SYNTHESISED for a source with no decomp line (a timer model, a measured constant, a community
+convention); a citation this file does not carry is printed as NOT IN THE REGISTRY, which the tests
+refuse. `tests/run-tests.sh` regenerates the registry when pret is present and requires it byte-identical.
+
 # Gen 1/2 (Game Boy)
 
 ## The RNG (the hardware divider)
@@ -1606,7 +1617,7 @@ bit 15 of the PID is set (`pokeemerald:784-791`).
   (`pokeplatinum/src/overlay005/daycare.c:1130-1131`, `src/math_util.c:106`).
 - Method J/K statics go through the wild creator: Cute Charm roll, Synchronize/nature, PID
   loop, IVs, then one held-item roll after the IVs (`wild_encounters.c:1227-1235,1462`,
-  `pokemon.c:4681`; HGSS `encounter_check.c:988-996,1350`); `callsUsedWithItem` counts it.
+  `pokemon.c:4681`; HGSS `pokeheartgold/src/field/encounter_check.c:988-996,1350`); `callsUsedWithItem` counts it.
 - HGSS starters are created three in a row, 4 calls each, so starter i is at frame + 4i
   (`pokeheartgold/src/choose_starter.c:55-59`); DPPt starters are single `GivePokemon` mons
   (`statics-gen4.json` creation notes).

@@ -354,8 +354,10 @@ Electron app; the mobile bundle carries the tab but not its tables and says so) 
 countdown is the Gen 4 panel's two-phase timer with the same beeps, and its samples live in the app's
 settings under `wizard.calibration`, per mode). You pick the game,
 the encounter and the outcome you want; the tab lists the frames (Gen 3) or the seeds with their
-dates, times and delays (Gen 4) that produce it, shows the result card and a numbered procedure,
-runs the timer, and learns from what you type after the attempt. **Every output is EMPIRICAL /
+dates, times and delays (Gen 4) that produce it, shows the result card and a numbered procedure
+(each step's sources marked `[^n]` and listed after the steps: the decomp line with the `docs/FACTS.md`
+section it is filed under, or SYNTHESISED where the source is EonTimer's model or a community
+convention with no decomp line), runs the timer, and learns from what you type after the attempt. **Every output is EMPIRICAL /
 model output**: no hardware session has run a wizard procedure, and the tab prints the seed model
 it runs under with that status on the card, the procedure and every search. Nothing reads a capture.
 
@@ -431,12 +433,18 @@ Result card (EMPIRICAL / model output)
 ```
 ```
 Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)
-1. Prepare the save: in front of Turtwig L5 - Route 201 / Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (1 member). [dppt/nds/seed-to-time-v0]
-2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute (the countdown spans that long); target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0). [dppt/nds/seed-to-time-v0]
-3. Timer: start it as the clock confirms; phase 1 00:41.964 ends on the first long beep: press A to load the game from the DS menu; phase 2 05:17.236 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js). [dppt/nds/seed-to-time-v0]
-4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target. [dppt/nds/seed-to-time-v0]
+1. Prepare the save: in front of Turtwig L5 - Route 201 / Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (1 member). [^1] [dppt/nds/seed-to-time-v0]
+2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute (the countdown spans that long); target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0). [^2] [dppt/nds/seed-to-time-v0]
+3. Timer: start it as the clock confirms; phase 1 00:41.964 ends on the first long beep: press A to load the game from the DS menu; phase 2 05:17.236 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js). [^3] [dppt/nds/seed-to-time-v0]
+4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target. [^4] [^5] [dppt/nds/seed-to-time-v0]
 5. Advance to frame 0: no advance needed from frame 0. Then trigger the encounter. [dppt/nds/seed-to-time-v0]
 6. Read the nature and stats: the card above says what frame 0 of seed 7B0448D1 creates. [dppt/nds/seed-to-time-v0]
+Sources: decomp lines from docs/FACTS.md through the registry core/data/citations.json; SYNTHESISED marks a source with no decomp line.
+  [^1] pokeplatinum/src/pokemon.c:412,452-470 (docs/FACTS.md: Generators (Gen 3 / Gen 4 encounter engines) / Gen 4 statics: gen4Static, gen4StarterTriple): Method 1 on the LCRNG: PID low | PID high, IV word 1, IV word 2, the Mersenne Twister not involved
+  [^2] pokeplatinum/src/main.c:306-315 (docs/FACTS.md: Gen 4 (Nintendo DS) / The seed): seed = ((month*day + minute + second) << 24) + (hour << 16) + (year - 2000) + the VBlank count since boot (the delay), one u32 with natural overflow
+  [^3] SYNTHESISED (no decomp line; EonTimer's delay model, docs/FACTS.md Timer models): phase 1 = target second x 1000 + calibration + 200 - ms(target delay), padded to whole minutes; phase 2 = ms(target delay) - calibration; calibration = ms(calibrated delay) - calibrated second x 1000; NDS 59.8261 fps is the community timer's constant, not a game line
+  [^4] pokeplatinum/src/applications/poketch/coin_toss/main.c:158 (docs/FACTS.md: Gen 4 (Nintendo DS) / Seed verification): each Poketch coin flip is one Mersenne Twister output modulo 2 (1 = heads); the LCRNG frame does not move
+  [^5] SYNTHESISED (no decomp line; EonTimer's delay calibration, docs/FACTS.md Timer models): the calibrated delay moves by (hit - target) delays, x 0.75 within 10 frames
 ```
 
 Typing the target seed's own twelve coin flips, then a neighbour's (delay 18645):
@@ -533,9 +541,15 @@ available without installing anything:
   browser, including the Gen 1 TID tab, the Emerald / FRLG Secret ID search, the Gen 2 TID tab and the Gen 3 / Gen 4 wizard (no capture reading
   by design: `webapp/hunt/` is never bundled into it, and the RUN / PRACTICE-HUNT switch above the
   tabs only changes which calibration store is in force). **hackmons.com/shiny-solution** is the
-  live page with the earlier tools until then.
+  live page with the earlier tools until then. The page can be added to the home screen (it ships a
+  web app manifest and icons) and works offline after one visit: its service worker (`sw.js`) keeps
+  the page and every script, and keeps each wizard's table file from the first time that tab was
+  opened online, so the Gen 3 / Gen 4 wizard works offline for the generations you opened once. The
+  footer's status line says whether the offline copy controls the page and which build it is; a new
+  build replaces the old copy on the next online visit.
 - **Hackmons Hub app** — Fun → Shiny Solution (same tools, beeps included; the wizard tab is there but its
-  species, encounter and static tables are not inlined into the bundle, so it says to use the page or the desktop app).
+  species, encounter and static tables are not inlined into the bundle, so it says to use the page or the desktop app;
+  no service worker either: the bundle is one HTML string inside the app, and its status line says so).
 - **Windows desktop** — ShinySolution.exe carries the same Gen 1 TID, Gen 2 TID and Wizard (Gen 3/4) tabs as
   the page, pinned to it by the vector files under `tests/`.
 - **Linux/macOS desktop** — the calculators-and-timers app from the releases page
