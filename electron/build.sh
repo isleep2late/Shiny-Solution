@@ -58,4 +58,9 @@ if [ "$stage_only" = 1 ]; then
   exit 0
 fi
 [ -d node_modules ] || npm install --no-audit --no-fund
+if [ "$with_hunt" = 1 ]; then
+  # the hunt window's OBS source (webapp/hunt/electron-source.js) needs the 'ws' package; it is not in package.json,
+  # so a plain build never installs or ships it
+  npm install --no-save --no-audit --no-fund ws
+fi
 npx electron-builder --linux

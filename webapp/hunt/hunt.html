@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shiny-Solution: Practice &amp; Hunt</title>
+<link rel="stylesheet" href="../app.css">
+<style>
+  .hunt-banner { background: #5a1f1f; color: #ffd9d9; padding: 0.6em 1em; border-radius: 6px; font-weight: bold; }
+  #hunt-log { max-height: 24em; overflow: auto; background: #0d1014; padding: 0.6em; border-radius: 6px; }
+</style>
+</head>
+<body>
+<!-- This page ships only in a --with-hunt build (electron/build.sh, webapp/build-mobile-bundle.mjs): webapp/index.html
+     never references anything under webapp/hunt/. It is opened by the Electron app's "Practice & Hunt" menu item
+     (webapp/hunt/electron-main.js, present only when the hunt directory was staged), and only while the main window's
+     mode is PRACTICE / HUNT. There is no mode switch here: the mode is the main window's, and this page closes itself
+     when it finds RUN. -->
+<header>
+  <h1>Shiny-Solution: Practice &amp; Hunt</h1>
+  <p>The capture-watching side of the wall (RNG Solution's PREDICT mode): a state machine over screenshots or a
+  recording times the NEW GAME menu and the A press and predicts the Trainer ID. Practice, calibration and hunting only.</p>
+</header>
+<div id="mode-bar">
+  <div id="mode-banner">PRACTICE / HUNT mode - tools that read the capture are enabled; not for submitted runs</div>
+  <p class="hint" id="mode-note">The mode is the main window's setting (the switch above its tabs); this window has no switch of its own and
+  closes when the main window goes back to RUN.</p>
+</div>
+<main>
+  <section class="tab active">
+    <div class="card">
+      <h2>Gen 1 Trainer ID watcher (GBA HD, hold-START methodology)</h2>
+      <div id="hunt-panel"></div>
+      <p class="hint">Sources: a PNG-sequence replay from tests/fixtures/hunt (frames.csv timestamps, fed by the Electron main
+      process), or live obs-websocket screenshots (never connected by any test; confirm the dialog first). Every prediction names
+      the methodology it assumes and the sampling quantisation it was measured with; calibration samples are kept under the
+      practice store key only.</p>
+    </div>
+  </section>
+</main>
+<script src="../rng.js"></script>
+<script src="../gen1tid.js"></script>
+<script src="../gen1-data.js"></script>
+<script src="../mode.js"></script>
+<script src="hunt-panel.js"></script>
+<script>
+  // The mode is read from the shared setting (webapp/mode.js reads it from localStorage on every call). Found RUN at
+  // load, or switched back to RUN by the main window while this page is open (the 'storage' event from the same
+  // origin, and a check every second in case it does not arrive): the panel is replaced by the notice and the window
+  // closes itself. The main process closes it as well; neither side relies on the other.
+  (function () {
+    var MODE = window.ShinyMode, closing = false;
+    function check() {
+      if (MODE.isPractice()) return true;
+      if (closing) return false;
+      closing = true;
+      document.getElementById("mode-banner").hidden = true;
+      document.querySelector("main").hidden = true;
+      document.getElementById("mode-note").textContent = "PRACTICE / HUNT mode is off: this window closes. Turn the mode on with the switch above the tabs in the main window, then open it again from the Practice & Hunt menu. Nothing here runs in RUN mode.";
+      setTimeout(function () { window.close(); }, 1500);
+      return false;
+    }
+    if (check()) {
+      window.addEventListener("storage", function (e) { if (e.key === null || e.key === MODE.KEY) check(); });
+      setInterval(check, 1000);
+    }
+  })();
+</script>
+</body>
+</html>

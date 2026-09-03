@@ -218,6 +218,48 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# The PRACTICE / HUNT head (webapp/hunt/hunt-panel.js): its Gen 1 menu-box pipeline over the shared fixtures must equal
+# RNG Solution's, frame for frame and event for event (tests/fixtures/hunt/gen1-parity.json, emitted by RNG Solution's
+# tests/fixtures/hunt/emit_parity.py; the PNG poll gen1-gba-hd-menu/ and the real GBA HD timeline gba-timeline.csv).
+node test-hunt.cjs fixtures/hunt/gen1-parity.json fixtures/hunt
+
+# Negative control: the vector with one timeline attempt's close moved by a sample (raw +2 frames) and the PNG prediction's
+# offset bumped must FAIL, and is shown failing: the parity check sees a frame's difference.
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const a = v.timeline.sessions[1].attempts[0];
+a.close += 0.0335; a.raw += 2.0;
+v.png.predictions[0].offset += 1;
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' fixtures/hunt/gen1-parity.json "$corrupted"
+if node test-hunt.cjs "$corrupted" fixtures/hunt > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted hunt parity vector): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted hunt parity vector): FAILED as required ->"
+  grep -E '^FAIL' "$corrupted.out" | head -3 | cut -c1-160 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
+# Negative control: the Practice & Hunt window's main-process side (webapp/hunt/electron-main.js) with its mode check cut out
+# (every mode read as PRACTICE / HUNT) must FAIL test-hunt.cjs's window section, and is shown failing: the window would open
+# and the menu item stay enabled while the main window is in RUN.
+cutout=$(mktemp --suffix=.js)
+sed 's/function isPractice(mode) { return mode === PRACTICE; }/function isPractice(mode) { return true; }/' ../webapp/hunt/electron-main.js > "$cutout"
+grep -q "return true; }" "$cutout" || { echo "the mode check was not found in electron-main.js to cut out"; exit 1; }
+if node test-hunt.cjs fixtures/hunt/gen1-parity.json fixtures/hunt "$cutout" > "$cutout.out" 2>&1; then
+  echo "negative control (hunt window without its mode check): DID NOT FAIL"
+  rm -f "$cutout" "$cutout.out"
+  exit 1
+else
+  echo "negative control (hunt window without its mode check): FAILED as required ->"
+  grep -E '^FAIL' "$cutout.out" | head -3 | cut -c1-160 | sed 's/^/      /'
+fi
+rm -f "$cutout" "$cutout.out"
+
 # The webapp's Gen 1 Trainer ID tab: the mobile bundle must carry the tab, the engine and the embedded data, and the
 # tab's pure module must agree with the engine and RNG Solution's numbers (tests/test-webapp.cjs, which builds the bundle).
 bundle=$(mktemp --suffix=.ts)
@@ -232,8 +274,8 @@ no_hunt_code() { if grep -qF -- "$sentinel" "$1"; then echo "FAIL: $2 carries we
 no_hunt_code "$bundle" "the plain mobile bundle" || exit 1
 hunt_bundle=$(mktemp --suffix=.ts)
 node ../webapp/build-mobile-bundle.mjs --with-hunt "$hunt_bundle" > /dev/null 2>&1
-if grep -qF -- "$sentinel" "$hunt_bundle" && grep -qF "SHINY_HUNT_BUNDLED" "$hunt_bundle"; then
-  echo "positive control (--with-hunt): the sentinel IS in the bundle and it is marked as a hunt build"
+if grep -qF -- "$sentinel" "$hunt_bundle" && grep -qF "SHINY_HUNT_BUNDLED" "$hunt_bundle" && grep -qF "root.ShinyHunt = api" "$hunt_bundle"; then
+  echo "positive control (--with-hunt): the sentinel and the hunt panel ARE in the bundle and it is marked as a hunt build"
 else
   echo "positive control (--with-hunt): the sentinel is NOT in the bundle: --with-hunt does not bundle webapp/hunt/"
   exit 1
@@ -281,8 +323,10 @@ if bash "$tree/electron/build.sh" --stage-only > "$tree/electron.log" 2>&1; then
 else
   echo "refusal (electron stage, page references hunt/): refused as required -> $(grep -m1 refusing "$tree/electron.log")"
 fi
-bash "$tree/electron/build.sh" --stage-only --with-hunt > /dev/null 2>&1 && [ -f "$tree/electron/webapp/hunt/sentinel.js" ] \
-  && echo "refusal (electron stage, --with-hunt): staged, webapp/hunt/sentinel.js present" || { echo "electron --stage-only --with-hunt: hunt/ not staged"; exit 1; }
+bash "$tree/electron/build.sh" --stage-only --with-hunt > /dev/null 2>&1 && [ -f "$tree/electron/webapp/hunt/sentinel.js" ] && [ -f "$tree/electron/webapp/hunt/hunt.html" ] \
+  && [ -f "$tree/electron/webapp/hunt/hunt-panel.js" ] && [ -f "$tree/electron/webapp/hunt/preload.js" ] && [ -f "$tree/electron/webapp/hunt/electron-source.js" ] \
+  && [ -f "$tree/electron/webapp/hunt/electron-main.js" ] \
+  && echo "refusal (electron stage, --with-hunt): staged, webapp/hunt/{sentinel.js,hunt.html,hunt-panel.js,preload.js,electron-source.js,electron-main.js} present" || { echo "electron --stage-only --with-hunt: hunt/ not staged"; exit 1; }
 cp ../webapp/index.html "$tree/webapp/index.html"
 cat ../webapp/hunt/sentinel.js >> "$tree/webapp/app.js"
 if node "$tree/webapp/build-mobile-bundle.mjs" "$tree/out.ts" > "$tree/mobile.log" 2>&1; then
@@ -315,7 +359,12 @@ bash ../electron/build.sh --stage-only > /dev/null
 if [ -e ../electron/webapp/hunt ] || grep -rqF -- "$sentinel" ../electron/webapp; then
   echo "FAIL: the plain electron stage carries webapp/hunt/"; exit 1
 fi
-echo "the plain electron stage: no hunt/ directory, no sentinel; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; })"
+# ... and what ships outside the stage in every build names no hunt window, menu or capture source, and pulls no package for one:
+# main.js only requires webapp/hunt/electron-main.js when the stage has it, and 'ws' is installed by build.sh --with-hunt alone.
+if grep -qE 'Practice & Hunt|createHuntWindow|electron-source|preload|hunt\.html|GetSourceScreenshot|obs-websocket|"ws"' ../electron/main.js || grep -q '"ws"' ../electron/package.json; then
+  echo "FAIL: electron/main.js or package.json carries the hunt window code path or its package"; exit 1
+fi
+echo "the plain electron stage: no hunt/ directory, no sentinel; main.js names no hunt window and package.json no ws; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; })"
 
 # Negative control: a bundle whose gen2tid.js UMD line is renamed (the engine no longer registers as ShinyGen2Tid) must FAIL,
 # and is shown failing, so the carry of core/gen2tid.js into the bundle is a checked fact.
@@ -471,6 +520,30 @@ console.log("browser self-test: " + checks.length + " checks, " + bad + " failur
 fs.unlinkSync(process.argv[1] + ".seeded"); fs.unlinkSync(process.argv[1] + ".dom"); fs.unlinkSync(process.argv[1] + ".after");
 process.exit(bad ? 1 : 0);
 ' "$profile"
+  # The Practice & Hunt page (webapp/hunt/hunt.html) in the same browser, straight from the source tree: it carries no
+  # mode switch of its own; in RUN (a fresh profile) it says the mode is off and closes, showing no controls; once the
+  # shared mode setting is PRACTICE / HUNT (seeded by a probe page on the same file:// origin, the way the main window's
+  # switch sets it) the panel mounts under the practice store key.
+  hprofile=$(mktemp -d)
+  hprobe=$(mktemp --suffix=.html)
+  printf '<html><body><script>if (location.search === "?practice") localStorage.setItem("shinySolution.mode", "practice");</script></body></html>' > "$hprobe"
+  hpage="file://$(cd ../webapp && pwd)/hunt/hunt.html"
+  chrome_h() { timeout 120 google-chrome --headless=new --disable-gpu --no-sandbox --user-data-dir="$hprofile" --virtual-time-budget="$1" --dump-dom "$2" 2>/dev/null; }
+  run_dom=$(chrome_h 1000 "$hpage")
+  chrome_h 500 "file://$hprobe?practice" > /dev/null
+  practice_dom=$(chrome_h 2000 "$hpage")
+  rm -rf "$hprofile" "$hprobe"
+  hbad=0
+  echo "$run_dom" | grep -q 'id="mode-practice"' && { echo "FAIL hunt page: carries a mode switch of its own"; hbad=1; }
+  echo "$run_dom" | grep -q 'id="mode-note">PRACTICE / HUNT mode is off: this window closes' || { echo "FAIL hunt page: in RUN it does not say the mode is off and close"; hbad=1; }
+  echo "$run_dom" | grep -q '<main hidden' || { echo "FAIL hunt page: in RUN the panel is not hidden"; hbad=1; }
+  echo "$run_dom" | grep -q "<button" && { echo "FAIL hunt page: in RUN it shows controls"; hbad=1; }
+  echo "$practice_dom" | grep -q "calibration (practice store shinySolution.hunt.calibration.practice)" || { echo "FAIL hunt page: in PRACTICE / HUNT the panel did not mount under the practice key"; hbad=1; }
+  echo "$practice_dom" | grep -q "<button" || { echo "FAIL hunt page: in PRACTICE / HUNT it shows no controls"; hbad=1; }
+  echo "$practice_dom" | grep -q 'id="mode-note">PRACTICE / HUNT mode is off' && { echo "FAIL hunt page: in PRACTICE / HUNT it says the mode is off"; hbad=1; }
+  echo "$practice_dom" | grep -q '<main hidden' && { echo "FAIL hunt page: in PRACTICE / HUNT the panel is hidden"; hbad=1; }
+  [ $hbad = 0 ] || exit 1
+  echo "hunt page in the browser: no switch of its own; RUN: off, closing, no controls; PRACTICE / HUNT: panel mounted under the practice key"
 else
   echo "google-chrome not found; skipping the browser self-test"
 fi

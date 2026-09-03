@@ -22,4 +22,31 @@ Rules (README "Modes", RNG Solution's `docs/RNG_GUIDE_DESIGN.md` section 4.2):
   in force nowhere: the RUN side keeps only exact matches and names the rest as unknown.
 - It never touches LiveSplit, autosplit or reset logic.
 
-There is no capture-watching code here yet. `sentinel.js` is the marker the bundle tests use.
+What lives here (all of it staged and bundled only with `--with-hunt`):
+
+- `hunt-panel.js`: the Gen 1 menu-box watcher in JS, RNG Solution's `rngsolution/hunt` pipeline
+  for the GBA HD (the profiles' geometry and thresholds, the sample-rate guard, the
+  open -> close state machine with the overlay's hold check, the table lookup with the calibrated
+  lag, the practice-namespace calibration store `shinySolution.hunt.calibration.practice`
+  through `mode.js`'s `storeKey`). It exports the pure functions for node (`tests/test-hunt.cjs`
+  checks them against RNG Solution's `tests/fixtures/hunt/gen1-parity.json`, frame for frame on
+  the shared PNG poll and attempt for attempt on the real GBA HD timeline) and mounts the panel
+  into `#hunt-panel` when the page has one; it refuses to run while RUN mode is on.
+- `hunt.html`: the page the Electron app opens from its "Practice & Hunt" menu. It has no mode
+  switch of its own: the mode is the main window's (the one shared setting), the banner is shown,
+  and the page closes itself when it finds RUN at load or when the main window switches back
+  (the `storage` event, and a check every second).
+- `electron-main.js`: the menu and the window, in the Electron main process. `electron/main.js`
+  requires it only when this directory was staged, so a plain build's main process names no
+  window, menu or capture source. The menu item is enabled only while the main window's page
+  holds mode `practice` (read every second, and again at the click, which refuses with a dialog
+  otherwise), and a hunt window still open when the mode goes back to RUN is closed from here.
+- `preload.js` and `electron-source.js`: the hunt window's bridge and its frame sources in the
+  Electron main process: a PNG-sequence replay (`tests/fixtures/hunt/<name>/frames.csv`), and
+  obs-websocket screenshots through the `ws` package, opened only after the renderer's
+  confirmation dialog and never by any test. `ws` is not in `electron/package.json`;
+  `electron/build.sh --with-hunt` installs it (`npm install --no-save ws`), a plain build never.
+- `sentinel.js`: the marker the bundle tests use.
+
+Every prediction the panel prints says which methodology it assumes and, when the source was
+undersampled, the quantisation it was measured with.
