@@ -24,6 +24,7 @@ in the app's Help tab.
 | `app/` | **ShinySolution.exe** — WinForms desktop app (.NET 10, self-contained single file): all searchers and timers, plus a live TCP link that drives the mGBA scripts so you never touch the Lua console. The scripts are embedded; export them from the Help tab. |
 | `lua/shiny-solution.lua` | Gen 3 mGBA auto-manip script (also usable standalone via console commands). |
 | `lua/shiny-solution-gb.lua` | Gen 1/2 mGBA hunt bot (also standalone: `hunt()`, `stop()`, `setopt()`). |
+| `core/generators.js` + `app/Core/Generators.cs` | The Gen 3/4 encounter engines: Method 1/2/4 statics, wild Method H (RS, FRLG, Emerald leads), J and K (DPPt/HGSS leads, Safari, Bug Contest, headbutt, honey trees, Poke Radar), Gen 3 and Gen 4 eggs, per-stat/Hidden Power filters, exact rarity counts, LCRNG distance and the Gen 4 IV-to-seed back-step. Every call cited in `docs/FACTS.md` ("Generators"), checked bit-for-bit against PokeFinder's own test vectors. |
 | `core/rng.js` + `core/gen4.js` + `core/gen12.js` | Browser/Node ports of the engines (Gen 3 LCRNG/Method 1, Gen 4 seed/MT19937/timer, Gen 1-2 shiny DVs), bit-for-bit parity-tested against the C# engine. They power `timer/index.html`, the full `webapp/`, the hackmons.com tool page, and the Hackmons Hub mobile screen. |
 | `webapp/` | The complete no-emulator toolset as a static web app (all four gens: searchers, checkers, both timers with WebAudio beeps). Also the payload for the Linux/macOS desktop builds and the mobile WebView screen (`build-mobile-bundle.mjs`). |
 | `electron/` | Electron packaging for the calculators-and-timers desktop build (Linux AppImage/tar.gz locally, macOS dmg/zip via the `build-desktop` GitHub Actions workflow — unsigned; right-click Open on first launch). |
@@ -44,6 +45,10 @@ in the app's Help tab.
   bindings: RNG trace verification and a full automated New Game run.
 - `tests/test-gen4.cjs` — the JS Gen 4/Gen 1-2 ports vs vectors emitted by the C# engine
   (`--emit-gen4-vectors`), proving bit-for-bit parity; wired into `run-tests.sh`.
+- `tests/test-generators.cjs` and `--generators` in the C# tests — both generator engines vs
+  PokeFinder's test suite (`tests/generators-vectors.json`, 85 cases / 1833 results), the
+  decomp-vs-PokeFinder pins, the rarity and reversal math, and a 300-case JS/C# cross-check;
+  `tools/check-generator-citations.py` re-reads every cited decomp line.
 - Gen 1/2 addresses come from rgbds builds of the pret repos sha1-verified against retail
   ROM hashes; Gen 4 formulas are decomp-verified in Platinum/HGSS (DP's TID path inferred).
 

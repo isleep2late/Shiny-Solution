@@ -346,3 +346,319 @@ Python bindings (`tests/harness/`):
 GBA runs at 16777216 Hz with 280896 cycles per frame = **59.7275005696 fps**. The console
 timer converts advances to milliseconds with this constant; all constant offsets (console
 startup, human reaction) are absorbed by the calibration loop.
+
+# Generators (Gen 3 / Gen 4 encounter engines)
+
+`core/generators.js` and `app/Core/Generators.cs` (identical APIs, pure functions; no data
+file is read by the engines, the species and slot records of `core/data/*.json` are passed
+in). Every RNG call is a decomp line (STRUCTURAL); the few EMPIRICAL items are PokeFinder
+models we cannot read in code and are marked. `tools/check-generator-citations.py`
+re-reads all 300 cited lines (276 decomp, 21 PokeFinder, 3 PKHeX) and fails if any drifted.
+Decomp commits: pokeruby `63a8cbf`, pokeemerald `83df84e`, pokefirered `df4449a`,
+pokeplatinum `7c0aa10b`, pokeheartgold `814275e`; PokeFinder `7adce35`.
+
+## Conventions
+
+- **Frame N** (PokeFinder's convention, `Core/Gen3/Generators/StaticGenerator3.cpp:33-38`):
+  the generator starts from `jump(seed, N)`, so the first value it consumes is the (N+1)-th
+  LCRNG output after the seed. A Method 1 mon at frame N uses outputs N+1..N+4.
+- **LCRNG** `x = 0x41C64E6D*x + 0x6073`, output = `x >> 16` (`pokeemerald/src/random.c:11`,
+  `pokeplatinum/src/math_util.c:82`, `pokeheartgold/src/math_util.c:71-73`).
+- **Bounded rolls differ per game and this is load-bearing**: Gen 3 `Random() % n`;
+  DPPt `LCRNG_RandMod(n) = rand / ((0xffff / n) + 1)` (`pokeplatinum/include/inlines.h:156-169`)
+  except the places that spell `LCRNG_Next() % n` (surf/fish level `wild_encounters.c:967`,
+  typed slot pick `:1312`, held item `pokemon.c:4681`, Unown form `:1489`); HGSS
+  `LCRandRange(n) = LCRandom() % n` (`pokeheartgold/include/math_util.h:34`) everywhere.
+- **PID** = `lo | (hi << 16)`, low half first: `Random32()` (`pokeemerald/include/random.h:12`),
+  `pokeplatinum/src/pokemon.c:412`, `pokeheartgold/src/pokemon.c:195`. The one exception is
+  the FRLG Unown loop, `(Random() << 16) | Random()`, high half first
+  (`pokefirered/src/wild_encounter.c:248`; operand order is compiler output, verified for
+  agbcc in the Gen 3 section above and by PokeFinder's vectors).
+- **IV words**: word 1 = HP (bits 0-4), Atk (5-9), Def (10-14); word 2 = Spe, SpA, SpD
+  (`pokeemerald/src/pokemon.c:2277-2296`, `pokeplatinum/src/pokemon.c:452-470`,
+  `pokeheartgold/src/pokemon.c:226-239`). Result arrays use PokeFinder's order
+  `[hp, atk, def, spa, spd, spe]`.
+- **Methods 2 and 4** are a VBlank `Random()` (`pokeemerald/src/main.c:365-366`) landing
+  between PID and IV word 1 (Method 2) or between the IV words (Method 4); the positions are
+  PokeFinder's (EMPIRICAL, `WildGenerator3.cpp` `if (method == Method::Method2)` /
+  `Method4`). Statics accept Method 2 too (PokeFinder's static generator only offers 4).
+- Every result carries `callsUsed`, the number of LCRNG calls the creation consumed from the
+  frame, so the wizard can place the next event.
+
+## Derived values
+
+- Nature = PID % 25 (`pokeemerald/src/pokemon.c:5498-5500`).
+- Gender: 0/254/255 fixed male/female/genderless, else female iff `genderRatio > (PID & 0xFF)`
+  (`pokeemerald/src/pokemon.c:3471-3485`); reported 0 = M, 1 = F, 2 = none.
+- Ability: bit `PID & 1` selects the second ability only when the species has one
+  (`pokeemerald/src/pokemon.c:2298-2302`, `pokeplatinum/src/pokemon.c:475-483`). Results carry
+  `abilityBit`, the effective `abilitySlot` and `abilityId`.
+- Shiny iff `TID ^ SID ^ PIDhi ^ PIDlo < 8` (`pokeemerald/include/pokemon.h:371`,
+  `pokeplatinum/src/pokemon.c:2755`). `shinyType` 2/1/0 (equal / < 8 / not) is PokeFinder's
+  display split; the games only test `< 8`.
+- Hidden Power: power = `40 * bit1-pack / 63 + 30`, type = `15 * bit0-pack / 63 + 1`, +1 past
+  TYPE_MYSTERY (`pokeemerald/src/battle_script_commands.c:8905-8909`,
+  `pokeplatinum/src/battle/battle_script.c:6025-6031`). `hiddenPower` is the 0..15 index
+  (Fighting..Dark), `hiddenPowerTypeId` the decomp type id.
+- Unown letter = the four PID bit pairs, mod 28 (`pokeemerald/include/pokemon.h:364-369`).
+- Stats: `(2*base + IV) * level / 100 (+ level + 10 for HP, + 5 otherwise)`, nature ×110/×90
+  in integers (`core/rng.js statsAtLevel`); PokeFinder's float multipliers give the same
+  integers for every reachable value (the vectors compare all six stats).
+
+## Gen 3 statics and gifts: `gen3Static`
+
+PID lo, PID hi, [M2 skip], IV1, [M4 skip], IV2 (`pokeemerald/src/pokemon.c:2218,2277-2296`).
+`buggedRoamer` (RS Latis, FRLG beasts): the roamer's IVs go through `SetBoxMonData(MON_DATA_IVS)`
+which reads one byte, so only HP and the low 3 bits of Atk survive
+(`pokeruby/src/pokemon_2.c:938`, `pokefirered/src/pokemon.c:3660`, stored at
+`pokeruby/src/roamer.c:71`, `pokefirered/src/roamer.c:108`); Emerald reads all four bytes
+(`pokeemerald/src/pokemon.c:4400`).
+
+## Gen 3 wild Method H: `gen3Wild`
+
+Call script from the frame, in order. Rolls marked *opt* are outside PokeFinder's frame
+(it starts at the slot roll) and run only when the caller sets the option; they follow
+`StandardWildEncounter` (`pokeemerald/src/wild_encounter.c:595-661`, `pokeruby:447-512`,
+`pokefirered:366-440`).
+
+| Step | Emerald | Ruby/Sapphire | FireRed/LeafGreen |
+|---|---|---|---|
+| new metatile *opt* | `Random()%100 >= 60` skips (`:537`) | `:429` | `:350` |
+| encounter odds *opt* / rock smash always | `Random()%2880 < rate*16` (`:493,502`; bike ×80% `:504`, flutes/Cleanse Tag, cap 2880); rock smash `WildEncounterCheck(rate, TRUE)` `:680` | `:379,405-424`, rock smash `:531` | odds on the **separate** wild RNG `:304,669` (no main call); rock smash `:453` |
+| roamer *opt* | `Random()%4 == 0` (`src/roamer.c:216`) | `src/roamer.c:183` | `TryStartRoamerEncounter` |
+| outbreak *opt* | `Random()%100 < probability` (`:487`) | `:371` | none |
+| Feebas (fishing on the tile) | `Random()%100 > 49` -> no Feebas (`:137`), else Feebas 20-25 (`:67,784-790`) | `:98` | none |
+| typed slot | Magnet Pull on land, Static on land and water, nothing on rocks (`:432,440,445-446`): `Random()%2 != 0` -> no (`:947`), else `Random()%count` over the Steel/Electric slots unless none or all (`:931-934`) | none | none |
+| slot | `Random()%100` over 20/20/10/10/10/10/5/5/4/4/1/1 land, 60/30/5/4/1 water and rock, 70/30, 60/20/20, 40/40/15/4/1 rods (`:182-262`) | `:144-230` | `:71-130` |
+| level | `Random()%range` (`:286`); Pressure/Hustle/Vital Spirit `Random()%2 == 0` -> max, else `rand--` if nonzero (`:292-297`) | `:254` | `:172` |
+| Keen Eye/Intimidate *opt* (`lead.level`) | `Random()%2 == 0` suppresses when lead level > 5 and wild level <= lead-5 (`:906`, gated by `WILD_CHECK_KEEN_EYE` `:453`) | none | none |
+| Cute Charm | `Random()%3 != 0` when the species' gender is not fixed (`:397-398`), then the PID loop demands the opposite gender of the lead (`:410`, `src/pokemon.c:2340-2343`) | none | none |
+| Safari | one `Random()%100` (the `< 80` Pokeblock check, no block assumed: `:341`) | `:278` | none |
+| nature | Synchronize `Random()%2 == 0` -> lead nature (`:371-372`) else `Random()%25` (`:378`) | `Random()%25` (`:305`) | `Random()%NUM_NATURES` (`:232`) |
+| PID | `Random32()` until nature (and gender) match (`src/pokemon.c:2305-2311,2340-2343`) | `:311` | `:232`; Unown: `(Random()<<16)|Random()` until the chamber letter (`:237,243-251`), no nature roll |
+| IVs | IV1, IV2 with the Method 2/4 skips | same | same |
+
+RS and FRLG have no lead effects on slot, level, nature or gender (only Stench/Illuminate on
+the odds, `pokeruby:413-419`, `pokefirered:334-346`); `gen3Wild` refuses a field ability for
+those games instead of applying it. Fishing slots are reported per rod list (old 0-1, good 0-2,
+super 0-4) as PokeFinder does; a Feebas hit reports the inserted pseudo-slot 2/3/5.
+
+## Gen 3 eggs: `gen3EggEmerald`, `gen3EggRSFRLG`
+
+Trigger (held): the daycare step check `compatibility > Random()*100/USHRT_MAX`
+(`pokeemerald/src/daycare.c:893`, `pokeruby:755`, `pokefirered:1152`). Emerald then rolls
+Everstone inheritance only if the female/Ditto parent holds one: `Random() >= USHRT_MAX/2`
+-> none (`:439-447`), seeds `Random2` from `vblankCounter2` (`:459`) and builds the PID as
+`(Random2() << 16) | ((Random() % 0xfffe) + 1)` (`:465`) or loops `(Random2() << 16) | Random()`
+until the nature matches and the PID is nonzero (`:476-481`, 2400 tries). RS/FRLG store only
+the low half `(Random() % 0xfffe) + 1` (`pokeruby:364`, `pokefirered:750`).
+Pickup: RS/FRLG add `Random() << 16` (`pokeruby:721`, `pokefirered:1121`); then `CreateMon`
+draws IV1, IV2 (`pokeemerald:813,862`, `pokeruby:675`) and `InheritIVs` draws `%6 %5 %4`
+then three `%2` parents (`pokeemerald:549-561`, `pokeruby:426-435`, `pokefirered:809-816`).
+Removal bug: Emerald removes list position `i` (`:550`, fixed lists), RS/FRLG remove the
+selected *value* as an index (`pokeruby:429`, `pokefirered:810`). EMPIRICAL (PokeFinder
+`EggGenerator3.cpp`): the `Random2` seed model `(frame + 1 - calibration - 3*redraw) & 0xffff`,
+the held `advances = frame - offset` reporting, the 17-try VBlank cut-off in the nature loop,
+and the skip presets EBred {0,0,1}, EBredSplit {0,1,1}, EBredAlternate {0,0,2},
+RSFRLGBred {1,0,1}, RSFRLGBredSplit {0,1,1}, RSFRLGBredAlternate {1,0,2}, RSFRLGBredMixed {0,0,2}
+(iv1 skip, iv2 skip, inheritance skip). Nidoran/Illumise eggs take the male species when
+bit 15 of the PID is set (`pokeemerald:784-791`).
+
+## Gen 4 statics: `gen4Static`, `gen4StarterTriple`
+
+- Method 1: PID lo|hi, IV1, IV2 (`pokeplatinum/src/pokemon.c:412,452-470`,
+  `pokeheartgold/src/pokemon.c:195,226-239`).
+- Shiny "always" (red Gyarados): `Pokemon_FindShinyPersonality` / `GenerateShinyPersonality`:
+  `low = rand & 7`, `high = rand & 7`, then for each of 13 TSV bits one call decides which half
+  gets the bit (`pokeplatinum/src/pokemon.c:2762-2795`, `pokeheartgold/src/pokemon.c:2132-2152`,
+  called from `encounter_check.c:796`): 15 calls, then IVs.
+- Shiny "never" (Manaphy egg): ARNG `x*0x6C078965 + 1` rerolls until not shiny, no LCRNG call
+  (`pokeplatinum/src/overlay005/daycare.c:1130-1131`, `src/math_util.c:106`).
+- Method J/K statics go through the wild creator: Cute Charm roll, Synchronize/nature, PID
+  loop, IVs, then one held-item roll after the IVs (`wild_encounters.c:1227-1235,1462`,
+  `pokemon.c:4681`; HGSS `encounter_check.c:988-996,1350`); `callsUsedWithItem` counts it.
+- HGSS starters are created three in a row, 4 calls each, so starter i is at frame + 4i
+  (`pokeheartgold/src/choose_starter.c:55-59`); DPPt starters are single `GivePokemon` mons
+  (`statics-gen4.json` creation notes).
+- `call = output % 3` (E/K/P, `phone_scripts_prof_elm.c:84`) and `chatot = ((output % 8192) * 100) >> 13`
+  (`pokeplatinum/src/sound_chatot.c:80`, `pokeheartgold/src/sound_chatot.c:59`; the 0..99
+  scaling is PokeFinder's display) are derived from the frame's first output.
+
+## Gen 4 wild Method J (DPPt): `gen4Wild` with `method: "J"`
+
+`pokeplatinum/src/overlay006/wild_encounters.c`; every roll is `RandMod` (division) unless noted.
+
+1. Fishing: `RandMod(100) >= rate` -> no bite (`:396`); the frame still generates, reported
+   `valid: false` (PokeFinder convention). Feebas tile: `RandMod(2) == 0` -> not a Feebas tile
+   (`feebas_fishing.c:37`); otherwise the whole table is Feebas 10-20 (`:407-420`) and the
+   normal slot roll (and the lead's typed check) still happens; reported as pseudo-slot 5.
+2. Typed slot: Magnet Pull (Steel) then Static (Electric): `RandMod(2) == 0` (`:1319`) then
+   `LCRNG_Next() % count` over the matching slots unless none or all (`:1308-1312`). On water
+   and fishing the Magnet Pull result is overwritten by the Static check (`:1113-1115`, BUG
+   comment): the calls are spent, the water roll decides.
+3. Slot: `RandMod(100)` over 20/20/10/10/10/10/5/5/4/4/1/1 (`:822`), 60/30/5/4/1 surf and old
+   rod, 40/40/15/4/1 good and super rod (`:853,872`).
+4. Level: grass uses the slot's level; Pressure/Hustle/Vital Spirit `RandMod(2) == 0` **keeps**
+   the rolled slot, otherwise the highest-level slot of the same species (`:1109-1110,1502-1509`).
+   Surf/fish: `LCRNG_Next() % range` (`:967`), Pressure `RandMod(2) == 0` keeps it else max (`:971`).
+5. Keen Eye/Intimidate *opt*: `RandMod(2) == 0` suppresses when wild level <= lead-5 (`:1372`).
+6. Cute Charm: `RandMod(3) > 0` when the gender is not fixed (`:1063`), then nature
+   (Synchronize `RandMod(2) == 0` -> lead nature else `RandMod(25)`, `:944-949`) and the
+   **arithmetic** PID with no further call: `nature` for a female target,
+   `25 * (ratio/25 + 1) + nature` for a male one (`:1075`, `pokemon.c:516,535-536`).
+7. Otherwise nature, then `LCRNG_Next() | (LCRNG_Next() << 16)` until the nature matches
+   (`:1083`, `pokemon.c:498-499`), then IV1, IV2.
+8. Held item: `LCRNG_Next() % 100` (`pokemon.c:4681`; 45/95, Compound Eyes 20/80 `:4694`).
+   Only the roll and its class are reported (the data module carries no item ids).
+9. Unown: `LCRNG_Next() % count` over the map's form group (`:1489`, groups `:116-179`).
+10. Honey tree: level `5 + RandMod(11)`, Pressure `RandMod(2) == 0` keeps it else 15
+    (`:1210-1216`), then step 6 onward. Poke Radar with the chain kept: no slot roll
+    (`:1149-1161`), a broken chain rolls the slot (`:1164-1194`); shiny patches use the shiny
+    PID with a Cute Charm gender loop or a Synchronize nature loop (`:983-1045`); patch odds
+    `1/max(200, 8200 - 200*chain)` (`pokeradar.c:473-478`).
+
+`battleAdvances` = frame + `callsUsed` + 1 (ball position) + 1 for fishing + 4 on DP, 0 for
+Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
+
+## Gen 4 wild Method K (HGSS): `gen4Wild` with `method: "K"`
+
+`pokeheartgold/src/field/encounter_check.c`; every roll is modulo.
+
+1. Rock smash `(LCRandom() % 100) >= rate` (`:388`), fishing `LCRandRange(100) >= rate` (`:341`)
+   with the friendship boost 0/20/30/40/50 when the follower is out (`:1062-1081`), Suction
+   Cups/Sticky Hold ×2 for fishing, Arena Trap/No Guard/Illuminate ×2 otherwise, cap 100
+   (`:1124-1136`).
+2. Typed slot: `LCRandRange(2) == 0` (`:1112`) then `LCRandom() % count` (`:1104-1107`), for
+   land, rock smash, surf, fishing and headbutt alike (`:883-903`).
+3. Slot: `LCRandRange(100)` land (`:632`), surf (`:662`), all rods 40/30/15/10/5 (`:678`),
+   rock smash 80/20 (`:694-696`), headbutt 50/15/15/10/5/5 (`:700`); Safari `LCRandom() % 10`
+   (`:959`); Bug Contest `LCRandom() % 100`, first slot whose rate <= roll
+   (`overlay_bug_contest.c:178-183`).
+4. Level: land and Safari land use the slot's level with the Pressure slot swap
+   (`LCRandRange(2) == 0` keeps, `:886-887,961-965,1358-1372`); the design doc's claim that
+   HGSS grass spends a level roll was re-verified as **false** (`:886-887` read the slot level;
+   `:893` is the rock-smash case). Rock smash, surf, fishing, headbutt: `LCRandom() % range`
+   then Pressure `LCRandRange(2) == 0` keeps it else max (`:754-756`); Bug Contest level
+   `LCRandom() % range` with no Pressure roll (`overlay_bug_contest.c:186`).
+5. Keen Eye/Intimidate *opt* (`:1153`).
+6. Cute Charm `LCRandRange(3) != 0` (`:837`), nature `LCRandRange(25)` (Synchronize
+   `LCRandRange(2) == 0`, `:734-737`), arithmetic PID via letter 0
+   (`:846`, `pokemon.c:275,292`), IVs.
+7. Safari and Bug Contest without Cute Charm: up to four full creations (nature, PID loop,
+   IVs) until one IV is 31 (`:856-869`); `perfectIvTries` reports how many.
+8. Held item `LCRandom() % 100` (`pokemon.c:3748`, via `:1350`).
+9. Unown: Sinjoh event hall `LCRandom() % 2` over `!`/`?` (`:1312`, map
+   `MAP_RUINS_OF_ALPH_HALL_ENTRANCE_SINJOH_EVENT` = encounter bank 13,
+   `constants/maps.h:495`, `encounter_tables_narc.h:31`); elsewhere the unlocked puzzle letters
+   in the order A-J, R-V, K-Q, W-Z (`:1252-1297`), with the Unown radio `LCRandom() % 100 < 50`
+   picking among the uncaught ones (`:1339-1342`).
+
+## Gen 4 eggs: `gen4EggHeld`, `gen4EggPickup`, `gen4Egg`
+
+Trigger: Everstone check on the LCRNG (`LCRNG_Next() >= 0x7fff` -> no inheritance,
+`pokeplatinum/src/overlay005/daycare.c:327-336`; HGSS `get_egg.c:235-240`), then the PID is one
+MT19937 output (`daycare.c:353`, `get_egg.c:262`), or the first MT output with the parent's
+nature and nonzero, 2400 tries (`daycare.c:361-367`, `get_egg.c:266-267`). Masuda: up to four
+ARNG rerolls until shiny (`daycare.c:722-724`, `get_egg.c:601-604`). Pickup: IV1, IV2 from
+`Pokemon_InitWith`/`CreateMon` (`daycare.c:734,764`, `get_egg.c:611,631`), then `%6 %5 %4`
+and three `%2` parents (`daycare.c:405-410`, `get_egg.c:317-325`); DPPt removes position `i`
+(Emerald's bug, `daycare.c:406`), HGSS removes the rolled index (`get_egg.c:319`). HGSS power
+items force the first stat and skip one pair of rolls (`get_egg.c:308-312,999-1029`, two items
+-> `LCRandom() % 2` picks the parent).
+
+## Rarity (exact over the 2^32 cycle, recomputed here)
+
+`countIvStates(filter, method)` is exact: for IV1 word `w1` and IV2 word `w2` the number of
+states is `h_k[(w2 - (a_k * w1 mod 2^16)) mod 2^16]`, where `h_k` is the histogram of
+`hi16(a_k * t + c_k)` over the 65536 low halves and `(a_k, c_k)` the k-step LCRNG (k = 1
+for Methods 1/2/J/K, 2 for Method 4); the cost is (matching first words) × (matching second
+words). `listIvStates` enumerates them. Measured (`tests/test-generators.cjs` pins each):
+
+| Filter | Method 1 | Method 4 | per 100k frames |
+|---|---|---|---|
+| 6 × 31 | 6 states | 4 | 0.00014 |
+| exactly five 31 | 738 | 732 | 0.0172 |
+| all >= 30 | 260 | 252 | 0.0061 |
+| all >= 30 and Hidden Power Dark 70 | 6 | | |
+
+Flawless table (IV1 state, PID, nature, PSV; frame = `lcrngDistance(seed, ivState) - 3`):
+
+| Method | IV1 state | PID | Nature | PSV | Frame from Emerald 0 | from RS 0x5A0 |
+|---|---|---|---|---|---|---|
+| 1 | FFFF982D | 7942EF72 | Timid | 9630 | 176,562,488 | 1,860,923,800 |
+| 1 | FFFF305A | E85091A9 | Docile | 79F9 | 816,994,415 | 2,501,355,727 |
+| 1 | 7FFFF961 | E9375A48 | Calm | B37F | 1,821,972,668 | 3,506,333,980 |
+| 1 | 7FFF982D | F9426F72 | Modest | 9630 | 2,324,046,136 | 4,008,407,448 |
+| 1 | 7FFF305A | 685011A9 | Modest | 79F9 | 2,964,478,063 | 353,872,079 |
+| 1 | FFFFF961 | 6937DA48 | Modest | B37F | 3,969,456,316 | 1,358,850,332 |
+| 2 | same six IV states, PIDs 11A97B04 (Careful), 6F72469F (Lax), 5A48D694 (Naive), 91A9FB04 (Naive), EF72C69F (Hardy), DA485694 (Rash); frames one less than Method 1 | | | 6AAD/29ED/8CDC | | |
+| 4 | 7FFF52E5 / FFFF52E5 | B8862C85 / 3886AC85 | Modest / Timid | 9403 | 1,129,328,144 / 3,276,811,792 | 2,813,689,456 / 666,205,808 |
+| 4 | 7FFF8D6E / FFFF8D6E | 995ABC94 / 195A3C94 | Naive / Careful | 25CE | 356,047,747 / 2,503,531,395 | 2,040,409,059 / 4,187,892,707 |
+
+So the first flawless Method 1 frame is 176,562,488 from Emerald's seed 0 (34.2 days) and
+353,872,079 from RS 0x5A0; only nine natures can be flawless (Calm, Careful, Docile, Hardy,
+Lax, Modest, Naive, Rash, Timid) and a flawless shiny needs TID^SID in one of eight 8-wide
+blocks (25C8, 29E8, 6AA8, 79F8, 8CD8, 9400, 9630, B378) - the design doc's numbers reproduce.
+
+## Reachability
+
+- `lcrngDistance(from, to)`: the number of steps between two states in O(32) by matching one
+  bit at a time with the 2^i jump table (the low k bits of a full-period power-of-two LCG have
+  period 2^k; algorithm from PokeFinder `Core/RNG/LCRNG.hpp:51-64`). `frameForIvState(seed,
+  ivState, method)` = distance - 3 (Method 1/4) or - 4 (Method 2).
+- `prev(s) = s * 0xEEB9EB65 + 0x0A3561A1` (PKHeX `LCRNG.rMult`, PokeFinder `PokeRNGR`).
+- `seedsForIvs(ivs)`: PKHeX `LCRNGReversal.GetSeedsIVs` (lattice bounds Lag0 0x67D3, Lag1
+  0xC907, Lower 0x3443, Upper 0xC34E; `LCRNGReversal.cs:65-104`), returning every state whose
+  next two outputs carry the 15-bit IV words (the PID-high state of a Method 1 mon), both
+  bit-31 variants included. Checked on 300 random seeds in JS and C#.
+- `gen4SeedsForTarget(ivs, {maxFrame})`: back-steps each origin `callsBeforeIv1` (2) + N times
+  and keeps seeds whose hour byte `(seed >> 16) & 0xFF` is 0..23 (about 9.4 % of back-steps);
+  it reproduces the design doc's example (state 7FFF305A is frame 0 from seed 7B0448D1: hour 4,
+  low half 18641 = delay + year - 2000).
+
+## Disagreement log (decomp vs PokeFinder; the decomp wins, each pinned by a test)
+
+| # | Where | Decomp | PokeFinder | Effect |
+|---|---|---|---|---|
+| D1 | Emerald typed slots | Magnet Pull on land only, Static on land and water, neither on rocks (`pokeemerald/src/wild_encounter.c:432,440,445-446`) | applies both leads to every encounter type (`WildGenerator3.cpp`, `if ((lead == Lead::MagnetPull \|\| lead == Lead::Static) && ...)`) | Emerald water tables have no Steel type and rock tables no Electric type, so no shipped table differs; pinned with synthetic tables (`pin D1`) |
+| D2 | Emerald Everstone roll | `Random() >= USHRT_MAX/2` (= 0x7fff) -> no inheritance (`daycare.c:446-447`) | `(rand >> 15) == 0` inherits, so an output of exactly 0x7fff inherits | 1 in 65536 trigger frames (`pin D2`) |
+| D3 | HGSS Bug Contest with a Pressure-family lead | slot and level only (`overlay_bug_contest.c:178-186`) | adds the Pressure `nextUShort(2)` roll (`calculateLevel<true, true>` with force) | Pressure lead in the contest (`pin D3`) |
+| D4 | HGSS Safari surf/fishing with a Pressure-family lead | slot swap on land only (`encounter_check.c:961-965`) | `Grass \|\| safari` -> swap roll on water too | Pressure lead in Safari water (`pin D4`) |
+| D5 | DPPt surf/fishing with Magnet Pull | typed pick overwritten by the Static check (`wild_encounters.c:1113-1115`) | forces the Steel slot | needs a Steel type in a water table (none shipped); pinned with a synthetic table (`pin D5`) |
+| D6 | Gen 4 Everstone | MT loops until the parent's nature (`daycare.c:353-367`, `get_egg.c:259-274`) | `EggGenerator4` ignores the parents' items | our `everstoneNature` option; the oracle vectors run with it off (`pin D6`) |
+
+Not a mechanic but a label: PokeFinder folds the four Ruins of Alph interior banks into one
+location and uses **10** for the Sinjoh-event hall (`hgss.py`, "Ruins of Alpha interior all
+share the same table"); in the decomp that hall is bank 13 and bank 10 is the plain
+underground hall (`encounter_check.c:1388`, `map_headers.h:9466-9467,14746-14747`). The
+vector builder maps PokeFinder location 10 to `sinjoh: true`.
+
+## Not modelled / open
+
+- Emerald `TryGetRandomWildMonIndexByType` scans `NUM_LAND_MONS_ENCOUNTER_SLOTS` (12) entries
+  even for the 5-slot water table (`:953`, no BUGFIX), reading past the array into the next
+  ROM data; the Static-on-water count therefore depends on ROM layout. Both PokeFinder and
+  this engine use the in-bounds 5 slots.
+- Emerald egg nature loop: PokeFinder stops after 17 tries (a VBlank `Random()` is assumed to
+  land there); the decomp allows 2400 tries with the VBlank call interleaving at an unknown
+  point. `maxNatureTries` defaults to 17 for parity; the `pid != 0` condition (`:477`) is applied.
+- Held items: only the roll and its class (none/common/rare); characteristics: not derived.
+- DP battle-advance constants (+4 quick claw) come from PokeFinder, pokediamond has no C for it.
+- Safari Pokeblocks (Emerald nature shuffle), Battle Pike/Pyramid tables, double battles.
+
+## Verification record
+
+- Oracle: `tests/generators-vectors.json`, built by `tools/build-generator-vectors.cjs` from
+  PokeFinder's `Test/Gen3/{static3,wild3,egg3}.json` and `Test/Gen4/{static4,wild4,egg4}.json`
+  (commit 7adce35), every generator case mapped, PokeFinder's names kept, inputs resolved to
+  our data records: static3 3 cases / 30 results, wild3 16 / 133, egg3 6 / 350, static4 9 / 90,
+  wild4 43 / 430, egg4 8 / 800 (85 cases, 1833 results). Compared fields: pid, ivs, stats,
+  ability, abilityIndex, gender, hiddenPower, hiddenPowerStrength, level, nature, shiny,
+  advances, specie, encounterSlot, form, valid, battleAdvances, call, chatot, inheritance,
+  pickupAdvances, redraws. Not compared: item, characteristic.
+- `node tests/test-generators.cjs`: 1955 assertions green (2256 with the C# cross file);
+  `GEN_TEST_NEGATIVE=1` corrupts one oracle PID and fails with exit 1 (2 assertions).
+- `dotnet run --project app/Tests -- --generators`: 1929 assertions green on the same
+  vectors; it writes `tests/generators-cross.json` (300 random seed/frame/method cases over
+  the vector inputs) which the JS suite recomputes bit for bit.
+- `python3 tools/check-generator-citations.py`: all 300 citations present.

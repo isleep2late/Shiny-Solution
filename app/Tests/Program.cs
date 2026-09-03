@@ -20,6 +20,16 @@ if (args.Length < 1)
     return 2;
 }
 
+if (args[0] == "--generators")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --generators <generators-vectors.json> [cross-out.json]");
+        return 2;
+    }
+    return GeneratorTests.Run(args[1], args.Length > 2 ? args[2] : null);
+}
+
 if (args[0] == "--emit-gen4-vectors")
 {
     var seeds = new uint[] { 0, 1, 0x5A0, 0x12345678, 0xDEADBEEF, 0xFFFFFFFF, 0x01000000, 0xC4BD0000 };
