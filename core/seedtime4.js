@@ -94,11 +94,17 @@
 
   // ------------------------------------------------------------------ 1. seedToTimes (calculateTimes)
   // Every (date, time, delay) in `year` whose seed() is `seed`: the top byte is month*day+minute+second
-  // (mod 256) over every valid combination, byte 2 is the hour, the low 16 bits are year-2000+delay.
-  // PokeFinder's overflow rule (SeedToTimeCalculator4.cpp:30-32): an hour byte above 23 is shown as hour 23
-  // with (cd-23)*0x10000 moved into the delay; opts.allowHourOverflow=false drops those seeds instead.
-  // The delay is a u32 exactly as PokeFinder reports it (a year past 2000+efgh wraps negative);
-  // delaySigned is the same number as an int32.
+  // (mod 256) over every valid combination (PokeFinder's month/day/minute/second order), and the hour and
+  // the delay are the decomposition of the low 24 bits with the smallest non-negative delay:
+  //   (cd << 16) + efgh = (hour << 16) + (year - 2000) + delay, hour a clock hour 0..23.
+  // So hour = cd and delay = efgh - (year - 2000) when that is >= 0. When efgh < year - 2000 the hardware
+  // sum carried into the hour byte, so the real time is hour cd - 1 with delay + 0x10000 (when cd is 0 no
+  // clock hour reaches the seed in that year: the list is empty). An hour byte above 23 is PokeFinder's
+  // overflow rule (SeedToTimeCalculator4.cpp:30-32), the same minimum-delay decomposition: hour 23 with
+  // (cd - 23) * 0x10000 moved into the delay; opts.allowHourOverflow=false drops those seeds instead.
+  // opts.pokefinderDelay=true reports the carry case as PokeFinder does instead (hour cd and the delay
+  // wrapped to a u32, which no console can reach; its Test/Gen4/seedtotime4.json cases are written that
+  // way); delaySigned is the delay as an int32 (negative only in that mode).
   function seedToTimes(seed, year, opts) {
     seed = checkSeed(seed);
     checkInt("year", year, MIN_YEAR, MAX_YEAR);
@@ -111,8 +117,12 @@
     var results = [];
     if (cd > 23 && o.allowHourOverflow === false) return results;
     var hour = cd > 23 ? 23 : cd;
-    var delay = u32(efgh + (2000 - year));
-    if (cd > 23) delay = u32(delay + (cd - 23) * 0x10000);
+    var delay = (cd - hour) * 0x10000 + efgh - (year - 2000);
+    if (delay < 0) {
+      if (o.pokefinderDelay) delay = u32(delay);
+      else if (hour >= 1) { hour -= 1; delay += 0x10000; }
+      else return results;
+    }
     for (var month = 1; month <= 12; month++) {
       var maxDays = daysInMonth(year, month);
       for (var day = 1; day <= maxDays; day++) {
@@ -143,7 +153,16 @@
   // HGSS Elm calls: each call is one LCRNG advance, hi16 % 3 -> E/K/P
   // (pokeheartgold/src/application/pokegear/phone/scripts/phone_scripts_prof_elm.c:84, post-game with the
   // Pokerus flag) or hi16 % 2 -> E/K before that flag (:86) and after the Everstone before 7 badges (:59).
-  // PokeFinder Utilities4::getCalls formats 20+skips calls with the skipped roamer calls in parentheses.
+  // The letters name the draw (E = 0, K = 1, P = 2), not a fixed message: the two %2 branches start at
+  // different scripts, PHONE_SCRIPT_020 (:86) and PHONE_SCRIPT_014 (:59), so the same letters stand for
+  // different calls (ELM_LEGEND; phone_script_defs.c:190-240 maps the scripts to msg_0716 rows 15-18 and
+  // 27-32). PokeFinder Utilities4::getCalls formats 20+skips calls with the skipped roamer calls in
+  // parentheses.
+  var ELM_LEGEND = {
+    3: { E: "evolution (PHONE_SCRIPT_020, msg_0716 row 27; :84)", K: "Kanto (PHONE_SCRIPT_021, row 29)", P: "Pokerus (PHONE_SCRIPT_022, row 31)" },
+    2: { E: "post-game before the Pokerus flag (:86): evolution (PHONE_SCRIPT_020, row 27); after the Everstone before 7 badges (:59): egg hatch time (PHONE_SCRIPT_014, row 15)",
+         K: "post-game before the Pokerus flag (:86): Kanto (PHONE_SCRIPT_021, row 29); after the Everstone before 7 badges (:59): hatched moves (PHONE_SCRIPT_015, row 17)" }
+  };
   function elmCallsFormatted(seed, skips, ways) {
     var w = ways === 2 ? 2 : 3;
     var s = seed >>> 0;
@@ -161,10 +180,14 @@
     return { sequence: out, calls: compact };
   }
 
-  // HGSS roamers: on load every active roamer re-rolls its route from the LCRNG until it differs from
-  // where it was (pokeheartgold/src/field_roamer.c:236-254: LCRandom() % 16 + Johto start for Raikou/Entei,
-  // % 25 + Kanto start for Latias/Latios, retried while it equals the roamer's current map or the
-  // player's last map; :122-130 randomizes all active roamers). Route tables: field_roamer.c:24-69
+  // HGSS roamers: when a saved game is continued, every active roamer re-rolls its route from the LCRNG
+  // before the player has control: pokeheartgold/src/field_warp_tasks.c:355-379 (FieldTask_ContinueGame_Normal,
+  // case 0, calls sub_02067BE8) -> asm/unk_02067A60.s:212-220 (a thunk: Save_Roamers_Get, then
+  // Save_RandomizeRoamersLocation) -> src/field_roamer.c:123-130 (every active roamer in the order Raikou,
+  // Entei, Latias, Latios of include/constants/roamer.h:4-7; two more thunks re-roll on the warps at
+  // field_warp_tasks.c:633 and :744). The draw (:236-254): LCRandom() % 16 + Johto start for Raikou/Entei,
+  // % 25 + Kanto start for Latias/Latios, retried while it equals the roamer's current map or the player's
+  // last map (:118-121 passes PlayerLocationHistoryGetBack). Route tables: field_roamer.c:24-69
   // (Johto 29-39, 42-46; Kanto 1-22, 24, 26, 28). PokeFinder HGSSRoamer.cpp models the retry against the
   // previous route only (the player is assumed to be off the roamer maps) and counts the calls as skips.
   function routeJ(rand16) { var v = rand16 & 15; return v < 11 ? v + 29 : v + 31; }
@@ -208,17 +231,30 @@
   }
 
   // ------------------------------------------------------------------ 2. calibrateRows (calibrate)
-  // The target is opts.target ({year, month, day, hour, minute, second, delay}) or the first seedToTimes row
-  // for opts.year (default 2000, with opts.forceSecond). Rows: second offset -s..+s outer (rows whose date
-  // falls before 2000-01-01 are skipped), delay offset -k..+k inner; each row carries its own seed and the
-  // game's verification string. HGSS options: roamers {raikou, entei, lati}, routes {raikou, entei, lati}
-  // (the roamer's previous route, 0 = none), elmWays (3 or 2).
+  // The target is opts.target ({year, month, day, hour, minute, second, delay}, checked: a real date, a clock
+  // hour, delay 0..0xFFFFFF) or the first seedToTimes row for opts.year (default 2000, with opts.forceSecond).
+  // Rows: second offset -s..+s outer (rows whose date falls before 2000-01-01 are skipped), delay offset
+  // -k..+k inner (PokeFinder's u32 arithmetic: an offset below delay 0 wraps, the row re-seeds but is not a
+  // reachable event); each row carries its own seed and the game's verification string. HGSS options:
+  // roamers {raikou, entei, lati}, routes {raikou, entei, lati} (the roamer's previous route, 0 = none),
+  // elmWays (3 or 2).
+  function checkTarget(t) {
+    if (!t || typeof t !== "object") throw new Error("target must be an object {year, month, day, hour, minute, second, delay}");
+    checkInt("target.year", t.year, MIN_YEAR, MAX_YEAR);
+    checkInt("target.month", t.month, 1, 12);
+    checkInt("target.day", t.day, 1, daysInMonth(t.year, t.month));
+    checkInt("target.hour", t.hour, 0, 23);
+    checkInt("target.minute", t.minute, 0, 59);
+    checkInt("target.second", t.second, 0, 59);
+    checkInt("target.delay", t.delay, 0, 0xffffff);
+    return t;
+  }
   function calibrateRows(seed, delayRange, secondRange, game, opts) {
     var o = opts || {};
     var fam = gameFamily(game);
     checkInt("delayRange", delayRange, 0, 100000);
     checkInt("secondRange", secondRange, 0, 3600);
-    var target = o.target;
+    var target = o.target === undefined || o.target === null ? null : checkTarget(o.target);
     if (!target) {
       var times = seedToTimes(seed, o.year === undefined ? 2000 : o.year, { forceSecond: o.forceSecond, limit: 1 });
       if (times.length === 0) throw new Error("seed " + hex8(seed) + " has no time in " + (o.year === undefined ? 2000 : o.year));
@@ -448,7 +484,9 @@
 
   // For each candidate {seed, frame}, the (year, delay) pairs with delay = efgh - (year - 2000) inside
   // [delayMin, delayMax] and year inside [yearMin, yearMax], nearest to targetDelay first, and up to
-  // timesPerCandidate date/times for each (forceSecond honoured). Rows sort by delay distance, frame, seed.
+  // timesPerCandidate date/times for each (forceSecond honoured). A year past 2000 + efgh takes the hour-byte
+  // carry of seedToTimes (hour cd - 1, delay + 0x10000; no time at all when the hour byte is 0). Rows sort
+  // by delay distance, frame, seed.
   function seedsToTimes(candidates, opts) {
     var o = opts || {};
     var yearMin = o.yearMin === undefined ? MIN_YEAR : checkInt("yearMin", o.yearMin, MIN_YEAR, MAX_YEAR);
@@ -469,6 +507,7 @@
       var pairs = [];
       for (var year = yearMin; year <= yearMax; year++) {
         var delay = efgh - (year - 2000) + extra;
+        if (delay < 0) { if (cd >= 1) delay += 0x10000; else continue; }
         if (delay >= delayMin && delay <= delayMax) pairs.push({ year: year, delay: delay, dist: Math.abs(delay - targetDelay) });
       }
       pairs.sort(function (a, b) { return a.dist - b.dist || a.year - b.year; });
@@ -476,6 +515,7 @@
         var times = seedToTimes(seed, pairs[p].year, { forceSecond: o.forceSecond, limit: timesPer });
         for (var t = 0; t < times.length; t++) {
           var tm = times[t];
+          if (tm.delay !== pairs[p].delay) throw new Error("seedsToTimes: delay " + pairs[p].delay + " does not match seedToTimes " + tm.delay);
           rows.push({ seed: seed, frame: c.frame, year: tm.year, month: tm.month, day: tm.day, hour: tm.hour, minute: tm.minute, second: tm.second,
             delay: pairs[p].delay, delayDistance: pairs[p].dist, origin: c.origin });
         }
@@ -616,7 +656,7 @@
     next: next, prev: prev, hex8: hex8,
     daysInMonth: daysInMonth, addSeconds: addSeconds, calcSeed: calcSeed,
     seedToTimes: seedToTimes,
-    coinFlipsFormatted: coinFlipsFormatted, elmCallsFormatted: elmCallsFormatted,
+    coinFlipsFormatted: coinFlipsFormatted, elmCallsFormatted: elmCallsFormatted, ELM_LEGEND: ELM_LEGEND, checkTarget: checkTarget,
     roamerRoutes: roamerRoutes, routeJ: routeJ, routeK: routeK,
     chatotPitch: chatotPitch, chatotSequence: chatotSequence,
     calibrateRows: calibrateRows,

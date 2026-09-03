@@ -9,7 +9,7 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   dotnet run --project ../app/Tests -c Release -- --emit-gen4-vectors gen4-vectors.json
   node test-gen4.cjs gen4-vectors.json
 
-  # Gen 4 seed-to-time / reversal: JS and C# answer the same 300 random inputs (tests/seedtime4-cross.cjs) and
+  # Gen 4 seed-to-time / reversal: JS and C# answer the same 310 random inputs (300 plus 10 hour-byte-carry cases, tests/seedtime4-cross.cjs) and
   # must agree; a tampered answer file is shown to fail so the comparison is known to bite.
   cross_in=$(mktemp --suffix=.json); cross_out=$(mktemp --suffix=.json)
   node seedtime4-cross.cjs inputs "$cross_in" 300

@@ -143,7 +143,11 @@ public static class SeedTime4
     }
 
     // ---------------------------------------------------------------- 1. SeedToTimes
-    public static List<SeedTimeRow> SeedToTimes(uint seed, int year, int? forceSecond = null, long limit = long.MaxValue, bool allowHourOverflow = true)
+    // hour and delay are the minimum-delay decomposition of the low 24 bits (core/seedtime4.js seedToTimes):
+    // a year past 2000 + efgh carries into the hour byte (hour cd - 1, delay + 0x10000; empty when the hour
+    // byte is 0), an hour byte above 23 is hour 23 with (cd - 23) * 0x10000 in the delay (PokeFinder's rule);
+    // pokefinderDelay reports the carry case as PokeFinder's u32-wrapped delay at hour cd instead.
+    public static List<SeedTimeRow> SeedToTimes(uint seed, int year, int? forceSecond = null, long limit = long.MaxValue, bool allowHourOverflow = true, bool pokefinderDelay = false)
     {
         CheckInt("year", year, MinYear, MaxYear);
         if (forceSecond is int fs) CheckInt("forceSecond", fs, 0, 59);
@@ -153,8 +157,14 @@ public static class SeedTime4
         var results = new List<SeedTimeRow>();
         if (cd > 23 && !allowHourOverflow) return results;
         int hour = cd > 23 ? 23 : cd;
-        uint delay = unchecked(efgh + (uint)(2000 - year));
-        if (cd > 23) delay = unchecked(delay + (uint)((cd - 23) * 0x10000));
+        long delayL = (long)(cd - hour) * 0x10000 + efgh - (year - 2000);
+        if (delayL < 0)
+        {
+            if (pokefinderDelay) delayL = unchecked((uint)delayL);
+            else if (hour >= 1) { hour -= 1; delayL += 0x10000; }
+            else return results;
+        }
+        uint delay = (uint)delayL;
         for (int month = 1; month <= 12; month++)
         {
             int maxDays = DaysInMonth(year, month);
@@ -181,6 +191,21 @@ public static class SeedTime4
 
     // ---------------------------------------------------------------- verification strings
     public static string CoinFlipsFormatted(uint seed) => string.Join(", ", Gen4.CoinFlips(seed, 20).ToCharArray());
+
+    // The letters name the draw (E = 0, K = 1, P = 2), not a fixed message: the two %2 branches start at
+    // different scripts (phone_scripts_prof_elm.c:86 PHONE_SCRIPT_020, :59 PHONE_SCRIPT_014; phone_script_defs.c:190-240).
+    public static readonly IReadOnlyDictionary<int, IReadOnlyDictionary<char, string>> ElmLegend = new Dictionary<int, IReadOnlyDictionary<char, string>>
+    {
+        [3] = new Dictionary<char, string>
+        {
+            ['E'] = "evolution (PHONE_SCRIPT_020, msg_0716 row 27; :84)", ['K'] = "Kanto (PHONE_SCRIPT_021, row 29)", ['P'] = "Pokerus (PHONE_SCRIPT_022, row 31)"
+        },
+        [2] = new Dictionary<char, string>
+        {
+            ['E'] = "post-game before the Pokerus flag (:86): evolution (PHONE_SCRIPT_020, row 27); after the Everstone before 7 badges (:59): egg hatch time (PHONE_SCRIPT_014, row 15)",
+            ['K'] = "post-game before the Pokerus flag (:86): Kanto (PHONE_SCRIPT_021, row 29); after the Everstone before 7 badges (:59): hatched moves (PHONE_SCRIPT_015, row 17)"
+        }
+    };
 
     public static (string Sequence, string Calls) ElmCallsFormatted(uint seed, int skips, int ways = 3)
     {
@@ -242,13 +267,26 @@ public static class SeedTime4
     }
 
     // ---------------------------------------------------------------- 2. CalibrateRows
+    // A caller-supplied target must be a real date, a clock hour and a delay 0..0xFFFFFF.
+    public static SeedTimeRow CheckTarget(SeedTimeRow t)
+    {
+        CheckInt("target.year", t.Year, MinYear, MaxYear);
+        CheckInt("target.month", t.Month, 1, 12);
+        CheckInt("target.day", t.Day, 1, DaysInMonth(t.Year, t.Month));
+        CheckInt("target.hour", t.Hour, 0, 23);
+        CheckInt("target.minute", t.Minute, 0, 59);
+        CheckInt("target.second", t.Second, 0, 59);
+        if (t.Delay > 0xFFFFFF) throw new ArgumentOutOfRangeException("target.delay", $"target.delay must be in 0..16777215, got {t.Delay}");
+        return t;
+    }
+
     public static List<CalibrateRow> CalibrateRows(uint seed, int delayRange, int secondRange, string game, CalibrateOptions? opts = null)
     {
         var o = opts ?? new CalibrateOptions();
         string fam = GameFamily(game);
         CheckInt("delayRange", delayRange, 0, 100000);
         CheckInt("secondRange", secondRange, 0, 3600);
-        var target = o.Target;
+        var target = o.Target is null ? null : CheckTarget(o.Target);
         if (target is null)
         {
             var times = SeedToTimes(seed, o.Year, o.ForceSecond, 1);
@@ -481,6 +519,7 @@ public static class SeedTime4
             for (int year = yearMin; year <= yearMax; year++)
             {
                 int delay = efgh - (year - 2000) + extra;
+                if (delay < 0) { if (cd >= 1) delay += 0x10000; else continue; } // the hour-byte carry (SeedToTimes)
                 if (delay >= delayMin && delay <= delayMax) pairs.Add((year, delay, Math.Abs(delay - targetDelay)));
             }
             pairs.Sort((a, b) => a.Dist != b.Dist ? a.Dist.CompareTo(b.Dist) : a.Year.CompareTo(b.Year));
@@ -488,6 +527,7 @@ public static class SeedTime4
             {
                 foreach (var tm in SeedToTimes(c.Seed, pairs[p].Year, o.ForceSecond, timesPer))
                 {
+                    if (tm.Delay != (uint)pairs[p].Delay) throw new InvalidOperationException($"SeedsToTimes: delay {pairs[p].Delay} does not match SeedToTimes {tm.Delay}");
                     rows.Add(new TimeCandidate4(c.Seed, c.Frame, tm.Year, tm.Month, tm.Day, tm.Hour, tm.Minute, tm.Second, pairs[p].Delay, pairs[p].Dist, c.Origin));
                 }
             }

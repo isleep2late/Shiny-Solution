@@ -24,12 +24,60 @@ const pick = (r) => ({ year: r.year, month: r.month, day: r.day, hour: r.hour, m
 const hi15 = (s) => (s & 0x7fff0000) >>> 0;
 
 // 1. seedToTimes: PokeFinder ordering and delay, every row re-seeds to the input, forceSecond honoured
+// (PokeFinder's cases are in its own convention: a year past 2000 + low16 keeps hour cd with the delay wrapped)
 for (const c of v.seedToTimes) {
-  const rows = st.seedToTimes(c.seed, c.year, { forceSecond: c.forceSecond });
+  const pf = c.convention === "pokefinder";
+  const rows = st.seedToTimes(c.seed, c.year, { forceSecond: c.forceSecond, pokefinderDelay: pf });
   check(`seedToTimes ${c.id}`, rows.map(pick), c.results);
   check(`seedToTimes ${c.id} rows re-seed`, rows.every((r) => st.calcSeed(r, r.delay) === c.seed), true);
-  const all = st.seedToTimes(c.seed, c.year);
+  const all = st.seedToTimes(c.seed, c.year, { pokefinderDelay: pf });
   check(`seedToTimes ${c.id} unforced superset`, all.length >= rows.length && all.every((r) => st.calcSeed(r, r.delay) === c.seed), true);
+}
+// 1b. the hardware decomposition: the module's rows against a brute force over every clock time with a delay
+// 0..65535 through gen4.seed (independent of the module's hour/delay arithmetic); the carry into the hour
+// byte (hour cd-1, delay + 0x10000) and the empty list at hour byte 0 come out of that brute force
+function bruteInverse(seed, year, forceSecond) {
+  const rows = [];
+  for (let month = 1; month <= 12; month++) for (let day = 1; day <= st.daysInMonth(year, month); day++) for (let hour = 0; hour < 24; hour++)
+    for (let minute = 0; minute < 60; minute++) for (let second = 0; second < 60; second++) {
+      if (forceSecond !== null && forceSecond !== undefined && second !== forceSecond) continue;
+      const delay = (seed - gen4.seed(year, month, day, hour, minute, second, 0)) >>> 0;
+      if (delay <= 0xffff) rows.push({ year, month, day, hour, minute, second, delay });
+    }
+  return rows;
+}
+for (const c of v.seedToTimesHardware) {
+  const rows = st.seedToTimes(c.seed, c.year, { forceSecond: c.forceSecond });
+  check(`seedToTimesHardware ${c.id} parity`, rows.map(pick), c.results);
+  check(`seedToTimesHardware ${c.id} rows re-seed`, rows.every((r) => gen4.seed(r.year, r.month, r.day, r.hour, r.minute, r.second, r.delay) === c.seed), true);
+  check(`seedToTimesHardware ${c.id} clock hours and non-negative delays`, rows.every((r) => r.hour >= 0 && r.hour <= 23 && r.delay >= 0 && r.delaySigned === r.delay), true);
+  const brute = bruteInverse(c.seed, c.year, c.forceSecond);
+  if (c.bruteForce === false) {
+    check(`seedToTimesHardware ${c.id} beyond the brute force's delay range`, [brute.length, rows.length > 0 && rows.every((r) => r.hour === 23 && r.delay > 0xffff)], [0, true]);
+  } else {
+    check(`seedToTimesHardware ${c.id} = brute force`, rows.map(pick), brute);
+  }
+  check(`seedToTimesHardware ${c.id} PokeFinder convention on request`, st.seedToTimes(c.seed, c.year, { forceSecond: c.forceSecond, pokefinderDelay: true, limit: 1 }).map(pick), c.pokefinder);
+}
+{
+  check("seedToTimes carries into the hour byte (E80E0001 in 2018 is 13:57:59 at delay 65519, not 14:57:59 at delay -17)",
+    st.seedToTimes(0xe80e0001, 2018, { limit: 1 }).map((r) => [r.hour, r.minute, r.second, r.delay]), [[13, 57, 59, 65519]]);
+  check("seedToTimes hour byte 0 past 2000 + low16 has no time", st.seedToTimes(0x40000000, 2025).length, 0);
+  check("seedsToTimes carries into the hour byte", st.seedsToTimes([{ seed: 0xe80e0001, frame: 0 }], { yearMin: 2018, yearMax: 2018, delayMax: 0xffffff }).map((r) => [r.hour, r.delay]), [[13, 65519]]);
+  check("seedsToTimes hour byte 0 past 2000 + low16 has no time", st.seedsToTimes([{ seed: 0x40000000, frame: 0 }], { yearMin: 2025, yearMax: 2025, delayMax: 0xffffff }).length, 0);
+  check("seedsToTimes drops nothing the hardware can reach", st.seedsToTimes([{ seed: 0xe80e0001, frame: 0 }], { yearMin: 2000, yearMax: 2099, delayMax: 0xffffff, yearsPerCandidate: 100 }).length, 100);
+}
+for (const c of v.carrySearch) {
+  const rows = st.wantedToTimes({ ivs: c.ivs, method: c.method, maxFrame: 5, yearMin: c.year, yearMax: c.year, delayMin: 0, delayMax: 0xffffff, limit: 200 });
+  const hit = rows.find((r) => r.seed === c.seed && r.frame === c.frame);
+  if (c.expected) {
+    check(`carrySearch ${c.id} found`, hit ? [hit.hour, hit.delay] : null, [c.expected.hour, c.expected.delay]);
+    if (hit) check(`carrySearch ${c.id} time re-seeds`, gen4.seed(hit.year, hit.month, hit.day, hit.hour, hit.minute, hit.second, hit.delay), c.seed);
+  } else {
+    check(`carrySearch ${c.id} has no time in ${c.year}`, !!hit, false);
+    const alt = st.wantedToTimes({ ivs: c.ivs, method: c.method, maxFrame: 5, yearMin: c.yearWithTime, yearMax: c.yearWithTime, delayMin: 0, delayMax: 0xffffff, limit: 200 }).find((r) => r.seed === c.seed && r.frame === c.frame);
+    check(`carrySearch ${c.id} found in ${c.yearWithTime}`, alt ? alt.delay : null, c.delayIn2000);
+  }
 }
 {
   // hour overflow: PokeFinder shows hour 23 and moves (cd-23)*0x10000 into the delay; the strict option drops it
@@ -147,6 +195,7 @@ for (const c of v.calibrate) {
       const ways = c.opts.elmWays || 3;
       check(`calibrate ${c.id} calls ${r.seed}`, r.calls, ways === 3 ? gen4.elmCalls(r.seed, 20, skips) : (() => { let s = r.seed, o = ""; for (let i = 0; i < 20 + skips; i++) { s = core.next(s); if (i >= skips) o += (s >>> 16) % 2 === 0 ? "E" : "K"; } return o; })());
       check(`calibrate ${c.id} sequence ends with calls`, r.sequence.replace(/[^EKP]/g, "").slice(-20), r.calls);
+      check(`calibrate ${c.id} legend covers the letters`, r.calls.split("").every((ch) => ch in st.ELM_LEGEND[ways]), true);
       if (skips > 0) check(`calibrate ${c.id} skipped shown`, r.sequence.indexOf(" skipped)  ") > 0 && r.sequence[0] === "(", true);
     }
   }
@@ -176,10 +225,21 @@ for (const c of v.planner) {
   check("planner coin flip costs nothing", costs.coinFlip.perUse, 0);
 }
 
+{
+  // the two-way legend names both %2 branches (phone_scripts_prof_elm.c:86 and :59), the three-way one the post-game messages
+  check("ELM_LEGEND two-way names both branches", ["E", "K"].every((k) => /:86/.test(st.ELM_LEGEND[2][k]) && /:59/.test(st.ELM_LEGEND[2][k])) && /egg/i.test(st.ELM_LEGEND[2].E) && /hatched/i.test(st.ELM_LEGEND[2].K), true);
+  check("ELM_LEGEND three-way", Object.keys(st.ELM_LEGEND[3]).sort(), ["E", "K", "P"]);
+}
+
 // 8. input checking
+const okTarget = { year: 2000, month: 1, day: 1, hour: 0, minute: 0, second: 0, delay: 0 };
+const withTarget = (patch) => () => st.calibrateRows(0, 0, 0, "DP", { target: Object.assign({}, okTarget, patch) });
+check("calibrateRows accepts a valid target", st.calibrateRows(0, 0, 0, "DP", { target: okTarget }).length, 1);
 for (const bad of [() => st.seedToTimes(-1, 2000), () => st.seedToTimes(1, 1999), () => st.seedToTimes(1, 2000, { forceSecond: 60 }),
   () => st.ivsToSeeds(32, 0, 0, 0, 0, 0), () => st.pidToSeeds(2 ** 32), () => st.calibrateRows(0, 1, 1, "Emerald"), () => st.planAdvances(0, 5, { tools: ["bicycle"] }),
-  () => st.wantedToTimes({}), () => st.tidToSeeds(70000, 2000, 0, 1)]) {
+  () => st.wantedToTimes({}), () => st.tidToSeeds(70000, 2000, 0, 1),
+  withTarget({ delay: -1 }), withTarget({ delay: 0x1000000 }), withTarget({ hour: 24 }), withTarget({ month: 2, day: 30 }), withTarget({ year: 1999 }), withTarget({ minute: 60 }), withTarget({ second: "0" }),
+  () => st.calibrateRows(0, 0, 0, "DP", { target: "2000-01-01" })]) {
   let threw = false; try { bad(); } catch (e) { threw = true; }
   check("refuses " + bad.toString().replace(/^\(\) => /, ""), threw, true);
 }

@@ -67,6 +67,18 @@ static class SeedTime4Checks
         uint s3 = SeedTime4.Next(r), s4 = SeedTime4.Next(s3), s5 = SeedTime4.Next(s4);
         return Hi15(s3) == w1 && Hi15(method == "M4" ? s5 : s4) == w2;
     }
+    static List<object> BruteInverse(uint seed, int year, int? forceSecond)
+    {
+        var rows = new List<object>();
+        for (int month = 1; month <= 12; month++) for (int day = 1; day <= SeedTime4.DaysInMonth(year, month); day++) for (int hour = 0; hour < 24; hour++)
+            for (int minute = 0; minute < 60; minute++) for (int second = 0; second < 60; second++)
+            {
+                if (forceSecond is int fs && second != fs) continue;
+                uint delay = unchecked(seed - Gen4.Seed(year, month, day, hour, minute, second, 0));
+                if (delay <= 0xFFFF) rows.Add(new { year, month, day, hour, minute, second, delay });
+            }
+        return rows;
+    }
     static bool PidSound(uint s0, uint pid) { uint s1 = SeedTime4.Next(s0), s2 = SeedTime4.Next(s1); return (((s2 >> 16) << 16) | (s1 >> 16)) == pid; }
 
     static object RowObj(CalibrateRow r) => new
@@ -106,16 +118,62 @@ static class SeedTime4Checks
     {
         var v = JsonDocument.Parse(File.ReadAllText(vectorsPath)).RootElement;
 
-        // 1. seedToTimes
+        // 1. seedToTimes (PokeFinder's cases in its own convention: hour cd with the delay wrapped to a u32)
         foreach (var c in v.GetProperty("seedToTimes").EnumerateArray())
         {
             string id = c.GetProperty("id").GetString()!;
             uint seed = U(c.GetProperty("seed")); int year = I(c.GetProperty("year"));
-            var rows = SeedTime4.SeedToTimes(seed, year, I(c.GetProperty("forceSecond")));
+            bool pf = c.TryGetProperty("convention", out var conv) && conv.GetString() == "pokefinder";
+            var rows = SeedTime4.SeedToTimes(seed, year, I(c.GetProperty("forceSecond")), long.MaxValue, true, pf);
             Check($"seedToTimes {id}", rows.Select(Pick).ToList(), c.GetProperty("results"));
             Check($"seedToTimes {id} rows re-seed", rows.All(r => SeedTime4.CalcSeed(r.Year, r.Month, r.Day, r.Hour, r.Minute, r.Second, r.Delay) == seed), true);
-            var all = SeedTime4.SeedToTimes(seed, year);
+            var all = SeedTime4.SeedToTimes(seed, year, null, long.MaxValue, true, pf);
             Check($"seedToTimes {id} unforced superset", all.Count >= rows.Count && all.All(r => SeedTime4.CalcSeed(r.Year, r.Month, r.Day, r.Hour, r.Minute, r.Second, r.Delay) == seed), true);
+        }
+        // 1b. the hardware decomposition against a brute force over every clock time with delay 0..65535 through Gen4.Seed
+        foreach (var c in v.GetProperty("seedToTimesHardware").EnumerateArray())
+        {
+            string id = c.GetProperty("id").GetString()!;
+            uint seed = U(c.GetProperty("seed")); int year = I(c.GetProperty("year"));
+            int? forceSecond = c.TryGetProperty("forceSecond", out var fsE) && fsE.ValueKind == JsonValueKind.Number ? I(fsE) : null;
+            bool bruteForce = !(c.TryGetProperty("bruteForce", out var bf) && bf.ValueKind == JsonValueKind.False);
+            var rows = SeedTime4.SeedToTimes(seed, year, forceSecond);
+            Check($"seedToTimesHardware {id} parity", rows.Select(Pick).ToList(), c.GetProperty("results"));
+            Check($"seedToTimesHardware {id} rows re-seed", rows.All(r => Gen4.Seed(r.Year, r.Month, r.Day, r.Hour, r.Minute, r.Second, r.Delay) == seed), true);
+            Check($"seedToTimesHardware {id} clock hours and non-negative delays", rows.All(r => r.Hour >= 0 && r.Hour <= 23 && r.DelaySigned >= 0 && (uint)r.DelaySigned == r.Delay), true);
+            var brute = BruteInverse(seed, year, forceSecond);
+            if (!bruteForce) Check($"seedToTimesHardware {id} beyond the brute force's delay range", new object[] { brute.Count, rows.Count > 0 && rows.All(r => r.Hour == 23 && r.Delay > 0xFFFF) }, new object[] { 0, true });
+            else Check($"seedToTimesHardware {id} = brute force", rows.Select(Pick).ToList(), brute);
+            Check($"seedToTimesHardware {id} PokeFinder convention on request", SeedTime4.SeedToTimes(seed, year, forceSecond, 1, true, true).Select(Pick).ToList(), c.GetProperty("pokefinder"));
+        }
+        {
+            Check("seedToTimes carries into the hour byte", SeedTime4.SeedToTimes(0xE80E0001, 2018, null, 1).Select(r => new[] { r.Hour, r.Minute, r.Second, (int)r.Delay }).ToList(), new[] { new[] { 13, 57, 59, 65519 } });
+            Check("seedToTimes hour byte 0 past 2000 + low16 has no time", SeedTime4.SeedToTimes(0x40000000, 2025).Count, 0);
+            var carry = SeedTime4.SeedsToTimes(new[] { new Candidate4(0xE80E0001, 0, 14, 0xE8, 1, 0) }, new WantedFilter { YearMin = 2018, YearMax = 2018, DelayMax = 0xFFFFFF });
+            Check("seedsToTimes carries into the hour byte", carry.Select(r => new[] { r.Hour, r.Delay }).ToList(), new[] { new[] { 13, 65519 } });
+            Check("seedsToTimes hour byte 0 past 2000 + low16 has no time", SeedTime4.SeedsToTimes(new[] { new Candidate4(0x40000000, 0, 0, 0x40, 0, 0) }, new WantedFilter { YearMin = 2025, YearMax = 2025, DelayMax = 0xFFFFFF }).Count, 0);
+            Check("seedsToTimes drops nothing the hardware can reach", SeedTime4.SeedsToTimes(new[] { new Candidate4(0xE80E0001, 0, 14, 0xE8, 1, 0) }, new WantedFilter { YearMin = 2000, YearMax = 2099, DelayMax = 0xFFFFFF, YearsPerCandidate = 100 }).Count, 100);
+        }
+        foreach (var c in v.GetProperty("carrySearch").EnumerateArray())
+        {
+            string id = c.GetProperty("id").GetString()!;
+            uint seed = U(c.GetProperty("seed")); int frame = I(c.GetProperty("frame")); int year = I(c.GetProperty("year"));
+            var ivs = IvsOf(c.GetProperty("ivs")); string method = c.GetProperty("method").GetString()!;
+            var rows = SeedTime4.WantedToTimes(new WantedFilter { Ivs = ivs, Method = method, MaxFrame = 5, YearMin = year, YearMax = year, DelayMin = 0, DelayMax = 0xFFFFFF, Limit = 200 });
+            var hit = rows.FirstOrDefault(r => r.Seed == seed && r.Frame == frame);
+            if (c.GetProperty("expected").ValueKind == JsonValueKind.Object)
+            {
+                var e = c.GetProperty("expected");
+                Check($"carrySearch {id} found", hit is null ? null : new[] { hit.Hour, hit.Delay }, new[] { I(e.GetProperty("hour")), I(e.GetProperty("delay")) });
+                if (hit is not null) Check($"carrySearch {id} time re-seeds", Gen4.Seed(hit.Year, hit.Month, hit.Day, hit.Hour, hit.Minute, hit.Second, (uint)hit.Delay), seed);
+            }
+            else
+            {
+                Check($"carrySearch {id} has no time in {year}", hit is not null, false);
+                int yearWithTime = I(c.GetProperty("yearWithTime"));
+                var alt = SeedTime4.WantedToTimes(new WantedFilter { Ivs = ivs, Method = method, MaxFrame = 5, YearMin = yearWithTime, YearMax = yearWithTime, DelayMin = 0, DelayMax = 0xFFFFFF, Limit = 200 }).FirstOrDefault(r => r.Seed == seed && r.Frame == frame);
+                Check($"carrySearch {id} found in {yearWithTime}", alt?.Delay, I(c.GetProperty("delayIn2000")));
+            }
         }
         {
             var rows = SeedTime4.SeedToTimes(0x00190000, 2000, null, 1);
@@ -262,6 +320,7 @@ static class SeedTime4Checks
                         Check($"calibrate {id} row {i} two-way calls", r.Calls, sb.ToString());
                     }
                     Check($"calibrate {id} row {i} sequence ends with calls", new string(r.Sequence.Where(ch => ch is 'E' or 'K' or 'P').ToArray())[^20..], r.Calls);
+                    Check($"calibrate {id} row {i} legend covers the letters", r.Calls!.All(ch => SeedTime4.ElmLegend[opts.ElmWays == 2 ? 2 : 3].ContainsKey(ch)), true);
                     if (skips > 0) Check($"calibrate {id} row {i} skipped shown", r.Sequence.Contains(" skipped)  ") && r.Sequence[0] == '(', true);
                 }
             }
@@ -298,13 +357,23 @@ static class SeedTime4Checks
         Check("planner journal is EMPIRICAL", SeedTime4.AdvanceTools["journal"].Label, "EMPIRICAL");
         Check("planner coin flip costs nothing", SeedTime4.AdvanceTools["coinFlip"].PerUse, 0);
 
+        Check("ElmLegend two-way names both branches", new[] { 'E', 'K' }.All(k => SeedTime4.ElmLegend[2][k].Contains(":86") && SeedTime4.ElmLegend[2][k].Contains(":59"))
+            && SeedTime4.ElmLegend[2]['E'].Contains("egg", StringComparison.OrdinalIgnoreCase) && SeedTime4.ElmLegend[2]['K'].Contains("hatched", StringComparison.OrdinalIgnoreCase), true);
+        Check("ElmLegend three-way", SeedTime4.ElmLegend[3].Keys.OrderBy(k => k).ToArray(), new[] { 'E', 'K', 'P' });
+
         // 8. input checking
+        SeedTimeRow Target(int year = 2000, int month = 1, int day = 1, int hour = 0, int minute = 0, int second = 0, uint delay = 0) => new(year, month, day, hour, minute, second, delay, unchecked((int)delay), 0);
+        Action WithTarget(SeedTimeRow t) => () => SeedTime4.CalibrateRows(0, 0, 0, "DP", new CalibrateOptions { Target = t });
+        Check("calibrateRows accepts a valid target", SeedTime4.CalibrateRows(0, 0, 0, "DP", new CalibrateOptions { Target = Target() }).Count, 1);
         foreach (var (label, bad) in new (string, Action)[]
         {
             ("year 1999", () => SeedTime4.SeedToTimes(1, 1999)), ("forceSecond 60", () => SeedTime4.SeedToTimes(1, 2000, 60)),
             ("iv 32", () => SeedTime4.IvsToSeeds(32, 0, 0, 0, 0, 0)), ("game Emerald", () => SeedTime4.CalibrateRows(0, 1, 1, "Emerald")),
             ("tool bicycle", () => SeedTime4.PlanAdvances(0, 5, 1, new[] { "bicycle" })), ("empty filter", () => SeedTime4.WantedToTimes(new WantedFilter())),
-            ("tid 70000", () => SeedTime4.TidToSeeds(70000, 2000, 0, 1))
+            ("tid 70000", () => SeedTime4.TidToSeeds(70000, 2000, 0, 1)),
+            ("target delay -1 (u32)", WithTarget(Target(delay: unchecked((uint)-1)))), ("target delay 0x1000000", WithTarget(Target(delay: 0x1000000))),
+            ("target hour 24", WithTarget(Target(hour: 24))), ("target Feb 30", WithTarget(Target(month: 2, day: 30))), ("target year 1999", WithTarget(Target(year: 1999))),
+            ("target minute 60", WithTarget(Target(minute: 60)))
         })
         {
             bool threw = false; try { bad(); } catch (ArgumentException) { threw = true; }
@@ -323,7 +392,8 @@ static class SeedTime4Checks
         int? OptInt(JsonElement e, string name) => e.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.Number ? I(p) : null;
         var result = new
         {
-            seedToTimes = inp.GetProperty("seedToTimes").EnumerateArray().Select(c => SeedTime4.SeedToTimes(U(c.GetProperty("seed")), I(c.GetProperty("year")), OptInt(c, "forceSecond"), 200).Select(Pick).ToList()).ToList(),
+            seedToTimes = inp.GetProperty("seedToTimes").EnumerateArray().Select(c => SeedTime4.SeedToTimes(U(c.GetProperty("seed")), I(c.GetProperty("year")), OptInt(c, "forceSecond"), 200, true,
+                c.TryGetProperty("pokefinderDelay", out var pfd) && pfd.ValueKind == JsonValueKind.True).Select(Pick).ToList()).ToList(),
             calibrate = inp.GetProperty("calibrate").EnumerateArray().Select(c => SeedTime4.CalibrateRows(U(c.GetProperty("seed")), I(c.GetProperty("delayRange")), I(c.GetProperty("secondRange")), c.GetProperty("game").GetString()!, OptsOf(c)).Select(RowObj).ToList()).ToList(),
             ivs = inp.GetProperty("ivs").EnumerateArray().Select(c => { var iv = c.GetProperty("ivs").EnumerateArray().Select(I).ToArray(); return SeedTime4.IvsToSeedsByMethod(new Ivs4(iv[0], iv[1], iv[2], iv[3], iv[4], iv[5]), c.GetProperty("method").GetString()!); }).ToList(),
             pids = inp.GetProperty("pids").EnumerateArray().Select(p => SeedTime4.PidToSeeds(U(p))).ToList(),

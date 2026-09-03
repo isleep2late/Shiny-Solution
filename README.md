@@ -85,7 +85,7 @@ RNG Solution's registry and tables and embedded in every head.
   Google Chrome is installed, the tab driven headless through its own handlers. `core/seedtime4.js`
   vs `tests/seedtime4-vectors.json` (PokeFinder's seed-to-time / ID / reversal data, the design's
   gate seeds, round trips, decomp roamer tables) with a corrupted vector shown failing, and the
-  JS/C# cross-check on 300 random inputs with a tampered answer file shown failing.
+  JS/C# cross-check on 310 random inputs with a tampered answer file shown failing.
 - `app/run-core-tests.sh`: the C# engine vs the same vectors, plus canonical MT19937 vectors,
   the Gen 4 seed/timer model, `Gen1Tid.cs` vs the gen1tid vectors and `SeedTime4.cs` vs the
   seedtime4 vectors, each with its own negative control. `dotnet build app/App -c Release -p:EnableWindowsTargeting=true` compiles the

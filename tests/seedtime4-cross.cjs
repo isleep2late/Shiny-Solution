@@ -15,7 +15,12 @@ function makeInputs(total) {
   const inputs = { seedToTimes: [], calibrate: [], ivs: [], pids: [], reachable: [], wanted: [], planner: [], tidToSeeds: [], mtSecond: [], chatot: [] };
   const share = { seedToTimes: 40, calibrate: 40, ivs: 60, pids: 40, reachable: 20, wanted: 20, planner: 20, tidToSeeds: 10, mtSecond: 30, chatot: 20 };
   const scale = total / 300;
-  for (let i = 0; i < Math.round(share.seedToTimes * scale); i++) inputs.seedToTimes.push({ seed: rnd(), year: 2000 + ri(100), forceSecond: i % 3 === 0 ? null : ri(60) });
+  for (let i = 0; i < Math.round(share.seedToTimes * scale); i++) inputs.seedToTimes.push({ seed: rnd(), year: 2000 + ri(100), forceSecond: i % 3 === 0 ? null : ri(60), pokefinderDelay: i % 5 === 0 });
+  // the carry into the hour byte: low16 below year - 2000, a third with the hour byte 0, half in PokeFinder's convention
+  for (let i = 0; i < Math.round(10 * scale); i++) {
+    const seed = ((ri(256) << 24) | ((i % 3 === 0 ? 0 : 1 + ri(23)) << 16) | ri(50)) >>> 0;
+    inputs.seedToTimes.push({ seed, year: 2050 + ri(50), forceSecond: i % 2 === 0 ? null : ri(60), pokefinderDelay: i % 2 === 1 });
+  }
   for (let i = 0; i < Math.round(share.calibrate * scale); i++) {
     // keep the hour byte a clock hour so the row is a real time
     const seed = ((ri(256) << 24) | (ri(24) << 16) | ri(65536)) >>> 0;
@@ -40,7 +45,7 @@ function makeInputs(total) {
 const rowPick = (r) => ({ year: r.year, month: r.month, day: r.day, hour: r.hour, minute: r.minute, second: r.second, delay: r.delay });
 function answer(inputs) {
   return {
-    seedToTimes: inputs.seedToTimes.map((c) => st.seedToTimes(c.seed, c.year, { forceSecond: c.forceSecond, limit: 200 }).map(rowPick)),
+    seedToTimes: inputs.seedToTimes.map((c) => st.seedToTimes(c.seed, c.year, { forceSecond: c.forceSecond, limit: 200, pokefinderDelay: !!c.pokefinderDelay }).map(rowPick)),
     calibrate: inputs.calibrate.map((c) => st.calibrateRows(c.seed, c.delayRange, c.secondRange, c.game, { year: c.year, forceSecond: c.forceSecond, roamers: c.roamers, routes: c.routes, elmWays: c.elmWays })
       .map((r) => ({ year: r.year, month: r.month, day: r.day, hour: r.hour, minute: r.minute, second: r.second, delay: r.delay, secondOffset: r.secondOffset, delayOffset: r.delayOffset, seed: r.seed, sequence: r.sequence,
         roamer: r.roamer ? { raikou: r.roamer.raikou, entei: r.roamer.entei, lati: r.roamer.lati, skips: r.roamer.skips, routeString: r.roamer.routeString } : null }))),

@@ -36,11 +36,34 @@ const v = {
   }
 };
 
-// ---- PokeFinder seed-to-time
+// ---- PokeFinder seed-to-time (three of the four cases are a year past 2000 + low16 with the hour byte 0:
+// PokeFinder writes them as hour 0 with the delay wrapped to a u32, the module's pokefinderDelay option)
 v.seedToTimes = readPf("Test/Gen4/seedtotime4.json").calculateTimes.map((c) => ({
-  id: "pokefinder/seedtotime4/calculateTimes/" + c.name, seed: c.seed, year: c.year, forceSecond: 0,
+  id: "pokefinder/seedtotime4/calculateTimes/" + c.name, seed: c.seed, year: c.year, forceSecond: 0, convention: "pokefinder",
   results: c.results.map((r) => ({ year: r.year, month: r.month, day: r.day, hour: r.hour, minute: r.minute, second: r.second, delay: r.delay }))
 }));
+
+// ---- the hardware decomposition: when low16 < year - 2000 the console's sum carried into the hour byte, so
+// the real time is hour cd-1 with delay + 0x10000 (none when the hour byte is 0). `results` are the module's
+// rows (parity fixture); the harnesses rebuild every bruteForce case from scratch over every clock time with
+// delay 0..65535 through gen4.seed, and `pokefinder` is the first row in PokeFinder's convention.
+const pickRow = (r) => ({ year: r.year, month: r.month, day: r.day, hour: r.hour, minute: r.minute, second: r.second, delay: r.delay });
+v.seedToTimesHardware = [
+  { id: "hardware/carry/E80E0001-2018", seed: 0xe80e0001, year: 2018, forceSecond: 59, note: "low16 1 < 18: hour 13 (byte 14), delay 65519" },
+  { id: "hardware/carry/6F0B0008-2009", seed: 0x6f0b0008, year: 2009, forceSecond: null, note: "low16 8 < 9: hour 10 (byte 11), delay 65535" },
+  { id: "hardware/carry/hour-byte-0/40000000-2025", seed: 0x40000000, year: 2025, forceSecond: 0, note: "PokeFinder's own case: the hour byte is 0, so no clock hour reaches the seed in 2025" },
+  { id: "hardware/plain/gate-7B0448D1-2000", seed: 0x7b0448d1, year: 2000, forceSecond: 59 },
+  { id: "hardware/plain/E80E0001-2000", seed: 0xe80e0001, year: 2000, forceSecond: 59, note: "the same seed in 2000: hour 14, delay 1" },
+  { id: "hardware/overflow-and-carry/01190005-2010", seed: 0x01190005, year: 2010, forceSecond: 0, bruteForce: false, note: "hour byte 25 with low16 5 < 10: hour 23, delay 131067 (beyond the brute force's 65535)" }
+].map((c) => Object.assign({}, c, {
+  results: st.seedToTimes(c.seed, c.year, { forceSecond: c.forceSecond }).map(pickRow),
+  pokefinder: st.seedToTimes(c.seed, c.year, { forceSecond: c.forceSecond, pokefinderDelay: true, limit: 1 }).map(pickRow)
+}));
+
+// ---- the carry through the search: the frame-0 mon of a carried seed is found at the carried time
+v.carrySearch = [0xe80e0001, 0x40000000].map((seed) => ({ seed, frame: 0, method: "M1", ivs: st.monFromFrameSeed(seed, "M1").ivs }));
+v.carrySearch[0] = Object.assign(v.carrySearch[0], { id: "carry/search/E80E0001", year: 2018, expected: { hour: 13, delay: 65519 } });
+v.carrySearch[1] = Object.assign(v.carrySearch[1], { id: "carry/search/hour-byte-0/40000000", year: 2025, expected: null, yearWithTime: 2000, delayIn2000: 0 });
 
 // ---- PokeFinder id4
 const id4 = readPf("Test/Gen4/id4.json");
@@ -163,7 +186,7 @@ for (let i = 0; i < 200; i++) { const seed = rnd(); const mt = new gen4.Mt19937(
 
 fs.writeFileSync(out, JSON.stringify(v));
 console.log("wrote " + out + ": " + [
-  v.seedToTimes.length + " seedToTimes", v.idGenerator.length + " idGenerator", v.idSearcher.length + " idSearcher",
+  v.seedToTimes.length + " seedToTimes", v.seedToTimesHardware.length + " seedToTimesHardware", v.carrySearch.length + " carrySearch", v.idGenerator.length + " idGenerator", v.idSearcher.length + " idSearcher",
   v.lcrngReverse.ivs.length + "+" + v.lcrngReverse.pid.length + " lcrngReverse", v.gate.length + " gate",
   v.ivsRoundTrip.length + " ivsRoundTrip", v.pidRoundTrip.length + " pidRoundTrip", v.collisions.length + " collisions",
   v.calibrate.length + " calibrate (" + v.calibrate.reduce((n, c) => n + c.rows.length, 0) + " rows)", v.roamer.length + " roamer",
