@@ -16,6 +16,7 @@ in the app's Help tab.
 | **Gen 3** R/S (E/FRLG experimental) | Fully automatic: the mGBA script reads the live RNG, self-calibrates with a throwaway press + savestate rewind, and presses A on the exact shiny/TID frame — starters, gifts, AND static legendaries (enemy-slot mode); a brute-force hunt covers wild grass | Calibrated power-on timer for dead-battery R/S (every boot seeds 0x5A0); TID manip converges in a few attempts and reveals your SID |
 | **Gen 1/2** R/B/Y/G/S/C | Automatic hunt bot: no seedable RNG exists, so the bot retries a savestate with shifted timing until the roll is shiny (Gen 2 rule) or matches your DV pattern — encounters, gifts/starters, and TIDs | Not practical (hardware divider RNG) |
 | **Gen 4** D/P/Pt/HG/SS | Assisted: seed searcher + verifiers | Full EonTimer-model two-phase timer, TID-target search by delay, coin-flip seed matching (DPPt) and Elm-call sequence prediction (HGSS), Method-1 shiny search per seed |
+| **Gen 5** B/W/B2/W2 | Engine only in this release (no tab yet): the SHA-1 boot seed, the 64-bit LCRNG, the boot advances, TID/SID rows and the profile searcher (Timer0/VCount/VFrame/GxStat from typed IVs or save needles), ported from PokeFinder and vector-tested in JS and C# | Same engine; the console workflow (profile first, then date/time/keys for a wanted TID) arrives with the UI phase |
 
 ## The pieces
 
@@ -24,10 +25,10 @@ in the app's Help tab.
 | `app/` | **ShinySolution.exe** — WinForms desktop app (.NET 10, self-contained single file): all searchers and timers, plus a live TCP link that drives the mGBA scripts so you never touch the Lua console. The scripts are embedded; export them from the Help tab. |
 | `lua/shiny-solution.lua` | Gen 3 mGBA auto-manip script (also usable standalone via console commands). |
 | `lua/shiny-solution-gb.lua` | Gen 1/2 mGBA hunt bot (also standalone: `hunt()`, `stop()`, `setopt()`). |
-| `core/rng.js` + `core/gen4.js` + `core/gen12.js` | Browser/Node ports of the engines (Gen 3 LCRNG/Method 1, Gen 4 seed/MT19937/timer, Gen 1-2 shiny DVs), bit-for-bit parity-tested against the C# engine. They power `timer/index.html`, the full `webapp/`, the hackmons.com tool page, and the Hackmons Hub mobile screen. |
+| `core/rng.js` + `core/gen4.js` + `core/gen12.js` + `core/gen5.js` | Browser/Node ports of the engines (Gen 3 LCRNG/Method 1, Gen 4 seed/MT19937/timer, Gen 1-2 shiny DVs, Gen 5 SHA-1 seed/LCRNG64/ID/profile search), bit-for-bit parity-tested against the C# engine. They power `timer/index.html`, the full `webapp/`, the hackmons.com tool page, and the Hackmons Hub mobile screen. |
 | `webapp/` | The complete no-emulator toolset as a static web app (all four gens: searchers, checkers, both timers with WebAudio beeps). Also the payload for the Linux/macOS desktop builds and the mobile WebView screen (`build-mobile-bundle.mjs`). |
 | `electron/` | Electron packaging for the calculators-and-timers desktop build (Linux AppImage/tar.gz locally, macOS dmg/zip via the `build-desktop` GitHub Actions workflow — unsigned; right-click Open on first launch). |
-| `app/Core/` | The C# engine: LCRNG, MT19937, Method 1, Gen 4 seed model, searches, timer math. |
+| `app/Core/` | The C# engine: LCRNG, MT19937, Method 1, Gen 4 seed model, Gen 5 seed/ID/profile engine, searches, timer math. |
 | `docs/FACTS.md` | Every mechanic used, with decompilation citations. |
 | `tests/` | The test suites (see below). |
 
@@ -44,6 +45,10 @@ in the app's Help tab.
   bindings: RNG trace verification and a full automated New Game run.
 - `tests/test-gen4.cjs` — the JS Gen 4/Gen 1-2 ports vs vectors emitted by the C# engine
   (`--emit-gen4-vectors`), proving bit-for-bit parity; wired into `run-tests.sh`.
+- `tests/test-gen5.cjs` and `app/Tests --gen5` — both Gen 5 engines vs `tests/gen5-vectors.json`
+  (PokeFinder's own test vectors, the RNGWriteups worked seed 0xb082b4a755192171, and
+  independent oracles; provenance per vector, builder `tests/build-gen5-vectors.py`), plus
+  200 random inputs answered by C# (`--emit-gen5-random`) and re-checked in JS.
 - Gen 1/2 addresses come from rgbds builds of the pret repos sha1-verified against retail
   ROM hashes; Gen 4 formulas are decomp-verified in Platinum/HGSS (DP's TID path inferred).
 
@@ -62,11 +67,16 @@ dotnet publish app/App/ShinySolution.App.csproj -c Release -r win-x64 \
 - Wild encounters, eggs, and lead-ability aware searches for Gen 3/4
 - Gen 4 emulator automation (needs a scriptable DS emulator path)
 - Model-based Gen 1/2 prediction to replace brute-force hunting
-- Gen 5+ (different seeding: SHA-1 into MT — a separate project-sized effort)
+- Gen 5 UI: the profile branch of the console workflow over the ported engine (the engine
+  itself ships now; the +2/+10 boot-advance question and a DS calibration session are open)
+- Gen 6+ needs memory reads or a CSPRNG and is out of scope
 - Hardware auto-mode: a microcontroller pressing buttons through a Game Boy Player
 
 ## License
 
 GPL-3.0. The implementations are original, written against the pret decompilations; the
 Gen 4 timing model follows EonTimer's MIT-licensed source, and seed-inversion edge cases
-were cross-checked against PokeFinder (GPL-3.0), whose license this project shares.
+were cross-checked against PokeFinder (GPL-3.0), whose license this project shares. The Gen 5
+engine (`core/gen5.js`, `app/Core/Gen5.cs`) is a port of PokeFinder's SHA-1 seeding, LCRNG64,
+initial-advance, TID/SID and profile-search code by Admiral-Fish, credited in the file headers
+and in `docs/FACTS.md`; its test vectors are PokeFinder's own.

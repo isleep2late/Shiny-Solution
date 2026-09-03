@@ -16,7 +16,7 @@ void Check<T>(string label, T actual, T expected)
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json>");
+    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen5 <gen5-vectors.json> | --emit-gen5-random <out.json>");
     return 2;
 }
 
@@ -47,6 +47,17 @@ if (args[0] == "--emit-gen4-vectors")
         .Select(r => new { r.Second, r.Delay, r.SeedValue, r.Tid, r.Sid }).ToList();
     File.WriteAllText(args[1], JsonSerializer.Serialize(new { seedCases, tidSids, flips, elm, timers, search }));
     Console.WriteLine($"gen4 vectors written to {args[1]}");
+    return 0;
+}
+
+if (args[0] == "--gen5")
+{
+    return ShinySolution.Tests.Gen5Checks.Run(args[1]);
+}
+
+if (args[0] == "--emit-gen5-random")
+{
+    ShinySolution.Tests.Gen5Checks.EmitRandom(args[1]);
     return 0;
 }
 

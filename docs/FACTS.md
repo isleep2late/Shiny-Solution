@@ -33,6 +33,9 @@ Every mechanic Shiny-Solution relies on was verified directly against the pret d
 (pokered, pokeyellow, pokecrystal, pokegold, pokeruby, pokeemerald, pokefirered,
 pokediamond, pokeplatinum, pokeheartgold), not taken from community folklore. Citations below
 are file paths within those repos.
+The one exception is Gen 5 (last section): no decompilation exists, so that engine is a port
+of PokeFinder (Admiral-Fish, GPL-3.0) and is labelled EMPIRICAL throughout, with PokeFinder
+file:line citations instead.
 
 # Gen 1/2 (Game Boy)
 
@@ -346,3 +349,149 @@ Python bindings (`tests/harness/`):
 GBA runs at 16777216 Hz with 280896 cycles per frame = **59.7275005696 fps**. The console
 timer converts advances to milliseconds with this constant; all constant offsets (console
 startup, human reaction) are absorbed by the calibration loop.
+
+# Gen 5 (Nintendo DS: Black / White / Black 2 / White 2)
+
+**Status: EMPIRICAL throughout.** No Gen 5 decompilation exists (nothing under `~/AI/pret`),
+so nothing in this section is read from game code. Every mechanic and constant is ported
+from **PokeFinder by Admiral-Fish** (GPL-3.0, https://github.com/Admiral-Fish/PokeFinder,
+commit `7adce35`; every `file:line` below is in that checkout) and cross-read against
+Admiral-Fish's **RNGWriteups** (https://github.com/Admiral-Fish/RNGWriteups, `master`,
+`Gen 5/Initial Seeding.md` and `Gen 5/Initial Frame.md`, fetched 2026-09-03). Engines:
+`core/gen5.js` and `app/Core/Gen5.cs` (bit-for-bit twins). Vectors: `tests/gen5-vectors.json`,
+built by `tests/build-gen5-vectors.py` from PokeFinder's own `Test/` JSON, the nazo table parsed
+out of `Nazos.cpp`, the writeup's worked example, and Python `datetime` as an independent
+weekday oracle; `tests/gen5-random.json` holds 200 random inputs answered by the C# engine
+for the JS cross-check. Tests: `tests/test-gen5.cjs`, `app/Tests/Gen5Checks.cs`. Nothing here
+has been validated on a DS by us (the Phase 8 gate, a DS Lite calibration session, is pending).
+
+## The RNG (LCRNG64)
+
+`s = s * 0x5D588B656C078965 + 0x269EC3 (mod 2^64)` (`Core/RNG/LCRNG64.hpp:270`, `using BWRNG`;
+writeup Initial Frame.md, `next()`). The inverse step is `s * 0xDEDCEDAE9638806D +
+0x9B1AE6E9A384E6F9` (`:271`, `BWRNGR`). Two outputs: the high 32 bits (`:248-251`) and the
+bounded draw `((s >> 32) * max) >> 32` (`:261-264`), which every table roll, the needle draw
+and the TID/SID draw use. Jump-ahead by squaring (`:104-116` table, `:206-217`). Vectors:
+`Test/RNG/lcrng64.json` (`next`, `advance`, `jump`; forward and reverse), all reproduced.
+
+## The boot seed: SHA-1 over a 16-word message
+
+The game hashes one 512-bit SHA-1 block whose 13 message words are (`Core/RNG/SHA1.cpp:178-192`
+constructor and `:336-363` setters; writeup "Overall"):
+
+| Word | Value | PokeFinder |
+|---|---|---|
+| 0-4 | The five **nazo** words for (game, language, DS type). BW: `bswap(n)`, `bswap(n+0xfc)` twice, `bswap(n+0xfc+0x4c)` twice. BW2: `bswap(n0)`, `bswap(n1)`, `bswap(n)`, `bswap(n+0x54)` twice | `Core/Gen5/Nazos.cpp:29-36` (BW), `:43-50` (BW2), table `:56-117`, lookup `:119-232` (DSi and 3DS share the DSi row) |
+| 5 | `bswap((VCount << 16) \| Timer0)` | `SHA1.cpp:348` |
+| 6 | `MAC & 0xffff` (the writeup XORs `0x01000000` in on a soft reset; PokeFinder does not implement that flag, this port carries it as an optional `softReset`) | `SHA1.cpp:183` |
+| 7 | `(MAC >> 16) ^ (VFrame << 24) ^ GxStat` | `SHA1.cpp:184` |
+| 8 | `BCD(year-2000) << 24 \| BCD(month) << 16 \| BCD(day) << 8 \| weekday`, weekday `= (JDN + 1) % 7`, **Sunday = 0** | `SHA1.cpp:50-53` (BCD), `:55-62,64-93`; `Core/Util/DateTime.cpp:66-72,88-91` |
+| 9 | `BCD(hour) << 24 \| BCD(minute) << 16 \| BCD(second) << 8`, plus `0x40000000` when `hour >= 12` on a DS or DSi, **never on a 3DS** | `SHA1.cpp:95-120,356-363` |
+| 10, 11 | 0 | `SHA1.cpp:187-188` |
+| 12 | The **keypress word**: `0xff2f0000` minus, per held button, R `0x10000`, L `0x20000`, X `0x40000`, Y `0x80000`, A `0x1000000`, B `0x2000000`, Select `0x4000000`, Start `0x8000000`, Right `0x10000000`, Left `0x20000000`, Up `0x40000000`, Down `0x80000000` | `Core/Gen5/Keypresses.cpp:103-115`; bit order `Core/Enum/Buttons.hpp:28-48` |
+| 13, 14, 15 | `0x80000000`, 0, `0x1a0`: standard SHA-1 padding for a 416-bit message | `SHA1.cpp:189-191` |
+
+Digest to seed: after the 80 rounds (round constants `0x5a827999`, `0x6ed9eba1`, `0x8f1bbcdc`,
+`0xca62c1d6` at `SHA1.cpp:124,136,148,160`; initial state `:307-311`) take `h0 = 0x67452301 + a`
+and `h1 = 0xefcdab89 + b` (`:298-299`), form `raw = bswap(h1) << 32 | bswap(h0)` (`:301`),
+and **step it once**: `seed = raw * 0x5D588B656C078965 + 0x269EC3` (`:302`). That stepped value
+is what PokeFinder and the community call the initial seed and what every advance count
+below starts from. PokeFinder precomputes the first eight rounds per (date, Timer0)
+(`:304-334`); this port runs all 80 rounds per seed and is verified against the same vectors.
+
+Worked example (writeup "Example"; identical to PokeFinder `Test/RNG/sha1.json` "White 1"):
+White, English, DS Lite, Timer0 `0x621`, VCount `0x2f`, MAC `0x9BF123456`, VFrame 5, GxStat 6,
+2000-01-01 00:00:00, no keys. Words `d0602102 cc612102 cc612102 18622102 18622102 21062f00
+00003456 0509bf14 00010106 00000000 00000000 00000000 ff2f0000 80000000 00000000 000001a0`;
+`h0 = 0x16a4a8f6`, `h1 = 0x9a2bb383`; `raw = 0x83b32b9af6a8a416`; **seed
+`0xb082b4a755192171`**. The other seven `sha1.json` cases (Black/White/Black 2/White 2 at
+00:00:00 and 12:00:00, Timer0 1544/1569/2418/2415, VCount 46/47/72/72) are reproduced too.
+
+Which key combinations are searched: never Up+Down, never Left+Right, never the soft-reset
+chord L+R+Select+Start, at most 8 buttons, optionally none with L or R (`Keypresses.cpp:35-56`,
+`:83-98`); a profile enables combinations by how many buttons are held (0..8).
+
+## Initial advances and the probability table
+
+At boot the game burns a seed-dependent number of LCRNG steps through a probability table
+(writeup Initial Frame.md: rows `[50, 100]`, `[50, 50, 100]`, `[30, 50, 100]`, `[25, 30, 50, 100]`,
+`[20, 25, 33, 50]`, each roll `((s >> 32) * 101) >> 32` compared with the threshold; the
+Smogon "Past Gen RNG Research" post it cites is the origin). PokeFinder's equivalent is
+`advanceProbabilityTable` (`Core/Util/Utilities.cpp:29-70`: one step, then a roll per row that
+continues while `roll > threshold`). Counts used by the generators:
+
+- **BW, normal boot:** five table passes (`Utilities.cpp:283-294`).
+- **BW2, normal boot:** five passes, plus 3 steps (2 with Memory Link) after the first pass,
+  then up to 100 triples of `nextUInt(15)` until all three differ, 3 steps per triple
+  (`:296-328`).
+- **BW, new game (TID/SID):** **2 + three passes** (`:330-343`).
+- **BW2, new game (TID/SID):** **10 + three passes**, with 2 uncounted steps after the first pass
+  and 4 after the second (`:345-372`; the comment at `:349-354` itemises the 10 as 2 after the
+  first table, 3 after the second, 1 when the main menu loads, 2 after the third, 2 right
+  before Juniper appears).
+
+For seed 0 the new-game base is 25 (BW) and 34 (BW2) (`Test/Gen5/id5.json`).
+
+## TID / SID
+
+`Core/Gen5/Generators/IDGenerator5.cpp:36-47`: from the new-game base above (plus the row
+offset), each row is one bounded draw `rand = nextUInt(0xffffffff)`; **TID = rand & 0xffff,
+SID = rand >> 16, TSV = (TID ^ SID) >> 3**. Vectors: `id5.json` seed 0, Black rows 25-34
+(first TID 18185 / SID 39382) and Black 2 rows 34-43, reproduced by `idRows` / `IdRows`.
+The design doc's "count of 'No' answers to Juniper adds to the index" is exposed here as the
+row offset (`tidSid(seed, game, noCount)`), but **that mapping is not in PokeFinder's code**:
+its ID form has only "Max Advances" (`Form/Gen5/IDs5.ui`), and the only Juniper reference is
+the comment at `Utilities.cpp:354`. INFERRED from community guides, unverified here.
+
+Timer0 ambiguity: a profile carries a Timer0 range (`Core/Gen5/Profile5.hpp:220-233`), and the
+community's rule of thumb is two adjacent values on BW1 and more on BW2 (design doc 3.6,
+EMPIRICAL); the typed TID after a boot picks the value that fired.
+
+## Profile calibration: Timer0 / VCount / VFrame / GxStat from typed IVs or needles
+
+`Core/Gen5/Searchers/ProfileSearcher5.cpp:121-160` (single-thread branch): for VFrame, GxStat,
+Timer0, VCount and second in that nesting, hash the seed and keep it when a validator accepts
+it; the seed-to-time search for IDs uses Timer0, then key combination, then second at a fixed
+date and clock minute (`Core/Gen5/Searchers/IDSearcher5.cpp:63-90`). Validators:
+
+- **IVs** (`ProfileSearcher5.cpp:171,177-186`): MT19937 seeded with the **high 32 bits of the
+  seed**, skip 2 outputs on BW2 (0 on BW), then six outputs `>> 27` in the order **HP, Atk,
+  Def, SpA, SpD, Spe** (`Core/Gen5/Generators/StaticGenerator5.cpp:29-31` `gen()`, `:67-88`
+  order). PokeFinder computes this with `MTFast<8, true>` (`Core/RNG/MTFast.hpp:48-153`: the
+  standard `0x6c078965` = 1812433253 initialisation at `:52-56`, and a tempering that keeps only
+  the top five bits, `:72,97,131-132`) and normally serves the IVs from a precomputed per-profile
+  IV cache (`Core/Gen5/IVCache.cpp`, `Profile5.hpp:112-115`). **This port computes them directly**
+  from the same MT19937 as the Gen 4 engine (`ivsFromSeed`), verified against
+  `Test/Gen5/profilesearcher5.json`: Black seed `0x5e89803c95fe8240` gives `[24, 4, 18, 5, 26, 0]`,
+  Black 2 seed `0x490eabda126d5432` gives `[5, 4, 27, 10, 7, 17]`.
+- **Needles** (`:205-229`): after the normal-boot initial advances (BW or BW2 with Memory Link),
+  plus one when Unova Link is used without Memory Link, each needle is `nextUInt(8)`, with one
+  extra step per needle over Unova Link. PokeFinder stores that advance count in a `u8`
+  (`:207`); this port does not truncate (it would only matter if the BW2 dedupe loop ran more
+  than ~64 times, probability below 1e-40). Vectors: Black `[5, 4, 0, 5]`, Black 2 Unova Link
+  `[7, 4, 7, 0]`, with Memory Link `[0, 1, 0, 7]`.
+- **Seed** (`:243`): equality.
+
+## Open items (not ported, or ported with a known discrepancy)
+
+- **+2 / +10 vs the writeup's rounds.** RNGWriteups `Initial Frame.md` gives the new-game count
+  as `1 + (2 or 3) table passes` for both BW and BW2 (`initial_frame_bw(prng, rounds)`,
+  `initial_frame_bw2_id`, "2 if a save file already exists otherwise 3"), with no inter-pass
+  advances; PokeFinder ships `2 + 3 passes` (BW) and `10 + 3 passes` with `advance(2)` /
+  `advance(4)` between passes (BW2). This port follows PokeFinder, whose vectors it reproduces;
+  the discrepancy is unreconciled and only a DS session (typed TIDs at known seeds) can settle
+  which base applies with and without an existing save.
+- **Weekday numbering.** The writeup's prose lists "1: Monday ... 7: Sunday", but its own worked
+  `message[8] = 0x00010106` encodes Saturday 2000-01-01 as 6, i.e. Sunday = 0, which is what
+  PokeFinder computes (`DateTime.cpp:90`). The vectors follow the code.
+- **Soft reset.** The writeup's `^ 0x01000000` on word 6 is absent from PokeFinder; carried as an
+  optional flag, exercised only in the JS-vs-C# cross-check.
+- **The "No" count** is a design-doc claim, not a PokeFinder mechanic (above).
+- **Korean Black 2 on DSi** uses base `0x02200770` in `Nazos.cpp:116`, the same as Korean White 2
+  on a DS (`:114`); ported as found, likely a PokeFinder table slip.
+- **Not ported:** PokeFinder's SIMD / SHA-extension SHA-1 paths and 8-round precompute
+  (`SHA1.cpp:304-334,400-820`), the SHA-1 seed cache and IV cache files
+  (`Core/Gen5/SHA1Cache.cpp`, `IVCache.cpp`), the C-Gear seed (writeup "Seed Generation (C-Gear)"),
+  the multi-threaded searcher wrappers, and every encounter / egg / Dream Radar generator.
+- **No hardware sample** and no emulator trace: melonDS / DeSmuME Timer0 and VCount are
+  whatever the community profiles say (design doc 3.6).

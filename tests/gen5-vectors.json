@@ -1,0 +1,2186 @@
+{
+ "provenance": {
+  "generated_by": "tests/build-gen5-vectors.py",
+  "pokefinder": {
+   "repo": "https://github.com/Admiral-Fish/PokeFinder",
+   "author": "Admiral-Fish",
+   "license": "GPL-3.0",
+   "commit": "7adce35",
+   "files": [
+    "Test/RNG/lcrng64.json",
+    "Test/RNG/sha1.json",
+    "Test/Gen5/id5.json",
+    "Test/Gen5/profilesearcher5.json",
+    "Core/Gen5/Nazos.cpp",
+    "Core/Gen5/Keypresses.cpp"
+   ]
+  },
+  "rngwriteups": {
+   "repo": "https://github.com/Admiral-Fish/RNGWriteups",
+   "file": "Gen 5/Initial Seeding.md",
+   "branch": "master"
+  },
+  "u64_encoding": "decimal or 0x-prefixed strings; JSON numbers are only used below 2^53"
+ },
+ "lcrng64": {
+  "next": [
+   {
+    "name": "Next 1",
+    "seed": "0",
+    "forward": "2531011",
+    "reverse": "11176499316418471673",
+    "source": "Test/RNG/lcrng64.json#next (BWRNG, BWRNGR)"
+   },
+   {
+    "name": "Next 2",
+    "seed": "4611686018427387904",
+    "forward": "4611686018429918915",
+    "reverse": "15788185334845859577",
+    "source": "Test/RNG/lcrng64.json#next (BWRNG, BWRNGR)"
+   },
+   {
+    "name": "Next 3",
+    "seed": "9223372036854775808",
+    "forward": "9223372036857306819",
+    "reverse": "1953127279563695865",
+    "source": "Test/RNG/lcrng64.json#next (BWRNG, BWRNGR)"
+   },
+   {
+    "name": "Next 4",
+    "seed": "13835058055282163712",
+    "forward": "13835058055284694723",
+    "reverse": "6564813297991083769",
+    "source": "Test/RNG/lcrng64.json#next (BWRNG, BWRNGR)"
+   }
+  ],
+  "advance": [
+   {
+    "name": "Advance 1",
+    "seed": "0",
+    "advances": 5,
+    "forward": "14429455622161994279",
+    "reverse": "12520804569371229877",
+    "source": "Test/RNG/lcrng64.json#advance"
+   },
+   {
+    "name": "Advance 2",
+    "seed": "0",
+    "advances": 10,
+    "forward": "7456084121517757018",
+    "reverse": "4952160670449465814",
+    "source": "Test/RNG/lcrng64.json#advance"
+   },
+   {
+    "name": "Advance 3",
+    "seed": "9223372036854775808",
+    "advances": 5,
+    "forward": "5206083585307218471",
+    "reverse": "3297432532516454069",
+    "source": "Test/RNG/lcrng64.json#advance"
+   },
+   {
+    "name": "Advance 4",
+    "seed": "9223372036854775808",
+    "advances": 10,
+    "forward": "16679456158372532826",
+    "reverse": "14175532707304241622",
+    "source": "Test/RNG/lcrng64.json#advance"
+   }
+  ],
+  "jump": [
+   {
+    "name": "Jump 1",
+    "seed": "0",
+    "advances": 1073741824,
+    "forward": "8389119115066867712",
+    "reverse": "5445938940215296000",
+    "source": "Test/RNG/lcrng64.json#jump"
+   },
+   {
+    "name": "Jump 2",
+    "seed": "0",
+    "advances": 2147483648,
+    "forward": "12166552211706347520",
+    "reverse": "6280191862003204096",
+    "source": "Test/RNG/lcrng64.json#jump"
+   },
+   {
+    "name": "Jump 3",
+    "seed": "0",
+    "advances": 3221225472,
+    "forward": "11332299289918439424",
+    "reverse": "2502758765363724288",
+    "source": "Test/RNG/lcrng64.json#jump"
+   },
+   {
+    "name": "Jump 4",
+    "seed": "0",
+    "advances": 4294967295,
+    "forward": "4532217658632103673",
+    "reverse": "17202820797742620355",
+    "source": "Test/RNG/lcrng64.json#jump"
+   }
+  ]
+ },
+ "sha1": [
+  {
+   "name": "Black 1 00:00:00",
+   "game": "black",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "vframe": 5,
+   "gxstat": 6,
+   "timer0": 1544,
+   "vcount": 46,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "second": 0,
+   "keypressCounts": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "skipLR": false,
+   "buttons": 0,
+   "seed": "6812116909077463616",
+   "source": "Test/RNG/sha1.json#hash[0] with Test/RNG/SHA1Test.cpp date/time"
+  },
+  {
+   "name": "White 1 00:00:00",
+   "game": "white",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "vframe": 5,
+   "gxstat": 6,
+   "timer0": 1569,
+   "vcount": 47,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "second": 0,
+   "keypressCounts": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "skipLR": false,
+   "buttons": 0,
+   "seed": "12718926928427950449",
+   "source": "Test/RNG/sha1.json#hash[1] with Test/RNG/SHA1Test.cpp date/time"
+  },
+  {
+   "name": "Black 2 00:00:00",
+   "game": "black2",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "vframe": 5,
+   "gxstat": 6,
+   "timer0": 2418,
+   "vcount": 72,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "second": 0,
+   "keypressCounts": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "skipLR": false,
+   "buttons": 0,
+   "seed": "5264333967543063602",
+   "source": "Test/RNG/sha1.json#hash[2] with Test/RNG/SHA1Test.cpp date/time"
+  },
+  {
+   "name": "White 2 00:00:00",
+   "game": "white2",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "vframe": 5,
+   "gxstat": 6,
+   "timer0": 2415,
+   "vcount": 72,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "second": 0,
+   "keypressCounts": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "skipLR": false,
+   "buttons": 0,
+   "seed": "16328266460923798414",
+   "source": "Test/RNG/sha1.json#hash[3] with Test/RNG/SHA1Test.cpp date/time"
+  },
+  {
+   "name": "Black 1 12:00:00",
+   "game": "black",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "vframe": 5,
+   "gxstat": 6,
+   "timer0": 1544,
+   "vcount": 46,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 12,
+   "minute": 0,
+   "second": 0,
+   "keypressCounts": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "skipLR": false,
+   "buttons": 0,
+   "seed": "12618516553663214562",
+   "source": "Test/RNG/sha1.json#hashTime[0] with Test/RNG/SHA1Test.cpp date/time"
+  },
+  {
+   "name": "White 1 12:00:00",
+   "game": "white",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "vframe": 5,
+   "gxstat": 6,
+   "timer0": 1569,
+   "vcount": 47,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 12,
+   "minute": 0,
+   "second": 0,
+   "keypressCounts": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "skipLR": false,
+   "buttons": 0,
+   "seed": "8449681635637948927",
+   "source": "Test/RNG/sha1.json#hashTime[1] with Test/RNG/SHA1Test.cpp date/time"
+  },
+  {
+   "name": "Black 2 12:00:00",
+   "game": "black2",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "vframe": 5,
+   "gxstat": 6,
+   "timer0": 2418,
+   "vcount": 72,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 12,
+   "minute": 0,
+   "second": 0,
+   "keypressCounts": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "skipLR": false,
+   "buttons": 0,
+   "seed": "4152701230797758160",
+   "source": "Test/RNG/sha1.json#hashTime[2] with Test/RNG/SHA1Test.cpp date/time"
+  },
+  {
+   "name": "White 2 12:00:00",
+   "game": "white2",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "vframe": 5,
+   "gxstat": 6,
+   "timer0": 2415,
+   "vcount": 72,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 12,
+   "minute": 0,
+   "second": 0,
+   "keypressCounts": [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "skipLR": false,
+   "buttons": 0,
+   "seed": "17309290041713254307",
+   "source": "Test/RNG/sha1.json#hashTime[3] with Test/RNG/SHA1Test.cpp date/time"
+  }
+ ],
+ "writeup": {
+  "source": "Admiral-Fish/RNGWriteups master, Gen 5/Initial Seeding.md, section Example (fetched 2026-09-03)",
+  "input": {
+   "game": "white",
+   "language": "english",
+   "dsType": "ds",
+   "timer0": 1569,
+   "vcount": 47,
+   "mac": 41860346966,
+   "softReset": false,
+   "vframe": 5,
+   "gxstat": 6,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "second": 0,
+   "buttons": 0
+  },
+  "message": [
+   "0xd0602102",
+   "0xcc612102",
+   "0xcc612102",
+   "0x18622102",
+   "0x18622102",
+   "0x21062f00",
+   "0x00003456",
+   "0x0509bf14",
+   "0x00010106",
+   "0x00000000",
+   "0x00000000",
+   "0x00000000",
+   "0xff2f0000",
+   "0x80000000",
+   "0x00000000",
+   "0x000001a0"
+  ],
+  "h0": "0x16a4a8f6",
+  "h1": "0x9a2bb383",
+  "rawSeed": "0x83b32b9af6a8a416",
+  "seed": "0xb082b4a755192171",
+  "note": "Same inputs as PokeFinder's Test/RNG/sha1.json#hash[1] (White 1): 0xb082b4a755192171 = 12718926928427950449."
+ },
+ "ids": [
+  {
+   "name": "Black",
+   "seed": "0",
+   "game": "black",
+   "initialAdvances": 0,
+   "maxAdvances": 9,
+   "rows": [
+    {
+     "advances": 25,
+     "tid": 18185,
+     "sid": 39382,
+     "tsv": 7131
+    },
+    {
+     "advances": 26,
+     "tid": 45109,
+     "sid": 2547,
+     "tsv": 5944
+    },
+    {
+     "advances": 27,
+     "tid": 33963,
+     "sid": 62051,
+     "tsv": 3801
+    },
+    {
+     "advances": 28,
+     "tid": 48671,
+     "sid": 57259,
+     "tsv": 3126
+    },
+    {
+     "advances": 29,
+     "tid": 20018,
+     "sid": 10415,
+     "tsv": 3283
+    },
+    {
+     "advances": 30,
+     "tid": 16700,
+     "sid": 11109,
+     "tsv": 3403
+    },
+    {
+     "advances": 31,
+     "tid": 17216,
+     "sid": 3711,
+     "tsv": 2471
+    },
+    {
+     "advances": 32,
+     "tid": 5565,
+     "sid": 2362,
+     "tsv": 912
+    },
+    {
+     "advances": 33,
+     "tid": 33146,
+     "sid": 38423,
+     "tsv": 749
+    },
+    {
+     "advances": 34,
+     "tid": 49315,
+     "sid": 21809,
+     "tsv": 4786
+    }
+   ],
+   "source": "Test/Gen5/id5.json#generate[0] (Test/Gen5/IDGenerator5Test.cpp)"
+  },
+  {
+   "name": "Black 2",
+   "seed": "0",
+   "game": "black2",
+   "initialAdvances": 0,
+   "maxAdvances": 9,
+   "rows": [
+    {
+     "advances": 34,
+     "tid": 49315,
+     "sid": 21809,
+     "tsv": 4786
+    },
+    {
+     "advances": 35,
+     "tid": 39672,
+     "sid": 1101,
+     "tsv": 5078
+    },
+    {
+     "advances": 36,
+     "tid": 3049,
+     "sid": 57482,
+     "tsv": 7532
+    },
+    {
+     "advances": 37,
+     "tid": 4119,
+     "sid": 52263,
+     "tsv": 7046
+    },
+    {
+     "advances": 38,
+     "tid": 16594,
+     "sid": 6116,
+     "tsv": 2790
+    },
+    {
+     "advances": 39,
+     "tid": 40328,
+     "sid": 62362,
+     "tsv": 3522
+    },
+    {
+     "advances": 40,
+     "tid": 58488,
+     "sid": 27093,
+     "tsv": 4533
+    },
+    {
+     "advances": 41,
+     "tid": 38204,
+     "sid": 38998,
+     "tsv": 429
+    },
+    {
+     "advances": 42,
+     "tid": 59196,
+     "sid": 33691,
+     "tsv": 3220
+    },
+    {
+     "advances": 43,
+     "tid": 4707,
+     "sid": 61973,
+     "tsv": 7182
+    }
+   ],
+   "source": "Test/Gen5/id5.json#generate[1] (Test/Gen5/IDGenerator5Test.cpp)"
+  }
+ ],
+ "profileIvs": [
+  {
+   "name": "Black",
+   "game": "black",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "buttons": 0,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "minSecond": 0,
+   "maxSecond": 59,
+   "minVCount": 46,
+   "maxVCount": 46,
+   "minTimer0": 1544,
+   "maxTimer0": 1544,
+   "minGxStat": 6,
+   "maxGxStat": 6,
+   "minVFrame": 5,
+   "maxVFrame": 5,
+   "minIvs": [
+    24,
+    4,
+    18,
+    5,
+    26,
+    0
+   ],
+   "maxIvs": [
+    24,
+    4,
+    18,
+    5,
+    26,
+    0
+   ],
+   "result": "6812116909077463616",
+   "source": "Test/Gen5/profilesearcher5.json#ivs[0]"
+  },
+  {
+   "name": "Black2",
+   "game": "black2",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "buttons": 0,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "minSecond": 0,
+   "maxSecond": 59,
+   "minVCount": 72,
+   "maxVCount": 72,
+   "minTimer0": 2418,
+   "maxTimer0": 2418,
+   "minGxStat": 6,
+   "maxGxStat": 6,
+   "minVFrame": 5,
+   "maxVFrame": 5,
+   "minIvs": [
+    5,
+    4,
+    27,
+    10,
+    7,
+    17
+   ],
+   "maxIvs": [
+    5,
+    4,
+    27,
+    10,
+    7,
+    17
+   ],
+   "result": "5264333967543063602",
+   "source": "Test/Gen5/profilesearcher5.json#ivs[1]"
+  }
+ ],
+ "profileNeedles": [
+  {
+   "name": "Black",
+   "game": "black",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "buttons": 0,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "minSecond": 0,
+   "maxSecond": 59,
+   "minVCount": 46,
+   "maxVCount": 46,
+   "minTimer0": 1544,
+   "maxTimer0": 1544,
+   "minGxStat": 6,
+   "maxGxStat": 6,
+   "minVFrame": 5,
+   "maxVFrame": 5,
+   "needles": [
+    5,
+    4,
+    0,
+    5
+   ],
+   "unovaLink": false,
+   "memoryLink": false,
+   "result": "6812116909077463616",
+   "source": "Test/Gen5/profilesearcher5.json#needle[0]"
+  },
+  {
+   "name": "Black2 Unova Link",
+   "game": "black2",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "buttons": 0,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "minSecond": 0,
+   "maxSecond": 59,
+   "minVCount": 72,
+   "maxVCount": 72,
+   "minTimer0": 2418,
+   "maxTimer0": 2418,
+   "minGxStat": 6,
+   "maxGxStat": 6,
+   "minVFrame": 5,
+   "maxVFrame": 5,
+   "needles": [
+    7,
+    4,
+    7,
+    0
+   ],
+   "unovaLink": true,
+   "memoryLink": false,
+   "result": "5264333967543063602",
+   "source": "Test/Gen5/profilesearcher5.json#needle[1]"
+  },
+  {
+   "name": "Black2 Unova Link Memory Link",
+   "game": "black2",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "buttons": 0,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "minSecond": 0,
+   "maxSecond": 59,
+   "minVCount": 72,
+   "maxVCount": 72,
+   "minTimer0": 2418,
+   "maxTimer0": 2418,
+   "minGxStat": 6,
+   "maxGxStat": 6,
+   "minVFrame": 5,
+   "maxVFrame": 5,
+   "needles": [
+    0,
+    1,
+    0,
+    7
+   ],
+   "unovaLink": true,
+   "memoryLink": true,
+   "result": "5264333967543063602",
+   "source": "Test/Gen5/profilesearcher5.json#needle[2]"
+  }
+ ],
+ "profileSeed": [
+  {
+   "name": "Black",
+   "game": "black",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "buttons": 0,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "minSecond": 0,
+   "maxSecond": 59,
+   "minVCount": 46,
+   "maxVCount": 46,
+   "minTimer0": 1544,
+   "maxTimer0": 1544,
+   "minGxStat": 6,
+   "maxGxStat": 6,
+   "minVFrame": 5,
+   "maxVFrame": 5,
+   "seed": "6812116909077463616",
+   "result": "6812116909077463616",
+   "source": "Test/Gen5/profilesearcher5.json#seed[0]"
+  },
+  {
+   "name": "Black2",
+   "game": "black2",
+   "language": "english",
+   "dsType": "ds",
+   "mac": 41860346966,
+   "buttons": 0,
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "hour": 0,
+   "minute": 0,
+   "minSecond": 0,
+   "maxSecond": 59,
+   "minVCount": 72,
+   "maxVCount": 72,
+   "minTimer0": 2418,
+   "maxTimer0": 2418,
+   "minGxStat": 6,
+   "maxGxStat": 6,
+   "minVFrame": 5,
+   "maxVFrame": 5,
+   "seed": "5264333967543063602",
+   "result": "5264333967543063602",
+   "source": "Test/Gen5/profilesearcher5.json#seed[1]"
+  }
+ ],
+ "nazoWords": [
+  {
+   "game": "black",
+   "language": "english",
+   "dsType": "ds",
+   "words": [
+    2959089922,
+    2892046594,
+    2892046594,
+    4167115010,
+    4167115010
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishBlack (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "english",
+   "dsType": "ds",
+   "words": [
+    3495960834,
+    3428917506,
+    3428917506,
+    409084162,
+    409084162
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishWhite (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "english",
+   "dsType": "dsi",
+   "words": [
+    2416014850,
+    2348971522,
+    2348971522,
+    3624039938,
+    3624039938
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "english",
+   "dsType": "3ds",
+   "words": [
+    2416014850,
+    2348971522,
+    2348971522,
+    3624039938,
+    3624039938
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "english",
+   "dsType": "dsi",
+   "words": [
+    2952885762,
+    2885842434,
+    2885842434,
+    4160910850,
+    4160910850
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "english",
+   "dsType": "3ds",
+   "words": [
+    2952885762,
+    2885842434,
+    2885842434,
+    4160910850,
+    4160910850
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "english",
+   "dsType": "ds",
+   "words": [
+    3903719682,
+    3919381250,
+    268443650,
+    1677729794,
+    1677729794
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishBlack2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "english",
+   "dsType": "ds",
+   "words": [
+    682559746,
+    362676994,
+    1342185474,
+    2751471618,
+    2751471618
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishWhite2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "english",
+   "dsType": "dsi",
+   "words": [
+    3903719682,
+    3919381250,
+    1885305346,
+    3294591490,
+    3294591490
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "english",
+   "dsType": "3ds",
+   "words": [
+    3903719682,
+    3919381250,
+    1885305346,
+    3294591490,
+    3294591490
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "english",
+   "dsType": "dsi",
+   "words": [
+    682559746,
+    362676994,
+    2422110722,
+    3831396866,
+    3831396866
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "english",
+   "dsType": "3ds",
+   "words": [
+    682559746,
+    362676994,
+    2422110722,
+    3831396866,
+    3831396866
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr englishWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "japanese",
+   "dsType": "ds",
+   "words": [
+    274669826,
+    207626498,
+    207626498,
+    1482694914,
+    1482694914
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseBlack (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "japanese",
+   "dsType": "ds",
+   "words": [
+    811540738,
+    744497410,
+    744497410,
+    2019565826,
+    2019565826
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseWhite (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "japanese",
+   "dsType": "dsi",
+   "words": [
+    1343321602,
+    1276278274,
+    1276278274,
+    2551346690,
+    2551346690
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "japanese",
+   "dsType": "3ds",
+   "words": [
+    1343321602,
+    1276278274,
+    1276278274,
+    2551346690,
+    2551346690
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "japanese",
+   "dsType": "dsi",
+   "words": [
+    1343321602,
+    1276278274,
+    1276278274,
+    2551346690,
+    2551346690
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "japanese",
+   "dsType": "3ds",
+   "words": [
+    1343321602,
+    1276278274,
+    1276278274,
+    2551346690,
+    2551346690
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "japanese",
+   "dsType": "ds",
+   "words": [
+    3701999874,
+    3382313730,
+    2969116418,
+    83500802,
+    83500802
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseBlack2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "japanese",
+   "dsType": "ds",
+   "words": [
+    4238870786,
+    4120511234,
+    3505987330,
+    620371714,
+    620371714
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseWhite2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "japanese",
+   "dsType": "dsi",
+   "words": [
+    3701999874,
+    3382313730,
+    816282114,
+    2225568258,
+    2225568258
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "japanese",
+   "dsType": "3ds",
+   "words": [
+    3701999874,
+    3382313730,
+    816282114,
+    2225568258,
+    2225568258
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "japanese",
+   "dsType": "dsi",
+   "words": [
+    4238870786,
+    4120511234,
+    4037376514,
+    1151760898,
+    1151760898
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "japanese",
+   "dsType": "3ds",
+   "words": [
+    4238870786,
+    4120511234,
+    4037376514,
+    1151760898,
+    1151760898
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr japaneseWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "german",
+   "dsType": "ds",
+   "words": [
+    4032766210,
+    3965722882,
+    3965722882,
+    945889538,
+    945889538
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanBlack (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "german",
+   "dsType": "ds",
+   "words": [
+    274735362,
+    207692034,
+    207692034,
+    1482760450,
+    1482760450
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanWhite (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "german",
+   "dsType": "dsi",
+   "words": [
+    4026693122,
+    3959649794,
+    3959649794,
+    939816450,
+    939816450
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "german",
+   "dsType": "3ds",
+   "words": [
+    4026693122,
+    3959649794,
+    3959649794,
+    939816450,
+    939816450
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "german",
+   "dsType": "dsi",
+   "words": [
+    4026693122,
+    3959649794,
+    3959649794,
+    939816450,
+    939816450
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "german",
+   "dsType": "3ds",
+   "words": [
+    4026693122,
+    3959649794,
+    3959649794,
+    939816450,
+    939816450
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "german",
+   "dsType": "ds",
+   "words": [
+    682494210,
+    1771897602,
+    1358896898,
+    2768183042,
+    2768183042
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanBlack2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "german",
+   "dsType": "ds",
+   "words": [
+    1219365122,
+    2510095106,
+    1895767810,
+    3305053954,
+    3305053954
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanWhite2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "german",
+   "dsType": "dsi",
+   "words": [
+    682494210,
+    1771897602,
+    274823682,
+    1684109826,
+    1684109826
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "german",
+   "dsType": "3ds",
+   "words": [
+    682494210,
+    1771897602,
+    274823682,
+    1684109826,
+    1684109826
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "german",
+   "dsType": "dsi",
+   "words": [
+    1219365122,
+    2510095106,
+    274758146,
+    1684044290,
+    1684044290
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "german",
+   "dsType": "3ds",
+   "words": [
+    1219365122,
+    2510095106,
+    274758146,
+    1684044290,
+    1684044290
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr germanWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "spanish",
+   "dsType": "ds",
+   "words": [
+    1885348098,
+    1818304770,
+    1818304770,
+    3093373186,
+    3093373186
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishBlack (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "spanish",
+   "dsType": "ds",
+   "words": [
+    1885348098,
+    1818304770,
+    1818304770,
+    3093373186,
+    3093373186
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishWhite (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "spanish",
+   "dsType": "dsi",
+   "words": [
+    4026627586,
+    3959584258,
+    3959584258,
+    939750914,
+    939750914
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "spanish",
+   "dsType": "3ds",
+   "words": [
+    4026627586,
+    3959584258,
+    3959584258,
+    939750914,
+    939750914
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "spanish",
+   "dsType": "dsi",
+   "words": [
+    4026627586,
+    3959584258,
+    3959584258,
+    939750914,
+    939750914
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "spanish",
+   "dsType": "3ds",
+   "words": [
+    4026627586,
+    3959584258,
+    3959584258,
+    939750914,
+    939750914
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "spanish",
+   "dsType": "ds",
+   "words": [
+    2829977858,
+    3114074882,
+    3506380546,
+    603987970,
+    603987970
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishBlack2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "spanish",
+   "dsType": "ds",
+   "words": [
+    3366848770,
+    3852272386,
+    4043251458,
+    1140858882,
+    1140858882
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishWhite2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "spanish",
+   "dsType": "dsi",
+   "words": [
+    2829977858,
+    3114074882,
+    1885370882,
+    3294657026,
+    3294657026
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "spanish",
+   "dsType": "3ds",
+   "words": [
+    2829977858,
+    3114074882,
+    1885370882,
+    3294657026,
+    3294657026
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "spanish",
+   "dsType": "dsi",
+   "words": [
+    3366848770,
+    3852272386,
+    2959047170,
+    73431554,
+    73431554
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "spanish",
+   "dsType": "3ds",
+   "words": [
+    3366848770,
+    3852272386,
+    2959047170,
+    73431554,
+    73431554
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr spanishWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "french",
+   "dsType": "ds",
+   "words": [
+    811606274,
+    744562946,
+    744562946,
+    2019631362,
+    2019631362
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchBlack (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "french",
+   "dsType": "ds",
+   "words": [
+    1348477186,
+    1281433858,
+    1281433858,
+    2556502274,
+    2556502274
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchWhite (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "french",
+   "dsType": "dsi",
+   "words": [
+    805467650,
+    738424322,
+    738424322,
+    2013492738,
+    2013492738
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "french",
+   "dsType": "3ds",
+   "words": [
+    805467650,
+    738424322,
+    738424322,
+    2013492738,
+    2013492738
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "french",
+   "dsType": "dsi",
+   "words": [
+    1342338562,
+    1275295234,
+    1275295234,
+    2550363650,
+    2550363650
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "french",
+   "dsType": "3ds",
+   "words": [
+    1342338562,
+    1275295234,
+    1275295234,
+    2550363650,
+    2550363650
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "french",
+   "dsType": "ds",
+   "words": [
+    145688834,
+    4187816706,
+    805314562,
+    2214600706,
+    2214600706
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchBlack2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "french",
+   "dsType": "ds",
+   "words": [
+    682559746,
+    631112450,
+    1342185474,
+    2751471618,
+    2751471618
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchWhite2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "french",
+   "dsType": "dsi",
+   "words": [
+    145688834,
+    4187816706,
+    2422176258,
+    3831462402,
+    3831462402
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "french",
+   "dsType": "3ds",
+   "words": [
+    145688834,
+    4187816706,
+    2422176258,
+    3831462402,
+    3831462402
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "french",
+   "dsType": "dsi",
+   "words": [
+    682559746,
+    631112450,
+    4032723458,
+    1147107842,
+    1147107842
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "french",
+   "dsType": "3ds",
+   "words": [
+    682559746,
+    631112450,
+    4032723458,
+    1147107842,
+    1147107842
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr frenchWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "italian",
+   "dsType": "ds",
+   "words": [
+    2959024386,
+    2891981058,
+    2891981058,
+    4167049474,
+    4167049474
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianBlack (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "italian",
+   "dsType": "ds",
+   "words": [
+    3495895298,
+    3428851970,
+    3428851970,
+    409018626,
+    409018626
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianWhite (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "italian",
+   "dsType": "dsi",
+   "words": [
+    3489756674,
+    3422713346,
+    3422713346,
+    402880002,
+    402880002
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "italian",
+   "dsType": "3ds",
+   "words": [
+    3489756674,
+    3422713346,
+    3422713346,
+    402880002,
+    402880002
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "italian",
+   "dsType": "dsi",
+   "words": [
+    3489756674,
+    3422713346,
+    3422713346,
+    402880002,
+    402880002
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "italian",
+   "dsType": "3ds",
+   "words": [
+    3489756674,
+    3422713346,
+    3422713346,
+    402880002,
+    402880002
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "italian",
+   "dsType": "ds",
+   "words": [
+    3903654146,
+    1771897602,
+    285155074,
+    1694441218,
+    1694441218
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianBlack2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "italian",
+   "dsType": "ds",
+   "words": [
+    682494210,
+    2510095106,
+    1358896898,
+    2768183042,
+    2768183042
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianWhite2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "italian",
+   "dsType": "dsi",
+   "words": [
+    3903654146,
+    1771897602,
+    1885305346,
+    3294591490,
+    3294591490
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "italian",
+   "dsType": "3ds",
+   "words": [
+    3903654146,
+    1771897602,
+    1885305346,
+    3294591490,
+    3294591490
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "italian",
+   "dsType": "dsi",
+   "words": [
+    682494210,
+    2510095106,
+    3495852546,
+    610236930,
+    610236930
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "italian",
+   "dsType": "3ds",
+   "words": [
+    682494210,
+    2510095106,
+    3495852546,
+    610236930,
+    610236930
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr italianWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "korean",
+   "dsType": "ds",
+   "words": [
+    2959548674,
+    2892505346,
+    2892505346,
+    4167573762,
+    4167573762
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanBlack (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "korean",
+   "dsType": "ds",
+   "words": [
+    2959548674,
+    2892505346,
+    2892505346,
+    4167573762,
+    4167573762
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanWhite (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "korean",
+   "dsType": "dsi",
+   "words": [
+    1343321602,
+    1276278274,
+    1276278274,
+    2551346690,
+    2551346690
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black",
+   "language": "korean",
+   "dsType": "3ds",
+   "words": [
+    1343321602,
+    1276278274,
+    1276278274,
+    2551346690,
+    2551346690
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanBlackDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "korean",
+   "dsType": "dsi",
+   "words": [
+    1343321602,
+    1276278274,
+    1276278274,
+    2551346690,
+    2551346690
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "white",
+   "language": "korean",
+   "dsType": "3ds",
+   "words": [
+    1343321602,
+    1276278274,
+    1276278274,
+    2551346690,
+    2551346690
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanWhiteDSi (parsed), computeNazoBW evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "korean",
+   "dsType": "ds",
+   "words": [
+    213256450,
+    3584295682,
+    1342644226,
+    2751930370,
+    2751930370
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanBlack2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "korean",
+   "dsType": "ds",
+   "words": [
+    750127362,
+    27591426,
+    1879515138,
+    3288801282,
+    3288801282
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanWhite2 (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "korean",
+   "dsType": "dsi",
+   "words": [
+    213256450,
+    3584295682,
+    1879515138,
+    3288801282,
+    3288801282
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "black2",
+   "language": "korean",
+   "dsType": "3ds",
+   "words": [
+    213256450,
+    3584295682,
+    1879515138,
+    3288801282,
+    3288801282
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanBlack2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "korean",
+   "dsType": "dsi",
+   "words": [
+    750127362,
+    27591426,
+    2958522882,
+    72907266,
+    72907266
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  },
+  {
+   "game": "white2",
+   "language": "korean",
+   "dsType": "3ds",
+   "words": [
+    750127362,
+    27591426,
+    2958522882,
+    72907266,
+    72907266
+   ],
+   "source": "Core/Gen5/Nazos.cpp constexpr koreanWhite2DSi (parsed), computeNazoBW2 evaluated here"
+  }
+ ],
+ "keypress": [
+  {
+   "buttons": "None",
+   "mask": 0,
+   "value": 4281270272,
+   "source": "RNGWriteups Initial Seeding.md keypress base"
+  },
+  {
+   "buttons": "R",
+   "mask": 1,
+   "value": 4281204736,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "L",
+   "mask": 2,
+   "value": 4281139200,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "X",
+   "mask": 4,
+   "value": 4281008128,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "Y",
+   "mask": 8,
+   "value": 4280745984,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "A",
+   "mask": 16,
+   "value": 4264493056,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "B",
+   "mask": 32,
+   "value": 4247715840,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "Select",
+   "mask": 64,
+   "value": 4214161408,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "Start",
+   "mask": 128,
+   "value": 4147052544,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "Right",
+   "mask": 256,
+   "value": 4012834816,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "Left",
+   "mask": 512,
+   "value": 3744399360,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "Up",
+   "mask": 1024,
+   "value": 3207528448,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "Down",
+   "mask": 2048,
+   "value": 2133786624,
+   "source": "RNGWriteups Initial Seeding.md keypress table"
+  },
+  {
+   "buttons": "A+B",
+   "mask": 48,
+   "value": 4230938624,
+   "source": "RNGWriteups keypress table, summed here"
+  },
+  {
+   "buttons": "Start+Left+Up",
+   "mask": 1664,
+   "value": 2536439808,
+   "source": "RNGWriteups keypress table, summed here"
+  },
+  {
+   "buttons": "R+L+X+Y",
+   "mask": 15,
+   "value": 4280287232,
+   "source": "RNGWriteups keypress table, summed here"
+  },
+  {
+   "buttons": "X+Y+A+B+Select+Start+Right+Up",
+   "mask": 1532,
+   "value": 2686648320,
+   "source": "RNGWriteups keypress table, summed here"
+  }
+ ],
+ "dateWords": [
+  {
+   "year": 2000,
+   "month": 1,
+   "day": 1,
+   "word": 65798,
+   "source": "RNGWriteups message[8] formula with Python datetime weekday (Sunday = 0)"
+  },
+  {
+   "year": 2000,
+   "month": 2,
+   "day": 29,
+   "word": 141570,
+   "source": "RNGWriteups message[8] formula with Python datetime weekday (Sunday = 0)"
+  },
+  {
+   "year": 2003,
+   "month": 12,
+   "day": 31,
+   "word": 51523843,
+   "source": "RNGWriteups message[8] formula with Python datetime weekday (Sunday = 0)"
+  },
+  {
+   "year": 2011,
+   "month": 3,
+   "day": 6,
+   "word": 285410816,
+   "source": "RNGWriteups message[8] formula with Python datetime weekday (Sunday = 0)"
+  },
+  {
+   "year": 2012,
+   "month": 10,
+   "day": 7,
+   "word": 303040256,
+   "source": "RNGWriteups message[8] formula with Python datetime weekday (Sunday = 0)"
+  },
+  {
+   "year": 2024,
+   "month": 2,
+   "day": 29,
+   "word": 604121348,
+   "source": "RNGWriteups message[8] formula with Python datetime weekday (Sunday = 0)"
+  },
+  {
+   "year": 2050,
+   "month": 7,
+   "day": 4,
+   "word": 1342637057,
+   "source": "RNGWriteups message[8] formula with Python datetime weekday (Sunday = 0)"
+  },
+  {
+   "year": 2099,
+   "month": 12,
+   "day": 31,
+   "word": 2568106244,
+   "source": "RNGWriteups message[8] formula with Python datetime weekday (Sunday = 0)"
+  }
+ ],
+ "timeWords": [
+  {
+   "hour": 0,
+   "minute": 0,
+   "second": 0,
+   "dsType": "ds",
+   "word": 0,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 0,
+   "minute": 0,
+   "second": 0,
+   "dsType": "dsi",
+   "word": 0,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 0,
+   "minute": 0,
+   "second": 0,
+   "dsType": "3ds",
+   "word": 0,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 11,
+   "minute": 59,
+   "second": 59,
+   "dsType": "ds",
+   "word": 291068160,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 11,
+   "minute": 59,
+   "second": 59,
+   "dsType": "dsi",
+   "word": 291068160,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 11,
+   "minute": 59,
+   "second": 59,
+   "dsType": "3ds",
+   "word": 291068160,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 12,
+   "minute": 0,
+   "second": 0,
+   "dsType": "ds",
+   "word": 1375731712,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 12,
+   "minute": 0,
+   "second": 0,
+   "dsType": "dsi",
+   "word": 1375731712,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 12,
+   "minute": 0,
+   "second": 0,
+   "dsType": "3ds",
+   "word": 301989888,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 13,
+   "minute": 5,
+   "second": 9,
+   "dsType": "ds",
+   "word": 1392838912,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 13,
+   "minute": 5,
+   "second": 9,
+   "dsType": "dsi",
+   "word": 1392838912,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 13,
+   "minute": 5,
+   "second": 9,
+   "dsType": "3ds",
+   "word": 319097088,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 23,
+   "minute": 59,
+   "second": 59,
+   "dsType": "ds",
+   "word": 1666799872,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 23,
+   "minute": 59,
+   "second": 59,
+   "dsType": "dsi",
+   "word": 1666799872,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  },
+  {
+   "hour": 23,
+   "minute": 59,
+   "second": 59,
+   "dsType": "3ds",
+   "word": 593058048,
+   "source": "RNGWriteups message[9] formula evaluated here"
+  }
+ ]
+}

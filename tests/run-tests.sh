@@ -8,6 +8,10 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   export PATH="$HOME/.dotnet:$PATH"
   dotnet run --project ../app/Tests -c Release -- --emit-gen4-vectors gen4-vectors.json
   node test-gen4.cjs gen4-vectors.json
+  dotnet run --project ../app/Tests -c Release -- --gen5 gen5-vectors.json
+  dotnet run --project ../app/Tests -c Release -- --emit-gen5-random gen5-random.json
+  node test-gen5.cjs gen5-vectors.json gen5-random.json
 else
-  echo "dotnet not found; skipping gen4 parity vectors"
+  echo "dotnet not found; skipping gen4 parity vectors and the C# gen5 checks"
+  node test-gen5.cjs gen5-vectors.json gen5-random.json
 fi
