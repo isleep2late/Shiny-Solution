@@ -346,12 +346,137 @@ The tab gives you targets, a two-phase timer, and seed verification:
    HGSS starters: all three are rolled when the selection scene opens — Chikorita occupies
    advances 1–4, Cyndaquil 5–8, Totodile 9–12.
 
+## Wanted-IVs wizard (Gen 3 / Gen 4): from the Pokemon you want to the frame, the seed and the procedure
+
+TARGET mode, human input only, in the web app's **Wizard (Gen 3/4)** tab (the same page in the
+Electron app; the mobile bundle carries the tab but not its tables and says so). You pick the game,
+the encounter and the outcome you want; the tab lists the frames (Gen 3) or the seeds with their
+dates, times and delays (Gen 4) that produce it, shows the result card and a numbered procedure,
+runs the timer, and learns from what you type after the attempt. **Every output is EMPIRICAL /
+model output**: no hardware session has run a wizard procedure, and the tab prints the seed model
+it runs under with that status on the card, the procedure and every search. Nothing reads a capture.
+
+1. **Game and console.** Pick the game and the console (GBA / GBA SP / Game Boy Player or a DS
+   slot-2 for Gen 3; DS / DS Lite or DSi / 3DS for Gen 4; the rates are EonTimer's). The tab
+   prints the **seed model**: Ruby / Sapphire with a dead battery seed `0x5A0` at every boot
+   (`rs/gba/boot-seed-v0`), Emerald seeds `0` (`emerald/gba/boot-seed-0-v0`), FireRed / LeafGreen
+   have no fixed seed and need one typed (`frlg/gba/typed-seed-v0`; without it the game is stated
+   unavailable), and the Gen 4 games take the seed a DS clock can reach
+   (`dppt/nds/seed-to-time-v0`, `hgss/nds/seed-to-time-v0`). The species, encounter and static
+   tables of the generation load on first use (`webapp/data/wizard-gen3.js`, `wizard-gen4.js`).
+2. **Encounter.** A static or gift from the catalogue (the entry says its creation chain and so its
+   method: Method 1 for gifts, starters, roamers and fossils, Method J / K for the Gen 4 scripted
+   battles; eggs and the fixed-PID Pichu are listed as not offered, with the reason), or a wild slot:
+   the map, the kind (land, surfing, Rock Smash, a rod), on Gen 4 the time of day, and the species
+   with its slots, levels and share of the slot roll. Gen 3 statics and wild slots take Method 1 /
+   2 / 4 (the VBlank-skip variants); Emerald and the Gen 4 games offer their lead effects (Gen 4
+   Cute Charm is not offered: its PID is arithmetic, so the IV back-step cannot reach it).
+3. **Wanted outcome.** Per-stat IV min and max, the nature, the ability slot (where the species has
+   two), the gender (where the byte is not fixed), shiny with your Trainer ID and Secret ID typed.
+   Gen 3: the search horizon in minutes after the seed (an hour by default). Gen 4: the frame limit,
+   the years, the delay window and the target delay (nearest first).
+4. **Search.** Gen 3 generates forward from the seed with the engine's filter; the rows are frames
+   with their time after the seed. When nothing matches inside the horizon the tab says so and
+   gives the feasibility: the exact count of IV states over the LCRNG cycle (when affordable) times
+   the other odds, and for statics the exact first frame of the whole cycle. Gen 4 reverses each
+   exact IV set to its states, keeps the seeds a clock can produce (the hour byte), re-generates
+   every candidate with the static or wild generator so the frame is the engine's, and lists the
+   date, time and delay rows inside your windows.
+5. **Result card and procedure.** Click a row: the card (PID, nature, gender, ability, IVs, Hidden
+   Power, stats at the level, shiny yes / no, frame, seed, the seed model and its status) and the
+   numbered procedure under the seed model (Gen 3: the save, the seed at power-on, the constant
+   input path, the timer's two phases, the typed outcome; Gen 4: the DS clock setting with the
+   minutes-before rule, the two phases, the coin-flip or Elm-call verification, the advance plan
+   from the frame you type as your starting point and your party size).
+6. **Timer.** The page's two-phase countdown over `core/timers.js`: Gen 3 the pre-timer then the
+   target frame in milliseconds plus the calibration (power on at the first long beep, A on the
+   last); Gen 4 the delay model with the calibrated delay and second (start as the clock confirms,
+   load the game at the first long beep, A on CONTINUE at the last). Space with nothing focused
+   starts and cancels it on this tab.
+7. **What did you get?** Gen 3: type the nature and the IVs (or the six stats): the tab
+   re-generates the frames around the target, names the frame you hit and moves the calibration by
+   the difference. Gen 4: type the coin flips (DPPt) or Elm calls (HGSS, with the roamers active on
+   your save ticked): the tab matches them against the neighbouring delays and seconds, names the
+   delay you hit and moves the calibrated delay (x 0.75 within 167 ms). Samples are kept under
+   `shinySolution.wizard.calibration` per game and console, stamped with the seed model and the mode
+   (RUN or PRACTICE / HUNT, each mode its own store); a sample of another mode or model is listed as
+   left out and never in force.
+
+A worked example, pasted from the tab driven headless (`?wizselftest`, Chrome): Platinum, a
+flawless Turtwig from Rowan's briefcase (`pt/starter/turtwig`, Method 1), IVs 31/31/31/31/31/31, frame
+limit 100, year 2000, delay window 0-65535, target delay 18641 (the design's gate seed).
+
+```
+Seed model: dppt/nds/seed-to-time-v0 (PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate)).
+1 IV combination -> 6 IV origin states after the PID filter -> 68 seeds a clock can produce within 100 frames (hour byte 0-23) -> 68 candidates confirmed by the static generator frame by frame.
+30 date / time / delay rows inside the delay and year windows, nearest the target delay first (the year is a delay knob: +1 year = -1 delay for the same seed).
+Feasibility: about 0.000140 matching frames per 100,000 (IV count exact over the 2^32 LCRNG cycle: 0.0001397 per 100,000).
+  Expected first hit near frame 715827883 on average.
+  A reachable seed exists for about 9.4 % of back-steps (the hour byte), so the search is exact within its windows, not a promise that a low frame exists.
+```
+```
+Result card (EMPIRICAL / model output)
+  Turtwig L5  PID 685011A9  nature Modest  gender M  ability OVERGROW (slot 1)
+  IVs 31/31/31/31/31/31 (HP/Atk/Def/SpA/SpD/Spe)  Hidden Power Dark 70  stats at L5 22/11/12/12/12/9
+  shiny: unknown (type your Trainer ID and Secret ID to know)
+  frame 0  seed 7B0448D1  2000-01-05 04:59:59 delay 18641  calls used 4
+  seed model dppt/nds/seed-to-time-v0: PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate)
+```
+```
+Procedure (dppt/nds/seed-to-time-v0; EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console.)
+1. Prepare the save: in front of Turtwig L5 - Route 201 / Lake Verity (Rowan's briefcase) [starter, Method 1], the last A before the battle or the gift is the frame that matters. Save with the party you will advance with (1 member).
+2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute (the countdown spans that long); target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0).
+3. Timer: start it as the clock confirms; phase 1 00:41.964 ends on the first long beep: press A to load the game from the DS menu; phase 2 05:17.236 ends on the last beep: press A on CONTINUE, the seed forms then (calibrated delay 500, calibrated second 14; EonTimer's delay model, core/timers.js).
+4. Verify the seed: open the Poketch coin toss and flip it 10-20 times (the MT only: the LCRNG frame does not move), type the H/T string below: the tool names the delay you hit and corrects the calibrated delay. Repeat until the hit is the target.
+5. Advance to frame 0: no advance needed from frame 0. Then trigger the encounter.
+6. Read the nature and stats: the card above says what frame 0 of seed 7B0448D1 creates.
+```
+
+Typing the target seed's own twelve coin flips, then a neighbour's (delay 18645):
+
+```
+You hit delay 18641 (seed 7B0448D1, second +0), aimed 18641: on the target; 1 row of 603 match HTTHHHTHHHHH.
+Calibrated delay 500 -> 500 (core/timers.js calibrateGen4: the delta x 0.75 within 167 ms, else x 1.0, rounded half to even); recorded under dppt/nds/seed-to-time-v0 [RUN mode].
+The seed is hit: advance to frame 0 with the plan in the procedure, then trigger the encounter.
+```
+```
+You hit delay 18645 (seed 7B0448D5, second +0), aimed 18641: 4 delays late (67.0 ms); 1 row of 603 match TTTHTHHHTHHT.
+Calibrated delay 500 -> 503 (core/timers.js calibrateGen4: the delta x 0.75 within 167 ms, else x 1.0, rounded half to even); recorded under dppt/nds/seed-to-time-v0 [RUN mode].
+```
+
+The honest limit, from the same run: a flawless Treecko from Emerald's seed 0 has no frame inside
+an hour, and the tab says where the first one is instead of promising it.
+
+```
+Seed model: emerald/gba/boot-seed-0-v0 (decomp-derived; EMPIRICAL / model output: no hardware session); seed 00000000, frames counted from the seed at 59.7275 fps.
+No matching frame within the first 215019 frames (60:00.000): the honest limit of this seed model is stated, not promised away.
+Feasibility: about 0.000140 matching frames per 100,000 (IV count exact over the 2^32 LCRNG cycle: 0.0001397 per 100,000).
+  Expected first hit near frame 715827883 (138.7 days at 59.7275 fps) on average.
+  Exact over the whole cycle: 6 IV states pass the IV ranges; the first one that also passes the PID filter is frame 176562488 from this seed = 34.2 days (PID 7942EF72).
+```
+
+And the Gen 3 typed-outcome step on the Ruby Groudon Method 4 vector (the seed 0 typed; the
+dead-battery model is 0x5A0), aimed at frame 3 and hit on it:
+
+```
+Result card (EMPIRICAL / model output)
+  Groudon L45  PID 8E4231B0  nature Bashful  gender none  ability DROUGHT (slot 1)
+  IVs 12/22/24/30/25/27 (HP/Atk/Def/SpA/SpD/Spe)  Hidden Power Water 46  stats at L45 150/149/141/108/97/98
+  shiny: no for TID 12345 / SID 54321
+  frame 3  seed 00000000  00:00.050 after the seed  calls used 5
+  seed model rs/gba/boot-seed-v0: defined and emulator-verified (tests/harness on libmgba); EMPIRICAL / model output: no hardware session (the power-on-to-press offset of a console is the calibration below)
+```
+```
+You hit frame 3, aimed 3: on the frame; 1 candidate matched within +-3000 frames.
+```
+
 ## Gen 4 seed-to-time from node
 
-The seed-to-time layer (`core/seedtime4.js`; the same functions in `app/Core/SeedTime4.cs`) has
-no tab yet either. It answers the reverse question of the Gen 4 tab above: which DS clock setting
-and delay reach a seed that produces the mon you want, and how to tell which delay you hit. No DS
-session has landed one of its times yet; the delay a console reaches is the open hardware gate.
+The seed-to-time layer (`core/seedtime4.js`; the same functions in `app/Core/SeedTime4.cs`) is
+what the Wizard tab above runs for Gen 4; from node it answers the same reverse question of the Gen
+4 tab: which DS clock setting and delay reach a seed that produces the mon you want, and how to tell
+which delay you hit. No DS session has landed one of its times yet; the delay a console reaches is
+the open hardware gate.
 
 ```
 node -e 'const s=require("./core/seedtime4.js");const rows=s.wantedToTimes({ivs:{hp:31,atk:31,def:31,spa:31,spd:31,spe:31},method:"M1",maxFrame:100,delayMin:0,delayMax:65535,targetDelay:600,limit:3});rows.forEach(r=>console.log(s.hex8(r.seed),"frame",r.frame,r.year+"-"+r.month+"-"+r.day,r.hour+":"+r.minute+":"+r.second,"delay",r.delay,"PID",s.hex8(r.pid),r.natureName));const t=s.seedToTimes(0x7B0448D1,2000,{limit:2});console.log("7B0448D1 in 2000:",t.map(x=>x.month+"/"+x.day+" "+x.hour+":"+x.minute+":"+x.second+" delay "+x.delay).join("; "));const p=s.planAdvances(0,7,{partyCount:1,tools:["journal","chatot"]});console.log("advance 0 -> 7:",p.plan.map(x=>x.uses+" x "+x.tool+" ("+x.label+")").join(", "),"remainder",p.remainder);const c=s.calibrateRows(0x7B0448D1,1,0,"DPPt");console.log("calibrate rows:",c.map(r=>s.hex8(r.seed)+" delay "+r.delay+" "+r.sequence.slice(0,23)+"...").join(" | "))'
@@ -398,11 +523,12 @@ The no-emulator toolset (all searchers, calculators, checkers, and both timers) 
 available without installing anything:
 
 - **hackmons.com/rng-solution** (in preview until it is promoted) — the full toolset in the
-  browser, including the Gen 1 TID tab, the Emerald / FRLG Secret ID search and the Gen 2 TID tab (no capture reading
+  browser, including the Gen 1 TID tab, the Emerald / FRLG Secret ID search, the Gen 2 TID tab and the Gen 3 / Gen 4 wizard (no capture reading
   by design: `webapp/hunt/` is never bundled into it, and the RUN / PRACTICE-HUNT switch above the
   tabs only changes which calibration store is in force). **hackmons.com/shiny-solution** is the
   live page with the earlier tools until then.
-- **Hackmons Hub app** — Fun → Shiny Solution (same tools, beeps included).
+- **Hackmons Hub app** — Fun → Shiny Solution (same tools, beeps included; the wizard tab is there but its
+  species, encounter and static tables are not inlined into the bundle, so it says to use the page or the desktop app).
 - **Linux/macOS desktop** — the calculators-and-timers app from the releases page
   (Linux AppImage/tarball; macOS dmg/zip, unsigned — right-click → Open the first time).
 

@@ -1497,6 +1497,18 @@ pokeplatinum `7c0aa10b`, pokeheartgold `814275e`; PokeFinder `7adce35`.
   `Method4`). Statics accept Method 2 too (PokeFinder's static generator only offers 4).
 - Every result carries `callsUsed`, the number of LCRNG calls the creation consumed from the
   frame, so the wizard can place the next event.
+- **The head over these engines** is the web app's Wizard tab (`webapp/wizard-ui.js`, USAGE.md
+  "Wanted-IVs wizard"). Its Gen 3 answer is a forward generation from the game's seed model
+  (Ruby / Sapphire dead battery `0x5A0`, Emerald `0`, FireRed / LeafGreen a typed seed) with the
+  engine's own filter, chunked to the horizon; its Gen 4 answer is the seed-to-time layer's
+  back-step (below, "The reachability search") followed by the static or wild generator run on
+  every candidate seed, so a Method J / K creation's slot, level, nature and PID-loop calls are
+  counted by the engine and never assumed. The seed models it prints (`rs/gba/boot-seed-v0`,
+  `emerald/gba/boot-seed-0-v0`, `frlg/gba/typed-seed-v0`, `dppt/nds/seed-to-time-v0`,
+  `hgss/nds/seed-to-time-v0`) are EMPIRICAL / model output: no hardware session has run a wizard
+  procedure. The tab's own checks: the Groudon Method 4 vector at frame 3, the Route 111 wild
+  vector at frame 7, the design's gate seed `7B0448D1` at frame 0 and the Route 222 Magnet Pull
+  vector's seed `5D1745D0` at frame 0 (`tests/test-webapp.cjs`, `?wizselftest`).
 
 ## Derived values
 

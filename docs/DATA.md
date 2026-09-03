@@ -5,14 +5,27 @@ layer for the RNG guide wizard (design doc section 6.3): species tables, wild en
 tables and the static/gift catalogue for Gen 3 and Gen 4. No engine reads the files: the
 generator engines (`core/generators.js`, `app/Core/Generators.cs`) take these species and
 slot records as arguments, `tools/build-generator-vectors.cjs` resolves PokeFinder's cases
-against them, and `tests/test-data.cjs` asserts them.
+against them, `tests/test-data.cjs` asserts them, and the web app's Wizard tab
+(`webapp/wizard-ui.js`) resolves a picked game, table and static entry into the records the
+engines take (`staticEntries`, `wildTables`, `slotsFor`).
 
-TODO: no shipped head loads these six files yet, so `webapp/sync-core.sh`,
-`webapp/build-mobile-bundle.mjs`, `electron/build.sh` and the `build-desktop` workflow carry
-only `gen1-tid.json` / `gen3-sid.json` / `gen2-tid.json` (as `gen1-data.js`; the Gen 2 tables are
-1,034,046 bytes, read by the web app's Gen 2 TID tab (`webapp/gen2tid-ui.js`) as
-`window.ShinyGen2TidData`, so the plain mobile bundle is about 1.7 MB) and the engines, `core/generators.js` included. Species, encounters and statics join those three the same way once a
-tab consumes them (4.7 MB of JSON in total; a per-game split or a lazy fetch is the open choice).
+Which head loads them, and how: the web app's **Wizard (Gen 3/4)** tab (`webapp/wizard-ui.js`)
+is the consumer. `webapp/sync-core.sh` still writes `gen1-data.js` with `gen1-tid.json` /
+`gen3-sid.json` / `gen2-tid.json` as globals (the Gen 2 tables are 1,034,046 bytes, read by the
+Gen 2 TID tab as `window.ShinyGen2TidData`, so the plain mobile bundle is about 1.8 MB), and now
+also writes `webapp/data/wizard-gen3.js` (1.26 MB: `window.ShinyWizardData3 = {species, encounters,
+statics}`) and `webapp/data/wizard-gen4.js` (3.41 MB, `ShinyWizardData4`). The choice made for the
+4.7 MB: **lazy load per generation on first use, as a script element**, not a fetch and not an
+inline. The tab appends `<script src="data/wizard-genN.js">` when a game of generation N is
+picked, so the static site and the Electron `file://` page (`electron/build.sh` copies both files
+into `electron/webapp/data/`) pay for the tables only when the wizard is used, and a script element
+works over `file://` where `fetch` would be refused (the headless self-test `?wizselftest` in
+`tests/run-tests.sh` loads them that way). The mobile bundle (`webapp/build-mobile-bundle.mjs`)
+inlines neither file: it is one HTML string with no file beside it, so it sets
+`window.SHINY_WIZARD_NO_DATA` before the tab's script and the tab states that its tables need the
+static page or the Electron app. A per-game split was not taken: the encounter files are the bulk
+and are read by one game at a time already, so splitting them would save a load only for a visitor
+who never changes game.
 
 | File | Bytes | Content |
 |---|---|---|
