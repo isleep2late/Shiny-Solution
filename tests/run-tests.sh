@@ -36,6 +36,41 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# Gen 2 Trainer ID / Lucky ID engine (core/gen2tid.js over core/data/gen2-tid.json) against tests/gen2tid-vectors.json, emitted by
+# tests/gen2_reference.py from the derivation folder's CSVs read directly. When that folder is present the vectors are re-emitted
+# and must be byte-identical to the committed file; the generated data must also be byte-reproducible.
+GEN2_SRC="${GEN2_TID_SRC:-$HOME/Desktop/Red-WR-Practice/gen2-tid}"
+if [ -f "$GEN2_SRC/gold-gbp.csv" ]; then
+  python3 gen2_reference.py "$GEN2_SRC" 2>/dev/null | cmp - gen2tid-vectors.json && echo "gen2 vectors re-emitted from the CSVs: byte-identical"
+  regen=$(mktemp --suffix=.json)
+  cp ../core/data/gen2-tid.json "$regen"
+  python3 ../tools/gen-gen2-data.py "$GEN2_SRC" > /dev/null
+  cmp ../core/data/gen2-tid.json "$regen" && echo "gen2-tid.json regenerated from the CSVs: byte-identical"
+  rm -f "$regen"
+else
+  echo "gen2 derivation folder not found; checking the committed vectors only"
+fi
+node test-gen2tid.cjs gen2tid-vectors.json
+
+# Negative control: a corrupted vector (one lookup TID bumped by 1, one schedule's A time moved by 1e-6 s) must FAIL, and is shown failing.
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+v.lookups[5].tid += 1;
+v.schedules.find((s) => "result" in s).result.tA += 1e-6;
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' gen2tid-vectors.json "$corrupted"
+if node test-gen2tid.cjs "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted gen2tid vectors): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted gen2tid vectors): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # The webapp's Gen 1 Trainer ID tab: the mobile bundle must carry the tab, the engine and the embedded data, and the
 # tab's pure module must agree with the engine and RNG Solution's numbers (tests/test-webapp.cjs, which builds the bundle).
 bundle=$(mktemp --suffix=.ts)
