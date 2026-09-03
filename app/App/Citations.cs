@@ -11,7 +11,8 @@ namespace ShinySolution.App;
 // beside the executable preferred, or the file given to LoadCitations (app/Tests, whose negative controls pass a copy
 // with one entry removed). A panel marks each protocol step, target line, schedule line or verify line with [^n] over
 // its table of sources and lists them as a Sources block: a decomp line is printed with the docs/FACTS.md section the
-// registry files it under; a source with no decomp line is SYNTHESISED (a timer model, a community convention) or,
+// registry files it under (or the one the source names, when the registry files the line under several: it must be one
+// of them); a source with no decomp line is SYNTHESISED (a timer model, a community convention) or,
 // when it is a measured constant, printed under its validation status word (EMULATOR-EXACT, HARDWARE-VALIDATED n,
 // EMPIRICAL); a citation the registry does not carry is printed as NOT IN THE REGISTRY, which ProcedureProblems reports.
 public static class Citations
@@ -19,7 +20,7 @@ public static class Citations
     public const string Header = "Sources: decomp lines from docs/FACTS.md through the registry core/data/citations.json; SYNTHESISED marks a source with no decomp line.";
     public const string StatusNote = " A measured source is printed under its validation status: EMULATOR-EXACT, HARDWARE-VALIDATED n or EMPIRICAL.";
 
-    static Dictionary<string, string>? _citations;
+    static Dictionary<string, List<string>>? _citations;
     static bool _citationsTried;
     public static bool Loaded { get { Ensure(); return _citations is not null; } }
     public static void SetCitations(JsonElement? registry)
@@ -27,10 +28,16 @@ public static class Citations
         _citationsTried = true;
         _citations = null;
         if (registry is not JsonElement r || r.ValueKind != JsonValueKind.Object || !r.TryGetProperty("entries", out var entries) || entries.ValueKind != JsonValueKind.Array) return;
-        var by = new Dictionary<string, string>();
+        var by = new Dictionary<string, List<string>>();
         foreach (var e in entries.EnumerateArray())
-            by[e.TryGetProperty("cite", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() ?? "" : ""] =
-                e.TryGetProperty("section", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() ?? "" : "";
+        {
+            // the sections that cite the line, the first being the entry's section (an older registry carries only that one)
+            var sections = new List<string>();
+            if (e.TryGetProperty("sections", out var list) && list.ValueKind == JsonValueKind.Array)
+                foreach (var s in list.EnumerateArray()) if (s.ValueKind == JsonValueKind.String) sections.Add(s.GetString() ?? "");
+            if (sections.Count == 0) sections.Add(e.TryGetProperty("section", out var one) && one.ValueKind == JsonValueKind.String ? one.GetString() ?? "" : "");
+            by[e.TryGetProperty("cite", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() ?? "" : ""] = sections;
+        }
         _citations = by;
     }
     public static void LoadCitations(string? path = null)
@@ -52,9 +59,9 @@ public static class Citations
     }
     static void Ensure() { if (!_citationsTried) LoadCitations(); }
 
-    // one source: Cite a decomp line; Synth no decomp line; Measured a measured constant under its Status word (EMPIRICAL
-    // when none is given)
-    public sealed record CiteSource(string? Cite, string? Synth, string Claim, string? Measured = null, string? Status = null);
+    // one source: Cite a decomp line (under the named Section, one of the FACTS.md sections that cite it, when given);
+    // Synth no decomp line; Measured a measured constant under its Status word (EMPIRICAL when none is given)
+    public sealed record CiteSource(string? Cite, string? Synth, string Claim, string? Measured = null, string? Status = null, string? Section = null);
 
     public static string FootnoteText(int n, CiteSource src)
     {
@@ -62,8 +69,14 @@ public static class Citations
         if (src.Synth is not null) return head + "SYNTHESISED (no decomp line; " + src.Synth + "): " + src.Claim;
         if (src.Measured is not null) return head + (src.Status ?? "EMPIRICAL") + " (no decomp line; " + src.Measured + "): " + src.Claim;
         Ensure();
-        if (_citations is null || !_citations.TryGetValue(src.Cite ?? "", out var section))
+        if (_citations is null || !_citations.TryGetValue(src.Cite ?? "", out var sections))
             return head + src.Cite + " NOT IN THE REGISTRY (" + (_citations is not null ? "core/data/citations.json carries no such line of docs/FACTS.md" : "no citation registry is loaded") + "): " + src.Claim;
+        string section = sections[0];
+        if (src.Section is not null)
+        {
+            if (!sections.Contains(src.Section)) return head + src.Cite + " NOT IN THE REGISTRY (core/data/citations.json files that line under no docs/FACTS.md section named " + src.Section + "): " + src.Claim;
+            section = src.Section;
+        }
         return head + src.Cite + " (docs/FACTS.md: " + section + "): " + src.Claim;
     }
 

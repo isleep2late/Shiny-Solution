@@ -45,7 +45,8 @@ refused), and writes `core/data/citations.json` with the citation, the section o
 (and every section that cites it), the line of this file and the text of the first cited line
 (`docs/DATA.md`). The Gen 1 TID, Gen 2 TID and wizard tabs, and the desktop panels, mark each protocol
 step, target line, schedule line and verify line with `[^n]` and list the sources under the protocol
-(`webapp/footnotes.js`, `app/App/Citations.cs`): a decomp line with the section it is filed under here,
+(`webapp/footnotes.js`, `app/App/Citations.cs`): a decomp line with the section it is filed under here (a
+source may name the one it means among the sections that cite the line),
 SYNTHESISED for a source with no decomp line (a timer model, a community convention), or a measured
 constant under its validation status word (EMULATOR-EXACT, HARDWARE-VALIDATED n or EMPIRICAL, from the
 console's status in the Gen 1 and Gen 2 data files); a citation this file does not carry is printed as
@@ -1642,7 +1643,9 @@ bit 15 of the PID is set (`pokeemerald:784-791`).
 
 ## Gen 4 wild Method J (DPPt): `gen4Wild` with `method: "J"`
 
-`pokeplatinum/src/overlay006/wild_encounters.c`; every roll is `RandMod` (division) unless noted.
+`pokeplatinum/src/overlay006/wild_encounters.c`; every roll is `RandMod` (division) unless noted. The wild creator is
+`CreateWildMon` (`pokeplatinum/src/overlay006/wild_encounters.c:1047-1087,1462`: the Cute Charm roll, the nature, the
+PID loop and the IVs, then `AddWildMonToParty` rolls the held item).
 
 1. Fishing: `RandMod(100) >= rate` -> no bite (`:396`); the frame still generates, reported
    `valid: false` (PokeFinder convention). Feebas: `RandMod(2) == 0` -> not a Feebas tile is the
@@ -1681,7 +1684,9 @@ Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
 
 ## Gen 4 wild Method K (HGSS): `gen4Wild` with `method: "K"`
 
-`pokeheartgold/src/field/encounter_check.c`; every roll is modulo.
+`pokeheartgold/src/field/encounter_check.c`; every roll is modulo. The wild creator is `generateWildNonShinyAndAddToParty`
+(`pokeheartgold/src/field/encounter_check.c:821-875,1350`: the Cute Charm roll, the nature, the PID loop and the IVs, then
+`addGeneratedMonToBattleSetupParty` rolls the held item).
 
 1. Rock smash `(LCRandom() % 100) >= rate` (`:388`), fishing `LCRandRange(100) >= rate` (`:341`)
    with the friendship boost 0/20/30/40/50 when the follower is out (`:1062-1081`), Suction

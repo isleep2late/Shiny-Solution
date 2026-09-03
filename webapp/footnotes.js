@@ -4,7 +4,7 @@
 // writes it into gen1-data.js, the mobile bundle inlines it); node callers pass the parsed file to setCitations.
 // A tab marks each protocol step, target line, schedule line or verify line with [^n] over its table of sources and
 // lists them as a Sources block: a decomp line is printed with the docs/FACTS.md section the registry files it
-// under; a source with no decomp line is SYNTHESISED (a timer model, a community convention) or, when it is a
+// under (or the one the source names, when the registry files the line under several: it must be one of them); a source with no decomp line is SYNTHESISED (a timer model, a community convention) or, when it is a
 // measured constant, printed under its validation status word (EMULATOR-EXACT, HARDWARE-VALIDATED n, EMPIRICAL);
 // a citation the registry does not carry is printed as NOT IN THE REGISTRY, which procedureProblems reports and
 // the self-tests refuse. Loaded after gen1-data.js and before the three tab scripts (index.html, the mobile
@@ -23,15 +23,21 @@
 
   var HEADER = "Sources: decomp lines from docs/FACTS.md through the registry core/data/citations.json; SYNTHESISED marks a source with no decomp line.";
   var STATUS_NOTE = " A measured source is printed under its validation status: EMULATOR-EXACT, HARDWARE-VALIDATED n or EMPIRICAL.";
-  // one source: {cite, claim} a decomp line; {synth, claim} no decomp line; {measured, status, claim} a measured constant
-  // under its status word (EMPIRICAL when none is given)
+  // one source: {cite, claim} a decomp line ({cite, section, claim} under the named one of the FACTS.md sections that
+  // cite it); {synth, claim} no decomp line; {measured, status, claim} a measured constant under its status word
+  // (EMPIRICAL when none is given)
   function footnoteText(n, src) {
     var head = "[^" + n + "] ";
     if (src.synth) return head + "SYNTHESISED (no decomp line; " + src.synth + "): " + src.claim;
     if (src.measured) return head + (src.status || "EMPIRICAL") + " (no decomp line; " + src.measured + "): " + src.claim;
     var e = CITATIONS && CITATIONS.byCite[src.cite];
     if (!e) return head + src.cite + " NOT IN THE REGISTRY (" + (CITATIONS ? "core/data/citations.json carries no such line of docs/FACTS.md" : "no citation registry is loaded") + "): " + src.claim;
-    return head + src.cite + " (docs/FACTS.md: " + e.section + "): " + src.claim;
+    var section = e.section;
+    if (src.section) {
+      if ((e.sections || [e.section]).indexOf(src.section) < 0) return head + src.cite + " NOT IN THE REGISTRY (core/data/citations.json files that line under no docs/FACTS.md section named " + src.section + "): " + src.claim;
+      section = src.section;
+    }
+    return head + src.cite + " (docs/FACTS.md: " + section + "): " + src.claim;
   }
   // one procedure's footnotes over a table of sources: mark(keys) returns the markers for a line, lines() the Sources
   // block. With no order the numbers follow the order of first use (the wizard); with an order the numbers are fixed

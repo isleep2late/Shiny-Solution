@@ -258,7 +258,7 @@ public static class Gen1TidText
                 "hold START on any frame " + t.HoldLoFrame + "-" + t.HoldHiFrame + " and the NEW GAME menu opens on frame " + t.MenuFrame + "; the A press frame is the menu frame + 80 + the offset (the table's definition), one Trainer ID per offset under " + p.MethodologyId + "; " + p.Name + ": " + p.Status,
                 "the table's derivation on pokemon-speedrunning/gambatte-core with START held inside the window, docs/FACTS.md Gen 1 Trainer ID (hold-START methodologies, RNG Solution)", StatusWord(p)),
             ["menuInput"] = new(repo + "/engine/menus/main_menu.asm:" + (y ? "63-66,84" : "64-68,85-86"), null, "the NEW GAME menu waits in HandleMenuInput with A, B and START watched; A on NEW GAME goes to StartNewGame, so the frame of that press is the one the offset counts"),
-            ["tidRoll"] = new(repo + "/engine/movie/oak_speech/init_player_data.asm:1-10", null, "InitPlayerData2, first thing in the Oak speech, rolls the Trainer ID with two Random calls: hRandomSub is the high byte, hRandomAdd the low byte"),
+            ["tidRoll"] = new(repo + "/engine/movie/oak_speech/init_player_data.asm:1-10", null, "InitPlayerData2, first thing in the Oak speech, rolls the Trainer ID with two Random calls: hRandomSub is the high byte, hRandomAdd the low byte", Section: "Gen 1/2 (Game Boy) / Gen 1 Trainer ID / Where the ID comes from"),
             ["stir"] = new(repo + "/engine/math/random.asm:1-13", null, "Random_ is the only RNG: hRandomAdd += rDIV and hRandomSub -= rDIV, called once per VBlank, so the Trainer ID is a function of the frame of the A press and of the DIV phase the hold-START boot fixes"),
         };
     }

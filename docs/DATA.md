@@ -390,7 +390,7 @@ error (exit 1), not a skip. Readers: `webapp/footnotes.js` (as `window.ShinyCita
 their footnotes through it) and `app/App/Citations.cs` (embedded as `data.citations`, a `citations.json` beside the
 executable preferred; the three desktop panels render through it): each protocol step, target line, schedule line
 and verify line that rests on a mechanic is marked `[^n]` and the sources are listed under the protocol, a decomp
-line with its FACTS.md section, SYNTHESISED for a source with no decomp line, or a measured constant under its
+line with its FACTS.md section (`section`, or the one the source names, which must be in `sections`), SYNTHESISED for a source with no decomp line, or a measured constant under its
 validation status word (EMULATOR-EXACT, HARDWARE-VALIDATED n or EMPIRICAL from the console's status in
 `gen1-tid.json` and `gen2-tid.json`); a source the registry lacks is printed as NOT IN THE REGISTRY, which the tests
 refuse. Every Gen 1 and Gen 2 citation of FACTS.md names its repository (pokered, pokeyellow, pokegold, pokecrystal),
