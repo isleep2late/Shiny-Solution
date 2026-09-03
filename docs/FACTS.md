@@ -164,6 +164,17 @@ Decompilation citations refer to [pret/pokered](https://github.com/pret/pokered)
 | samples per frame | 35112 at 2097152 Hz | gambatte's audio rate; used by the reset harness |
 | menu to table | 80 frames | the tables' definition: A press frame = menu frame + 80 + offset |
 
+### Where the ID comes from (the game code)
+
+The table rows below are measured; these are the routines they measure. Blue is pret's pokered built
+for Blue, so its citations are pokered's.
+
+| fact | where | label |
+|---|---|---|
+| the title screen waits in `.awaitUserInterruptionLoop` on `CheckForUserInterruption`, which runs one `DelayFrame` and one `JoypadLowSensitivity` per frame and returns on START or A (`hJoy5`) or Up+Select+B (`hJoyHeld`); the loop ends, the cry and the fade play, then `jp MainMenu`: START held is read on the first poll after the title's scroll-in, so any START-down frame inside the hold window opens the menu on one fixed frame | `pokered/engine/movie/title.asm:227-239,266`, `pokered/home/overworld.asm:2395-2424`; Yellow polls `hJoyHeld & (A\|START)` by level in its own title loop, `pokeyellow/engine/movie/title.asm:166-175` | STRUCTURAL (the loop); the window's frames EMPIRICAL (the tables below) |
+| the NEW GAME menu waits in `HandleMenuInput` with `wMenuWatchedKeys = A\|B\|START`; A on NEW GAME goes to `StartNewGame` -> `OakSpeech` -> `InitPlayerData2`, whose first two `Random` calls write `wPlayerID`: `hRandomSub` (the high byte) then `hRandomAdd` (the low byte) | `pokered/engine/menus/main_menu.asm:64-68,85-86`, `pokered/engine/movie/oak_speech/oak_speech.asm:42-52`, `pokered/engine/movie/oak_speech/init_player_data.asm:1-10`; Yellow `pokeyellow/engine/menus/main_menu.asm:63-66,84`, `pokeyellow/engine/movie/oak_speech/oak_speech.asm:60`, `pokeyellow/engine/movie/oak_speech/init_player_data.asm:1-10` | STRUCTURAL |
+| the only RNG is `Random_`: `hRandomAdd += rDIV` and `hRandomSub -= rDIV`, called once per VBlank, so the Trainer ID is a function of the frame of the A press and of the DIV phase that the hold-START boot fixes; the table's offset is that frame counted from the menu (A press frame = menu frame + 80 + offset) | `pokered/engine/math/random.asm:1-13`, `pokered/home/vblank.asm:37`; Yellow `pokeyellow/engine/math/random.asm:1-13`, `pokeyellow/home/vblank.asm:43` | STRUCTURAL (the stir); the offset EMPIRICAL (the tables' definition) |
+
 ### Trainer ID tables
 
 Both tables are in `rngsolution/data/red/` with their derivation line preserved as the first
@@ -230,10 +241,10 @@ boot ROMs as Red, `wSaveFileStatus $D088`, `wPlayerID $D359` (`pokeblue.sym`).
 `pokeyellow.gbc` sha1 `cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1`, `wSaveFileStatus $D087`,
 `wPlayerID $D358` (`pokeyellow.sym`). STRUCTURAL differences from Red (pret/pokeyellow):
 `PlayIntroScene` polls `JoypadLowSensitivity` every frame and skips on `hJoyPressed & (A|B|START)`
-(`engine/movie/intro_yellow.asm:12-20`); the title loop tests `hJoyHeld & (A|START)` (level,
-`engine/movie/title.asm:166-175`); `PlayShootingStar` shows the copyright screen for 180 frames,
+(`pokeyellow/engine/movie/intro_yellow.asm:12-20`); the title loop tests `hJoyHeld & (A|START)` (level,
+`pokeyellow/engine/movie/title.asm:166-175`); `PlayShootingStar` shows the copyright screen for 180 frames,
 waits 64 more, then `AnimateShootingStar` polls `CheckForUserInterruption`
-(`engine/movie/intro.asm:82-118`, `home/overworld.asm:2273-2302`). EMPIRICAL (the `hold` search at
+(`pokeyellow/engine/movie/intro.asm:82-123`, `pokeyellow/home/overworld.asm:2273-2302`). EMPIRICAL (the `hold` search at
 step 1 over every candidate range, `timeline` brightness with no input):
 
 | hold START from (frames) | GBA silicon: menu | DMG: menu | what happens |
@@ -460,19 +471,19 @@ sample of any Gen 2 configuration**; every methodology's status is
 
 | fact | where | label |
 |---|---|---|
-| `wPlayerID` is written once, first thing in `_ResetWRAM` (`NewGame` -> `ResetWRAM` -> `ClearTilemapEtc` -> `OakSpeech`): after the WRAM clear `DelayFrame; ldh a,[hRandomSub]; ld [wPlayerID],a` then `DelayFrame; ldh a,[hRandomAdd]; ld [wPlayerID+1],a`; gender / naming come after | pokegold `engine/menus/intro_menu.asm:1-7,28-49`; pokecrystal `:61-68,107-128` | STRUCTURAL |
-| Crystal then rolls `wSecretID` with two `Random` calls a frame apart; it is not shown in game and has no shiny role in Gen 2 | pokecrystal `intro_menu.asm:130-134` | STRUCTURAL |
-| the RNG is only the VBlank stir (`hRandomAdd += DIV`, `hRandomSub -= DIV`); no seed, HRAM cleared at Init; `Random` does the same stir sub-frame | `home/vblank.asm:68-79`, `home/init.asm:79-86`, `home/random.asm` | STRUCTURAL |
+| `wPlayerID` is written once, first thing in `_ResetWRAM` (`NewGame` -> `ResetWRAM` -> `ClearTilemapEtc` -> `OakSpeech`): after the WRAM clear `DelayFrame; ldh a,[hRandomSub]; ld [wPlayerID],a` then `DelayFrame; ldh a,[hRandomAdd]; ld [wPlayerID+1],a`; gender / naming come after | `pokegold/engine/menus/intro_menu.asm:1-7,28-49`; `pokecrystal/engine/menus/intro_menu.asm:61-68,102-128` | STRUCTURAL |
+| Crystal then rolls `wSecretID` with two `Random` calls a frame apart; it is not shown in game and has no shiny role in Gen 2 | `pokecrystal/engine/menus/intro_menu.asm:130-134` | STRUCTURAL |
+| the RNG is only the VBlank stir (`hRandomAdd += DIV`, `hRandomSub -= DIV`); no seed, HRAM cleared at Init; `Random` does the same stir sub-frame | `pokegold/home/vblank.asm:68-79` (`pokecrystal/home/vblank.asm:68-79`), `pokegold/home/init.asm:79-86`, `pokegold/home/random.asm:1-29` | STRUCTURAL |
 | the high byte is written on the frame whose `hRandomSub` equals it, the low byte and the LID one frame later, 13 frames after the accepting poll (Gold/Silver); `trainer_card.asm` prints big-endian | `REVIEW.md` section 5 (`gen2tid trace`, offsets 0-13 `0 NOROLL`, `1-8 C9FF/EEA4`, `9-12 9976/E0E0`, `13 4211/B1F8`) | EMPIRICAL |
-| the Lucky ID: `LoadOrRegenerateLuckyIDNumber` rolls two `Random` only if SRAM `sLuckyNumberDay != wCurDay+1` (`wCurDay` is 0 after the WRAM clear) and writes `sLuckyNumberDay = 1` plus the LID to SRAM right there, without a save; first LID byte = `hRandomSub` after the second `Random` | pokegold `intro_menu.asm:225-248`; pokecrystal `:312-336`; SRAM `sLuckyNumberDay`/`sLuckyIDNumber` = bank 0 `$AC68`/`$AC69` (all three syms) | STRUCTURAL + EMPIRICAL (trace) |
+| the Lucky ID: `LoadOrRegenerateLuckyIDNumber` rolls two `Random` only if SRAM `sLuckyNumberDay != wCurDay+1` (`wCurDay` is 0 after the WRAM clear) and writes `sLuckyNumberDay = 1` plus the LID to SRAM right there, without a save; first LID byte = `hRandomSub` after the second `Random` | `pokegold/engine/menus/intro_menu.asm:225-248`; `pokecrystal/engine/menus/intro_menu.asm:312-336`; SRAM `sLuckyNumberDay`/`sLuckyIDNumber` = bank 0 `$AC68`/`$AC69` (all three syms) | STRUCTURAL + EMPIRICAL (trace) |
 | addresses read by the harness: G/S `wPlayerID $D1A1`, `wLuckyIDNumber $D9E9`, `wMoney $D573`, `wMenuDataPointer $CEBD`, `MainMenu.MenuData 01:5A9F`; Crystal `wPlayerID $D47B`, `wLuckyIDNumber $DC9F`, `wSecretID $D84A`, `wMoney $D84E`, `wMenuDataPointer $CF86`, `MainMenu.MenuData 12:5D1C`; roll trigger `wMoney == 00 0B B8` (`START_MONEY` 3000, written after the LID in `_ResetWRAM`) | `pokegold.sym`, `pokesilver.sym`, `pokecrystal.sym`; `gen2tid.cpp:59-63` | STRUCTURAL |
 
 ### The boot path with START held, and the 4-frame poll
 
 | fact | where | label |
 |---|---|---|
-| the splash polls `JoyTextDelay` every frame and any button skips it; `splash.asm:14` zeroes `hJoyDown`, which guarantees an edge for a START held since power-on; the intro movie polls the same way from its first frame; the title accepts START or A by LEVEL on its first `TitleScreenMain` frame (Crystal after a 28-frame scroll-in) | pokegold `engine/movie/splash.asm:86-90,14`, `engine/movie/intro.asm:15-19`, `intro_menu.asm:968-1000` (Up+B+Select = clear save `:987-989`); pokecrystal `:1133-1200` | STRUCTURAL |
-| the main menu polls once every 4 frames: `MainMenuJoypadLoop` calls `SetUpMenu`, which sets `_2DMENU_DISABLE_JOYPAD_FILTER_F`, so `_ScrollingMenuJoypad`'s `.loopRTC` exits after ONE poll and goes back through `Move2DMenuCursor; WaitBGMap` (4 `DelayFrame`s); A/B edge-triggered via `hJoyPressed`, START masked by `wMenuJoypadFilter` | pokegold `engine/menus/main_menu.asm:142-152`, `home/menu.asm:479-485,35-48`, `engine/menus/menu.asm:190-234,236-247,185`, `home/tilemap.asm:3-10`, `home/joypad.asm:106-155`; pokecrystal `main_menu.asm:240-252`, `home/menu.asm:523-529` | STRUCTURAL (`REVIEW.md` m2 adds the `SetUpMenu` citation: `menu.asm:190-234` alone would imply per-frame polling) |
+| the splash polls `JoyTextDelay` every frame and any button skips it; `pokegold/engine/movie/splash.asm:14` zeroes `hJoyDown`, which guarantees an edge for a START held since power-on; the intro movie polls the same way from its first frame; the title accepts START or A by LEVEL on its first `TitleScreenMain` frame (Crystal after a 28-frame scroll-in) | `pokegold/engine/movie/splash.asm:86-90,14`, `pokegold/engine/movie/intro.asm:15-19`, `pokegold/engine/menus/intro_menu.asm:968-1000` (Up+B+Select = clear save `pokegold/engine/menus/intro_menu.asm:987-989`); `pokecrystal/engine/menus/intro_menu.asm:1138-1200` | STRUCTURAL |
+| the main menu polls once every 4 frames: `MainMenuJoypadLoop` calls `SetUpMenu`, which sets `_2DMENU_DISABLE_JOYPAD_FILTER_F`, so `_ScrollingMenuJoypad`'s `.loopRTC` exits after ONE poll and goes back through `Move2DMenuCursor; WaitBGMap` (4 `DelayFrame`s); A/B edge-triggered via `hJoyPressed`, START masked by `wMenuJoypadFilter` | `pokegold/engine/menus/main_menu.asm:142-152`, `pokegold/home/menu.asm:479-485,35-48`, `pokegold/engine/menus/menu.asm:190-234,236-247,185`, `pokegold/home/tilemap.asm:3-10`, `pokegold/home/joypad.asm:106-155`; `pokecrystal/engine/menus/main_menu.asm:240-252`, `pokecrystal/home/menu.asm:523-529` | STRUCTURAL (`REVIEW.md` m2 adds the `SetUpMenu` citation: `pokegold/engine/menus/menu.asm:190-234` alone would imply per-frame polling) |
 | START-hold plateaus (any START-down frame in the range opens the menu on one fixed frame, 0-based harness frames from power-on incl. the GBP stall): Gold GBP/GBC 0-355 -> detector 446; Silver 0-355 -> 448; Gold DMG 0-545 -> 627 (split at 347/348, two tables); Silver DMG 0-545 -> 629; Crystal GBP/GBC 0-407 -> 522. Negative control: hold one frame past the plateau slides the menu (356 -> 447, 408 -> 523, 546 -> 628) and agrees on 0 of 2400 offsets | `logs/hold_*_0-3600.txt`, `logs/plateaus_summary.txt`, `REVIEW.md` section 1 | EMPIRICAL |
 | the menu box becomes VISIBLE 4 frames after the detector on every configuration (brightness 255 -> 243 at detector + 4: 450/452, 631/633, 526); CSV offsets are relative to the detector, a human anchoring on the visible menu uses `v = offset - 4` | `logs/menu_visibility.txt` (`gen2tid menutl`, all 10 configurations) | EMPIRICAL |
 | bins (offset = frames after the detector at which A goes down, tap 4-8 frames): Gold/Silver `offset 0 -> dropped; 1..8 -> bin 0; else bin = (offset - 5) // 4` (599 bins, bin 598 = 2397-2399); Crystal `offset <= 1 -> dropped; 2..9 -> bin 0; else (offset - 6) // 4`. Visible-menu form: G/S `v in -3..4 -> bin 0`, then `bin k = v in 4k+1..4k+4`; Crystal `v in -2..5 -> bin 0`, then `4k+2..4k+5`. Asserted on every row of all 162 tables by `make_csv.py` and again by `tools/gen-gen2-data.py` and `tests/gen2_reference.py` | README "Shiny Solution integration"; 597 of 599 bins per table exactly 4 wide (`logs/analysis_primaries.txt`) | EMPIRICAL |
@@ -480,7 +491,7 @@ sample of any Gen 2 configuration**; every methodology's status is
 | buffered A: A held from any frame between the title's poll and the menu's first poll lands in bin 0 | `logs/bufa_gold_gbp.txt` | EMPIRICAL |
 | releasing START after the menu is harmless as long as it is up before the A tap (0-60 frames after the menu with A at offset 100, 0-240 with A at 400: one TID each); the original `release_..._d100.txt` rows "release 120/240" are a harness artefact (the press was delayed), marked in the log | `logs/release_gold_gbp_hf0_d{100,400}_fixed.txt`; `REVIEW.md` m7 | EMPIRICAL |
 | what the runner sees: GBP/GBC: CGB boot logo 1-165, handoff 186, black 218-242, copyright text 243-347, Game Freak logo would start 355, title 398-401 (Silver 400-403); Crystal copyright 255-359, title 449-479. DMG: white 1-73, boot logo 74-333, handoff 334, white 334-434, copyright 435-536, GF logo 545, title 587-590. GBP power-on is NOT an observable anchor (disc boot, GBA->CGB stall); the harness's frame 0 includes gambatte's 485808-sample stall (`gambatte.cpp:230-231`) | `logs/menu_visibility.txt` (no-input and START-held timelines) | EMPIRICAL |
-| DMG split: hold frames 0-347 and 348-545 give two byte-identical-within, different-between tables that differ by one DIV step on every bin (Gold offset 100 `A410` vs `A50F`); the boundary is 14 frames after the boot logo vanishes, so "press START when the logo disappears" lands on either side. Mechanism: the tables first differ in `hRandomSub` (+1) at `hVBlankCounter = 03`, the first VBlank after `InitSGBBorder`'s SGB-detection window (frames 347-395, interrupts disabled), a one-time event at the `ei` consistent with a pending joypad interrupt. No CGB split (holds 0/178/355 identical on GBP and GBC). The two DMG tables coincide in the 140-511-day brackets (days200/260/300/450), in days512 and in every halted state except halt-days700, and differ on every bin in days0, the carry brackets days700/780/850/1000 and halt-days700 (measured: the generator's identical-table grouping and the equal-bin count per state, `rtc.dmg_identical_states` / `rtc.dmg_equal_bins`, checked against the CSVs in both engines' vectors; the source README's "all halt states" is not exact) | `logs/dmg_subplateau_{coarse,fine}.txt`, `logs/platform_compare.txt`; pokegold `engine/gfx/color.asm:762-797`, `home/init.asm:148`; `REVIEW.md` m3 | EMPIRICAL (mechanism INFERRED) |
+| DMG split: hold frames 0-347 and 348-545 give two byte-identical-within, different-between tables that differ by one DIV step on every bin (Gold offset 100 `A410` vs `A50F`); the boundary is 14 frames after the boot logo vanishes, so "press START when the logo disappears" lands on either side. Mechanism: the tables first differ in `hRandomSub` (+1) at `hVBlankCounter = 03`, the first VBlank after `InitSGBBorder`'s SGB-detection window (frames 347-395, interrupts disabled), a one-time event at the `ei` consistent with a pending joypad interrupt. No CGB split (holds 0/178/355 identical on GBP and GBC). The two DMG tables coincide in the 140-511-day brackets (days200/260/300/450), in days512 and in every halted state except halt-days700, and differ on every bin in days0, the carry brackets days700/780/850/1000 and halt-days700 (measured: the generator's identical-table grouping and the equal-bin count per state, `rtc.dmg_identical_states` / `rtc.dmg_equal_bins`, checked against the CSVs in both engines' vectors; the source README's "all halt states" is not exact) | `logs/dmg_subplateau_{coarse,fine}.txt`, `logs/platform_compare.txt`; `pokegold/engine/gfx/color.asm:762-797`, `pokegold/home/init.asm:148`; `REVIEW.md` m3 | EMPIRICAL (mechanism INFERRED) |
 | platforms differ: GBP vs GBC (same CGB boot ROM, GBA flag on/off) share the TID high byte on 1635 of 2399 Gold offsets and the low byte on 0; DMG is unrelated to both; Gold vs Silver on GBC: 0 equal TIDs. Only 45 of 2396 Gold and 41 of 2396 Silver (platform, bin) entries share a TID with another platform's primary, so a typed TID normally also identifies the platform; the tool asks anyway | `logs/platform_compare.txt`, `inversion_summary.txt` `primaries_days0_all_platforms` | EMPIRICAL |
 
 ### Held input changes Gold/Silver IDs (REVIEW.md M1)
@@ -491,26 +502,26 @@ sample of any Gen 2 configuration**; every methodology's status is
 | tap-length sweeps, every offset, START released at the detector: 4-8-frame taps reproduce every table on every offset (4-7-frame taps miss the first poll on 1-4 bin-0 offsets, counted NOROLL); a 9-frame tap changes the TID on 81 (Gold GBP) / 94 (Silver GBP) / 46 (Gold DMG) / 152 (Silver DMG) offsets; 13 frames on 293 / 377 / 199 | `logs/heldinput_summary.txt` | EMPIRICAL |
 | the sensitive window: at Silver GBP offsets 101-103 the result changes as soon as the tap is still down 7 frames after the accepting poll; at Gold GBP offset 100 a tap through poll+11 is still fine and poll+12 is not; which frames matter is a per-bin property (the DIV phase), so the only rule that holds for every bin is the worst case: **nothing may be down from 7 frames after the accepting poll until the roll**. START-release scans: START down a few frames past the accepting poll is tolerated in the sampled bins (`same for rel 96-113; DIFFERENT for 114-120` at Gold offset 100) | `logs/scan_summary.txt`, `logs/scan_{alen,startrel}_*.txt` | EMPIRICAL |
 | **rule (Gold/Silver, all platforms)**: release START, then tap A for 4-8 frames (67-134 ms at 59.7275 fps), and press nothing until the New Game roll is over (about 0.35 s after the tap). Crystal: immune, but the same tap length is what selects one bin | every CSV's `VALID ONLY IF (held input)` header line; carried into every methodology's `validity` and `protocol` in `gen2-tid.json` | EMPIRICAL |
-| structural correlate: pokegold's `IE_DEFAULT` enables the joypad interrupt (handler `Joypad::` is a bare `reti`); pokecrystal's omits it. The cycle-level path is not traced | `constants/ram_constants.asm:358` (pokecrystal `:392`), `home/joypad.asm:1-6` | INFERRED |
+| structural correlate: pokegold's `IE_DEFAULT` enables the joypad interrupt (handler `Joypad::` is a bare `reti`); pokecrystal's omits it. The cycle-level path is not traced | `pokegold/constants/ram_constants.asm:358` (`pokecrystal/constants/ram_constants.asm:392`), `pokegold/home/joypad.asm:1-6` | INFERRED |
 
 ### The Lucky ID's three conditions (REVIEW.md M2)
 
 | fact | where | label |
 |---|---|---|
-| the LID column applies only to the FIRST New Game after "clear save data" (Up+B+Select on the title, `EmptyAllSRAMBanks`, zero-fill) or on a never-started cartridge; a later New Game returns the earlier LID unchanged; the TID column applies to every New Game. Controls: `sLuckyNumberDay = 01` with `sLuckyIDNumber = 1234` planted: `gold gbp off 100 -> E83B,1234` (TID unchanged), `day2 -> E83B,519A` (re-rolled); two boots with SRAM kept: `boot2 TID=BC66 LID=519A` (returned), with `EmptyAllSRAMBanks` between: `LID=F504` (= the table); same on Silver GBP, Gold DMG, Crystal GBP. The harness tables are the cleared case (gambatte's fresh SRAM is 0xFF, `initstate.cpp:415`, `READONLY_SAV`) | `logs/sram_luckyday_control.txt`, `logs/twoboot_lid_persistence.txt`; `engine/menus/empty_sram.asm:1-19` | EMPIRICAL |
+| the LID column applies only to the FIRST New Game after "clear save data" (Up+B+Select on the title, `EmptyAllSRAMBanks`, zero-fill) or on a never-started cartridge; a later New Game returns the earlier LID unchanged; the TID column applies to every New Game. Controls: `sLuckyNumberDay = 01` with `sLuckyIDNumber = 1234` planted: `gold gbp off 100 -> E83B,1234` (TID unchanged), `day2 -> E83B,519A` (re-rolled); two boots with SRAM kept: `boot2 TID=BC66 LID=519A` (returned), with `EmptyAllSRAMBanks` between: `LID=F504` (= the table); same on Silver GBP, Gold DMG, Crystal GBP. The harness tables are the cleared case (gambatte's fresh SRAM is 0xFF, `initstate.cpp:415`, `READONLY_SAV`) | `logs/sram_luckyday_control.txt`, `logs/twoboot_lid_persistence.txt`; `pokegold/engine/menus/empty_sram.asm:1-19` | EMPIRICAL |
 | the held-input rule above | | EMPIRICAL |
-| the LID survives to the Radio Tower lottery only if the in-game day is Sunday (`wCurDay == 0`) when `ResetLuckyNumberShowFlag` runs: it calls the same routine, which re-rolls unless `sLuckyNumberDay == wCurDay+1`, and the New Game left 1 | pokegold `engine/events/specials.asm:321-326` (the only other caller, grep) | STRUCTURAL, **not measured** |
-| LID 01001 = Kenya's fixed OT ID, which is why the glitchless route wants it | pokegold `engine/pokemon/move_mon.asm:1` `DEF RANDY_OT_ID EQU 01001` (checked in `~/AI/pret/pokegold`) | STRUCTURAL |
+| the LID survives to the Radio Tower lottery only if the in-game day is Sunday (`wCurDay == 0`) when `ResetLuckyNumberShowFlag` runs: it calls the same routine, which re-rolls unless `sLuckyNumberDay == wCurDay+1`, and the New Game left 1 | `pokegold/engine/events/specials.asm:321-326` (the only other caller, grep) | STRUCTURAL, **not measured** |
+| LID 01001 = Kenya's fixed OT ID, which is why the glitchless route wants it | `pokegold/engine/pokemon/move_mon.asm:1` `DEF RANDY_OT_ID EQU 01001` (checked in `~/AI/pret/pokegold`) | STRUCTURAL |
 
 ### RTC dependence of Gold/Silver (REVIEW.md M3)
 
 | fact | where | label |
 |---|---|---|
-| pokegold `home/init.asm` runs `StartClock` (`:123`) BEFORE the LCD is switched on (`:140`); `StartClock` -> `_FixDays` -> `FixDays` loops `sub 140` once per 140 days, takes the day-high-bit branch at 256, calls `SetClock` and `RecordRTCStatus` when >= 140, so its cycle count moves the LCD (every VBlank DIV sample) relative to DIV. Bracket edges are the loop counts: 0-139 skip; 140-255 two `.mod` iterations; 256-279 `.modh` 1 + `.modl` 1; 280-395 1+2 and 396-419 2+1 (same cost, one bracket: 395/396/419 all `F32E`); 420-511 2+2. pokecrystal switches the LCD on (`:131`) before `StartClock` (`:143`) and clears `rIF` before `ei` (`:155-159`): immune | pokegold `engine/rtc/rtc.asm:91-101,103-115`, `home/time.asm:61-120,205-250`; pokecrystal `home/init.asm` | STRUCTURAL |
+| pokegold runs `StartClock` (`pokegold/home/init.asm:123`) BEFORE the LCD is switched on (`pokegold/home/init.asm:140`); `StartClock` -> `_FixDays` -> `FixDays` loops `sub 140` once per 140 days, takes the day-high-bit branch at 256, calls `SetClock` and `RecordRTCStatus` when >= 140, so its cycle count moves the LCD (every VBlank DIV sample) relative to DIV. Bracket edges are the loop counts: 0-139 skip; 140-255 two `.mod` iterations; 256-279 `.modh` 1 + `.modl` 1; 280-395 1+2 and 396-419 2+1 (same cost, one bracket: 395/396/419 all `F32E`); 420-511 2+2. pokecrystal switches the LCD on (`pokecrystal/home/init.asm:131`) before `StartClock` (`pokecrystal/home/init.asm:143`) and clears `rIF` before `ei` (`pokecrystal/home/init.asm:155-159`): immune | `pokegold/engine/rtc/rtc.asm:91-101,103-115`, `pokegold/home/time.asm:61-120,205-250`; `pokecrystal/home/init.asm:131,143,155-159` | STRUCTURAL |
 | Gold GBP offset 100: 0 s to 139 days -> `E83B`; 140-255 -> `1D0C`; 256-279 -> `0818`; 280-419 -> `F32E`; 420-511 -> `DE4E`; with the carry bit (>= 512 days) the five brackets recur on days mod 512 (`25F8`, `58C8`, `4FDE`, `2EF4`, `170A`); every edge confirmed at offsets 100 and 777 incl. `139 d 23:59:59` -> the 140-day value (the day is evaluated when `StartClock` runs, ~1.5-2 s after power-on); h/m/s have no effect inside a bracket; Silver the same; Crystal 0/100/139/140/200/512 days give one row | `logs/rtc_scan_gold_gbp_*.txt`, `logs/rtc_gold_gbp.txt`, `logs/rtc_scan_crystal_silver_gbp_d100.txt`; `REVIEW.md` section 4 | EMPIRICAL |
 | the ten running-clock states (`days0` = the primary table; `days200/260/300/450` = 140-255 / 256-279 / 280-419 / 420-511; `days512/700/780/850/1000` = the same with the carry) exist on GBP, GBC, DMG and DMG-late-start: 72 bracket tables, one full sweep each plus a 20-offset spot re-derivation from a second hold frame (20/20 in every header; `make_csv.py` refuses to write a table whose spot check disagrees). Every bracket table differs from its platform's day-0 primary on all 2399 offsets | `rtc-brackets/*-rtc-days*.csv`, `logs/rtc_bracket_compare.txt`, `logs/rtc_offset100.txt` | EMPIRICAL |
-| a HALTED clock (DH bit 6) is an eleventh family: set through the core's `<rom>.rtc` sidecar (`Cartridge::loadSavedata`, `mem/cartridge.cpp:379-447`, keeps `dh & 0xC1`; `GB::setTime` clears the halt bit, `mem/rtc.cpp:81-94`; a running-clock sidecar needs base time = now, `cartridge.cpp:406-408`), validated at table scale: sidecar `DH=00 DL=200` and `DH=80 DL=0` equal the `setTime` days200 / days512 tables on 2399/2399 offsets (Gold and Silver). 80 halted tables; every one differs from every running table of its platform; inside the family `halt-days300 == halt-days1000` and `halt-days260 == halt-days850` on every platform (2399/2399). Structural cause: with the halt bit set `_GetClock` also opens SRAM and writes `sRTCHaltCheckValue` and `_FixDays` takes `.reset_rtc`, both before LCD-on; the identity is read as the carry test saving 16 cycles = one `FixDays` loop iteration (INFERRED) | `rtc-brackets/*-rtc-halt-days*.csv`, `logs/rtc_bracket_compare.txt`, `logs/batch_completeness.txt`; `engine/rtc/rtc.asm:117-137` | EMPIRICAL (identity's cause INFERRED) |
-| what a cartridge does: the day counter is days since the battery went in (or the last write-back); `FixDays` writes it back mod 140 (`SetClock`), so brackets 140-511 are single-boot transients; the carry bit is written back unchanged and cleared only by `SaveRTC` on a save; `SetClock` clears the halt bit when it writes the clock (`res B_RAMB_RTC_DH_HALT`) and `StartRTC`, run at the end of `StartClock` on every boot (`home/init.asm:123` -> `engine/rtc/rtc.asm` `StartClock` -> `StartRTC`), clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count (the next boot is `days0`, or `days512` with the carry). **After the first boot only two states remain: `days0` or `days512`** (`rtc.states[*].reachable_after_first_boot` in the data, false for every bracket 140-511 and for every halted state; the engine's two-state prior); the rule is carried into every Gold/Silver methodology's `validity` and `protocol` text. GSE and the community bruteforcer boot with gambatte's fresh clock = `days0` | `home/time.asm:61-120`, `SetClock :205-250`, `StartRTC engine/rtc/rtc.asm`, `SaveRTC rtc.asm:76-89` | STRUCTURAL |
+| a HALTED clock (DH bit 6) is an eleventh family: set through the core's `<rom>.rtc` sidecar (`Cartridge::loadSavedata`, `mem/cartridge.cpp:379-447`, keeps `dh & 0xC1`; `GB::setTime` clears the halt bit, `mem/rtc.cpp:81-94`; a running-clock sidecar needs base time = now, `cartridge.cpp:406-408`), validated at table scale: sidecar `DH=00 DL=200` and `DH=80 DL=0` equal the `setTime` days200 / days512 tables on 2399/2399 offsets (Gold and Silver). 80 halted tables; every one differs from every running table of its platform; inside the family `halt-days300 == halt-days1000` and `halt-days260 == halt-days850` on every platform (2399/2399). Structural cause: with the halt bit set `_GetClock` also opens SRAM and writes `sRTCHaltCheckValue` and `_FixDays` takes `.reset_rtc`, both before LCD-on; the identity is read as the carry test saving 16 cycles = one `FixDays` loop iteration (INFERRED) | `rtc-brackets/*-rtc-halt-days*.csv`, `logs/rtc_bracket_compare.txt`, `logs/batch_completeness.txt`; `pokegold/engine/rtc/rtc.asm:117-137` | EMPIRICAL (identity's cause INFERRED) |
+| what a cartridge does: the day counter is days since the battery went in (or the last write-back); `FixDays` writes it back mod 140 (`SetClock`), so brackets 140-511 are single-boot transients; the carry bit is written back unchanged and cleared only by `SaveRTC` on a save; `SetClock` clears the halt bit when it writes the clock (`res B_RAMB_RTC_DH_HALT`) and `StartRTC`, run at the end of `StartClock` on every boot (`pokegold/home/init.asm:123` -> `StartClock` -> `StartRTC`, `pokegold/engine/rtc/rtc.asm:100,13-22`), clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count (the next boot is `days0`, or `days512` with the carry). **After the first boot only two states remain: `days0` or `days512`** (`rtc.states[*].reachable_after_first_boot` in the data, false for every bracket 140-511 and for every halted state; the engine's two-state prior); the rule is carried into every Gold/Silver methodology's `validity` and `protocol` text. GSE and the community bruteforcer boot with gambatte's fresh clock = `days0` | `pokegold/home/time.asm:61-120`, `SetClock` `pokegold/home/time.asm:205-250`, `StartRTC` `pokegold/engine/rtc/rtc.asm:13-22`, `SaveRTC` `pokegold/engine/rtc/rtc.asm:76-89` | STRUCTURAL |
 | a dead-battery cartridge is unmodelled: its MBC3 registers after power loss are hardware behaviour the harness does not model; no bracket can be assigned a priori (halt bit set -> halted family; only carry -> `days512`; else a day bracket; which one only from a typed TID) | README "What a cartridge does" | — |
 
 ### Inversion (REVIEW.md M4)
@@ -572,7 +583,7 @@ initializes BOTH the LCRNG and the Mersenne Twister — two independent streams.
 - LCRNG: identical constants to Gen 3 (`0x41C64E6D` / `0x6073`, top 16 bits out) —
   `pokeheartgold/src/math_util.c:70-74`. Used for PIDs, IVs, encounters, Chatot pitch,
   Elm calls, roamers. Advances strictly per use — there is no per-frame advance.
-- Mersenne Twister (textbook MT19937, init 1812433253) — `math_util.c:79-119`. Used for
+- Mersenne Twister (textbook MT19937, init 1812433253) — `pokeheartgold/src/math_util.c:79-119`. Used for
   TID/SID and the DPPt Poketch Coin Toss.
 - ARNG (`*0x6C078965 + 1`): Masuda-method rerolls, Mystery Gift. Not used by this tool yet.
 
@@ -711,7 +722,7 @@ Each row carries the game's check:
 | Chatot cry | +1 | STRUCTURAL | `pokeplatinum/src/sound_chatot.c:80`; `pokeheartgold/src/sound_chatot.c:59` |
 | 128-step friendship cycle | +1 per party member | STRUCTURAL | step counter wraps at 128 then every party mon is updated (`pokeplatinum/src/overlay005/field_control.c:759-760,871`), one `LCRNG_Next() & 1` per mon (`src/pokemon.c:2637-2641`; `pokeheartgold/src/pokemon.c:2037`) |
 | Elm call | +1 | STRUCTURAL | `phone_scripts_prof_elm.c:59,84,86`, only on the story states that roll |
-| Poketch coin flip | 0 | STRUCTURAL | `coin_toss/main.c:158`, MT only |
+| Poketch coin flip | 0 | STRUCTURAL | `pokeplatinum/src/applications/poketch/coin_toss/main.c:158`, MT only |
 | Journal page flip (DPPt) | +2 | EMPIRICAL | community convention; no LCRNG call in `pokeplatinum/src/journal.c` |
 | Battle end | >= 1 | STRUCTURAL | the Pokerus roll (design 5.3); the per-battle count is not modelled |
 
@@ -889,7 +900,7 @@ them — the encounter just copies that fixed data into `gEnemyParty`. There is 
 | Symbol | Ruby/Sapphire | Emerald | FireRed/LeafGreen | Provenance |
 |---|---|---|---|---|
 | `gRngValue` | `0x03004818` | `0x03005D80` | `0x03005000` | RS proven from checked-in sym files; E/FRLG derived via the same COMMON-section walk and matching community values |
-| `gSaveBlock2` | `0x02024EA4` | via ptr `0x03005D90` | via ptr `0x0300500C` | RS proven (linker walk from `sym_ewram.txt`, annotated in `include/global.h:841`); E/FRLG pointers derived from proven object order anchored on `gRngValue` |
+| `gSaveBlock2` | `0x02024EA4` | via ptr `0x03005D90` | via ptr `0x0300500C` | RS proven (linker walk from `sym_ewram.txt`, annotated in `pokeruby/include/global.h:841`); E/FRLG pointers derived from proven object order anchored on `gRngValue` |
 | `playerTrainerId` offset | `+0x0A` | `+0x0A` | `+0x0A` | proven from `struct SaveBlock2` (`pokeruby/include/global.h:843-846`) |
 | `gPlayerPartyCount` | `0x03004350` | `0x020244E9`* | `0x02024029`* | RS proven (`sym_common.txt:140`, u8, then ALIGN(16) pads 0x03004354–0x0300435F before `gPlayerParty`); *E/FRLG values are derived, not decomp-proven |
 | `gPlayerParty` | `0x03004360` | `0x020244EC` | `0x02024284` | RS proven (`sym_common.txt:140-141` walk, cross-validated on `gMain`/`gRngValue`); E/FRLG derived, byte-consistent with declaration order in `src/pokemon.c` |
@@ -970,12 +981,12 @@ function names are stable, line numbers are not). Methodologies `emerald/gba/typ
 
 | fact | Emerald | FireRed / LeafGreen |
 |---|---|---|
-| Timer1 starts when the PLAYER naming screen is created | `src/naming_screen.c:411-412` (`DoNamingScreen`: `if (templateNum == NAMING_SCREEN_PLAYER) StartTimer1()`) | `src/naming_screen.c:427-428`; also at the title screen, `src/title_screen.c:351` |
-| the Trainer ID and the seed are the raw Timer1 count at the naming screen's exit, after the fade-out | `src/naming_screen.c:696-701` `MainState_Exit` -> `SeedRngAndSetTrainerId`; `src/main.c:208-214`: `val = REG_TM1CNT_L; SeedRng(val); REG_TM1CNT_H = 0; sTrainerId = val` | `src/naming_screen.c:717-723`; `src/main.c:264-270` (`gTrainerId`). The title-screen value (`title_screen.c:735`) is overwritten on every New Game |
-| LCRNG | `src/random.c:11-16`: `gRngValue = 0x41C64E6D * gRngValue + 0x6073`, output `>> 16`; `SeedRng`: `gRngValue = seed` | `src/random.c:8-17`, same constants |
-| one `Random()` per VBlank | `src/main.c:365-366` (skipped only in link / frontier / recorded battles) | `src/main.c:412` (unconditional) |
-| the Secret ID roll | `src/overworld.c:1532-1537` `CB2_NewGame` -> `NewGameInitData` (`src/new_game.c:140-164`) -> `InitPlayerTrainerId` (`:84-88`): `(Random() << 16) \| GetGeneratedTrainerIdLower()` | `src/overworld.c:1527-1531`; `src/new_game.c:82-96`, `:54-58` |
-| no other `Random()` on the path | `NewGameInitData` before the roll: `RtcReset`, `ZeroPlayerPartyMons`, `ZeroEnemyPartyMons`, `ResetPokedex`, `ClearFrontierRecord`, `ClearSav1`, `ClearAllMail` draw nothing (grep of `src/rtc.c`, `pokedex.c`, `mail.c`, `frontier_util.c`, `pokemon.c` `ZeroMonData`); `main_menu.c`'s only draw is `Random() % NUM_PRESET_NAMES` at `:1603`, before the naming screen; `naming_screen.c`, `palette.c`, `text.c`, `task.c`, `sprite.c`, `menu.c`, `window.c`, `bg.c`, `sound.c`, `m4a.c` contain no `Random()` | `oak_speech.c:2146,2148` draw only for the PLAYER default name, before the naming screen (`:2138-2160`); the rival presets draw nothing; `new_game.c:103` `SeedWildEncounterRng(Random())` is in `ResetMenuAndMonGlobals`, run at the title exit (`title_screen.c:737`), not on this path; `new_game.c:82-96` before the roll draws nothing |
+| Timer1 starts when the PLAYER naming screen is created | `pokeemerald/src/naming_screen.c:411-412` (`DoNamingScreen`: `if (templateNum == NAMING_SCREEN_PLAYER) StartTimer1()`) | `pokefirered/src/naming_screen.c:427-428`; also at the title screen, `pokefirered/src/title_screen.c:351` |
+| the Trainer ID and the seed are the raw Timer1 count at the naming screen's exit, after the fade-out | `pokeemerald/src/naming_screen.c:696-701` `MainState_Exit` -> `SeedRngAndSetTrainerId`; `pokeemerald/src/main.c:208-214`: `val = REG_TM1CNT_L; SeedRng(val); REG_TM1CNT_H = 0; sTrainerId = val` | `pokefirered/src/naming_screen.c:717-723`; `pokefirered/src/main.c:264-270` (`gTrainerId`). The title-screen value (`pokefirered/src/title_screen.c:735`) is overwritten on every New Game |
+| LCRNG | `pokeemerald/src/random.c:11-16`: `gRngValue = 0x41C64E6D * gRngValue + 0x6073`, output `>> 16`; `SeedRng`: `gRngValue = seed` | `pokefirered/src/random.c:8-17`, same constants |
+| one `Random()` per VBlank | `pokeemerald/src/main.c:365-366` (skipped only in link / frontier / recorded battles) | `pokefirered/src/main.c:412` (unconditional) |
+| the Secret ID roll | `pokeemerald/src/overworld.c:1532-1537` `CB2_NewGame` -> `NewGameInitData` (`pokeemerald/src/new_game.c:140-164`) -> `InitPlayerTrainerId` (`pokeemerald/src/new_game.c:84-88`): `(Random() << 16) \| GetGeneratedTrainerIdLower()` | `pokefirered/src/overworld.c:1527-1531`; `pokefirered/src/new_game.c:82-96`, `pokefirered/src/new_game.c:54-58` |
+| no other `Random()` on the path | `NewGameInitData` before the roll: `RtcReset`, `ZeroPlayerPartyMons`, `ZeroEnemyPartyMons`, `ResetPokedex`, `ClearFrontierRecord`, `ClearSav1`, `ClearAllMail` draw nothing (grep of `src/rtc.c`, `pokedex.c`, `mail.c`, `frontier_util.c`, `pokemon.c` `ZeroMonData`); `main_menu.c`'s only draw is `Random() % NUM_PRESET_NAMES` at `pokeemerald/src/main_menu.c:1603`, before the naming screen; `naming_screen.c`, `palette.c`, `text.c`, `task.c`, `sprite.c`, `menu.c`, `window.c`, `bg.c`, `sound.c`, `m4a.c` contain no `Random()` | `pokefirered/src/oak_speech.c:2146,2148` draw only for the PLAYER default name, before the naming screen (`:2138-2160`); the rival presets draw nothing; `pokefirered/src/new_game.c:103` `SeedWildEncounterRng(Random())` is in `ResetMenuAndMonGlobals`, run at the title exit (`pokefirered/src/title_screen.c:737`), not on this path; `pokefirered/src/new_game.c:82-96` before the roll draws nothing |
 
 So with **k = the number of VBlanks between the seed and the roll**,
 `SID = hi16(LCRNG^(k+1)(TID))` and `TSV = (TID ^ SID) >> 3`; PokeFinder's `IDGenerator3::generateFRLGE`
@@ -987,17 +998,17 @@ regenerated and compared in `tests/test_gen3.py` when node is present).
 #### What is inside k: the presses after naming (STRUCTURAL: which waits exist; EMPIRICAL: their frame counts)
 
 Every wait for a button on the path is a `JOY_NEW(A_BUTTON | B_BUTTON)` read: the YES/NO menus
-(`menu.c:1013-1022` `Menu_ProcessInputNoWrap`; pokefirered `menu.c:342-349` `Menu_ProcessInput`) and the
+(`pokeemerald/src/menu.c:1013-1022` `Menu_ProcessInputNoWrap`; `pokefirered/src/menu.c:342-349` `Menu_ProcessInput`) and the
 text printer's three wait states, `RENDER_STATE_WAIT`, `RENDER_STATE_CLEAR` (`\p`, `CHAR_PROMPT_CLEAR` 0xFB) and
 `RENDER_STATE_SCROLL_START` (`\l`, `CHAR_PROMPT_SCROLL` 0xFA, "waits for button press and scrolls"), all through
-`TextPrinterWaitWithDownArrow` / `TextPrinterWait` (pokeemerald `text.c:865-899,1167-1188`; pokefirered
-`text.c:550-585,859-875`; `include/constants/characters.h:175-176`; `charmap.txt:1087-1088`). A press while the
+`TextPrinterWaitWithDownArrow` / `TextPrinterWait` (`pokeemerald/src/text.c:865-899,1167-1188`;
+`pokefirered/src/text.c:550-585,859-875`; `pokeemerald/include/constants/characters.h:175-176`; `charmap.txt:1087-1088`). A press while the
 text is still printing is not a wait press: it only zeroes the current character delay
-(`text.c:944-955` / `:639-650`, `canABSpeedUpPrint`), so it is swallowed and the box is still waiting.
+(`pokeemerald/src/text.c:944-955` / `pokefirered/src/text.c:639-650`, `canABSpeedUpPrint`), so it is swallowed and the box is still waiting.
 The earlier statement in this repo of "six paragraph presses" counted only `\p`; the `\l` scroll prompts
 are presses too.
 
-**Emerald** (`main_menu.c:1788-1850` return from naming, `:1609-1786` the tasks; `data/text/birch_speech.inc:42-61`):
+**Emerald** (`pokeemerald/src/main_menu.c:1788-1850` return from naming, `:1609-1786` the tasks; `pokeemerald/data/text/birch_speech.inc:42-61`):
 YES on "So it's X?" (`:1626-1635`; NO at `:1637-1640` goes back to the gender box and re-enters naming, a new
 Timer1 read), then `gText_Birch_YourePlayer` (`\p`, `\l`, `\p`) and `gText_Birch_AreYouReady`
 (`\p`, `\p`, `\l`, `\p`, `\p`): **9 timed presses**. Fixed parts between them: the 16-step palette fade-in and
@@ -1006,8 +1017,8 @@ the 30-frame platform slide, the 64-frame `tTimer` before "are you ready?", the 
 the last press the shrink (`sSpriteAffineAnim_PlayerShrink` 0x30 frames, `:445-448`), the fades and
 `Cleanup` -> `CB2_NewGame` (`:1783`).
 
-**FireRed / LeafGreen** (`oak_speech.c:1788-1880` return from naming, `:1460-1786` the tasks;
-`data/text/new_game_intro.inc:218-243`): YES on "So your name is X." (`:1490-1520`; the box appears 25 frames
+**FireRed / LeafGreen** (`pokefirered/src/oak_speech.c:1788-1880` return from naming, `:1460-1786` the tasks;
+`pokefirered/data/text/new_game_intro.inc:218-243`): YES on "So your name is X." (`:1490-1520`; the box appears 25 frames
 after the text, `:1473`), `gOakSpeech_Text_WhatWasHisName` (`\p`, `\p`), the rival name menu
 (`:1413-1438`, cursor on NEW NAME; the first preset is DOWN then A; NEW NAME goes through the rival naming
 screen, which neither starts Timer1 nor reseeds but adds the typing time), YES on "was it X?",
@@ -1017,11 +1028,11 @@ the 40-frame timers around the pic fades (`:1497,1529,1575`), the 30-frame slide
 the 36-frame timer, the fade and `FreeResources` -> `CB2_NewGame` (`:1784`). LeafGreen differs from
 FireRed only by its first preset rival name (two boxes print it).
 
-The text speed is read at print time in Emerald (`menu.c:191-196` `AddTextPrinterForMessage`,
-`GetPlayerTextSpeedDelay`) and cached when the Oak speech starts in FRLG (`oak_speech.c:761`,
-`GetTextSpeedSetting`, `new_menu_helpers.c:27-32,658-664`: delays 8 / 4 / 1 for slow / mid / fast; a fresh
-cartridge is MID, `SetDefaultOptions` via `Sav2_ClearSetDefault`, pokeemerald `intro.c:1152-1156`,
-pokefirered `title_screen.c:737-741`). The name is printed by two boxes on each game's path, so the fixed
+The text speed is read at print time in Emerald (`pokeemerald/src/menu.c:191-196` `AddTextPrinterForMessage`,
+`GetPlayerTextSpeedDelay`) and cached when the Oak speech starts in FRLG (`pokefirered/src/oak_speech.c:761`,
+`GetTextSpeedSetting`, `pokefirered/src/new_menu_helpers.c:27-32,658-664`: delays 8 / 4 / 1 for slow / mid / fast; a fresh
+cartridge is MID, `SetDefaultOptions` via `Sav2_ClearSetDefault`, `pokeemerald/src/intro.c:1152-1156`,
+`pokefirered/src/title_screen.c:737-741`). The name is printed by two boxes on each game's path, so the fixed
 part is linear in the name length (measured: 8 / 4 / 1 frames per letter at SLOW / MID / FAST).
 
 #### Measured frame counts (EMPIRICAL: mGBA 0.10.5 headless, byte-exact ROMs; hardware unverified)
@@ -1058,10 +1069,10 @@ FireRed preset 1781 / 1829, 866 / 878; LeafGreen preset 1765 / 1813, 862 / 874).
 the Trainer ID (six different seeds, same k). Text speed: Emerald's is settable from the main menu's
 OPTION entry (a control through the real menu gives the same k as writing `SaveBlock2.optionsTextSpeed`:
 680 = 680, 2937 = 2937); FRLG's main menu has no OPTION (`pokefirered/src/main_menu.c:23-35`) and the Oak
-speech caches the speed at its start (`oak_speech.c:761`), so a fresh save is MID and fast / slow were
+speech caches the speed at its start (`pokefirered/src/oak_speech.c:761`), so a fresh save is MID and fast / slow were
 measured by writing the option at the main menu (as options carried over from a save would be). A held
 A: A held 8 or 30 frames at every press gives the same k as one-frame taps (savestate harness, review run);
-only a press while the text prints arms `hasPrintBeenSpedUp` (`text.c:944-955`).
+only a press while the text prints arms `hasPrintBeenSpedUp` (`pokeemerald/src/text.c:944-955`).
 
 `d_i` below = frames from the previous press (the seed frame for press 1) to press i, the press frame
 included; the preset stage is DOWN, one idle frame, A (the A is the timed press); the name-length rows
@@ -1564,17 +1575,17 @@ Call script from the frame, in order. Rolls marked *opt* are outside PokeFinder'
 |---|---|---|---|
 | new metatile *opt* | `Random()%100 >= 60` skips (`:537`) | `:429` | `:350` |
 | encounter odds *opt* / rock smash always | `Random()%2880 < rate*16` (`:493,502`; bike ×80% `:504`, flutes/Cleanse Tag, cap 2880); rock smash `WildEncounterCheck(rate, TRUE)` `:680` | `:379,405-424`, rock smash `:531` | odds on the **separate** wild RNG `:304,669` (no main call); rock smash `:453` |
-| roamer *opt* | `Random()%4 == 0` (`src/roamer.c:216`) | `src/roamer.c:183` | `TryStartRoamerEncounter` |
+| roamer *opt* | `Random()%4 == 0` (`pokeemerald/src/roamer.c:216`) | `pokeruby/src/roamer.c:183` | `TryStartRoamerEncounter` |
 | outbreak *opt* | `Random()%100 < probability` (`:487`) | `:371` | none |
 | Feebas (fishing on Route 119) | `Random()%100 > 49` -> no Feebas (`:137`), else Feebas 20-25 (`:67,784-790`); the roll follows the map check (`:121-122`) and precedes the spot comparison, so every cast on the map spends it (`feebasMap`) and only a cast on the tile can hit (`feebasTile`; D7) | `:84-85,98` | none |
 | typed slot | Magnet Pull on land, Static on land and water, nothing on rocks (`:432,440,445-446`): `Random()%2 != 0` -> no (`:947`), else `Random()%count` over the Steel/Electric slots unless none or all (`:931-934`) | none | none |
 | slot | `Random()%100` over 20/20/10/10/10/10/5/5/4/4/1/1 land, 60/30/5/4/1 water and rock, 70/30, 60/20/20, 40/40/15/4/1 rods (`:182-262`) | `:144-230` | `:71-130` |
 | level | `Random()%range` (`:286`); Pressure/Hustle/Vital Spirit `Random()%2 == 0` -> max, else `rand--` if nonzero (`:292-297`) | `:254` | `:172` |
 | Keen Eye/Intimidate *opt* (`lead.level`) | `Random()%2 == 0` suppresses when lead level > 5 and wild level <= lead-5 (`:906`, gated by `WILD_CHECK_KEEN_EYE` `:453`) | none | none |
-| Cute Charm | `Random()%3 != 0` when the species' gender is not fixed (`:397-398`), then the PID loop demands the opposite gender of the lead (`:410`, `src/pokemon.c:2340-2343`) | none | none |
+| Cute Charm | `Random()%3 != 0` when the species' gender is not fixed (`:397-398`), then the PID loop demands the opposite gender of the lead (`:410`, `pokeemerald/src/pokemon.c:2340-2343`) | none | none |
 | Safari | one `Random()%100` (the `< 80` Pokeblock check, no block assumed: `:341`) | `:278` | none |
 | nature | Synchronize `Random()%2 == 0` -> lead nature (`:371-372`) else `Random()%25` (`:378`) | `Random()%25` (`:305`) | `Random()%NUM_NATURES` (`:232`) |
-| PID | `Random32()` until nature (and gender) match (`src/pokemon.c:2305-2311,2340-2343`) | `:311` | `:232`; Unown: `(Random()<<16)|Random()` until the chamber letter (`:237,243-251`), no nature roll |
+| PID | `Random32()` until nature (and gender) match (`pokeemerald/src/pokemon.c:2305-2311,2340-2343`) | `:311` | `:232`; Unown: `(Random()<<16)|Random()` until the chamber letter (`:237,243-251`), no nature roll |
 | IVs | IV1, IV2 with the Method 2/4 skips | same | same |
 
 RS and FRLG have no lead effects on slot, level, nature or gender (only Stench/Illuminate on
@@ -1616,8 +1627,8 @@ bit 15 of the PID is set (`pokeemerald:784-791`).
 - Shiny "never" (Manaphy egg): ARNG `x*0x6C078965 + 1` rerolls until not shiny, no LCRNG call
   (`pokeplatinum/src/overlay005/daycare.c:1130-1131`, `src/math_util.c:106`).
 - Method J/K statics go through the wild creator: Cute Charm roll, Synchronize/nature, PID
-  loop, IVs, then one held-item roll after the IVs (`wild_encounters.c:1227-1235,1462`,
-  `pokemon.c:4681`; HGSS `pokeheartgold/src/field/encounter_check.c:988-996,1350`); `callsUsedWithItem` counts it.
+  loop, IVs, then one held-item roll after the IVs (`pokeplatinum/src/overlay006/wild_encounters.c:1227-1235,1462`,
+  `pokeplatinum/src/pokemon.c:4681`; HGSS `pokeheartgold/src/field/encounter_check.c:988-996,1350`); `callsUsedWithItem` counts it.
 - HGSS starters are created three in a row, 4 calls each, so starter i is at frame + 4i
   (`pokeheartgold/src/choose_starter.c:55-59`); DPPt starters are single `GivePokemon` mons
   (`statics-gen4.json` creation notes).
@@ -1631,8 +1642,8 @@ bit 15 of the PID is set (`pokeemerald:784-791`).
 
 1. Fishing: `RandMod(100) >= rate` -> no bite (`:396`); the frame still generates, reported
    `valid: false` (PokeFinder convention). Feebas: `RandMod(2) == 0` -> not a Feebas tile is the
-   first statement of `PlayerAvatar_IsFacingFeebasTile` (`feebas_fishing.c:37`), reached on every
-   cast on Mt. Coronet B1F (`:407`, `map_header.c:194-196`): `feebasMap` spends it off the tile
+   first statement of `PlayerAvatar_IsFacingFeebasTile` (`pokeplatinum/src/overlay006/feebas_fishing.c:37`), reached on every
+   cast on Mt. Coronet B1F (`:407`, `pokeplatinum/src/map_header.c:194-196`): `feebasMap` spends it off the tile
    too and only `feebasTile` can hit (D7); on a hit the whole table is Feebas 10-20 (`:407-420`)
    and the normal slot roll (and the lead's typed check) still happens; reported as pseudo-slot
    5, which `feebasTile` requires at index 5 of the rod table.
@@ -1649,17 +1660,17 @@ bit 15 of the PID is set (`pokeemerald:784-791`).
 6. Cute Charm: `RandMod(3) > 0` when the gender is not fixed (`:1063`), then nature
    (Synchronize `RandMod(2) == 0` -> lead nature else `RandMod(25)`, `:944-949`) and the
    **arithmetic** PID with no further call: `nature` for a female target,
-   `25 * (ratio/25 + 1) + nature` for a male one (`:1075`, `pokemon.c:516,535-536`).
+   `25 * (ratio/25 + 1) + nature` for a male one (`:1075`, `pokeplatinum/src/pokemon.c:516,535-536`).
 7. Otherwise nature, then `LCRNG_Next() | (LCRNG_Next() << 16)` until the nature matches
-   (`:1083`, `pokemon.c:498-499`), then IV1, IV2.
-8. Held item: `LCRNG_Next() % 100` (`pokemon.c:4681`; 45/95, Compound Eyes 20/80 `:4694`).
+   (`:1083`, `pokeplatinum/src/pokemon.c:498-499`), then IV1, IV2.
+8. Held item: `LCRNG_Next() % 100` (`pokeplatinum/src/pokemon.c:4681`; 45/95, Compound Eyes 20/80 `:4694`).
    Only the roll and its class are reported (the data module carries no item ids).
 9. Unown: `LCRNG_Next() % count` over the map's form group (`:1489`, groups `:116-179`).
 10. Honey tree: level `5 + RandMod(11)`, Pressure `RandMod(2) == 0` keeps it else 15
     (`:1210-1216`), then step 6 onward. Poke Radar with the chain kept: no slot roll
     (`:1149-1161`), a broken chain rolls the slot (`:1164-1194`); shiny patches use the shiny
     PID with a Cute Charm gender loop or a Synchronize nature loop (`:983-1045`); patch odds
-    `1/max(200, 8200 - 200*chain)` (`pokeradar.c:473-478`).
+    `1/max(200, 8200 - 200*chain)` (`pokeplatinum/src/pokeradar.c:473-478`).
 
 `battleAdvances` = frame + `callsUsed` + 1 (ball position) + 1 for fishing + 4 on DP, 0 for
 Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
@@ -1677,25 +1688,25 @@ Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
 3. Slot: `LCRandRange(100)` land (`:632`), surf (`:662`), all rods 40/30/15/10/5 (`:678`),
    rock smash 80/20 (`:694-696`), headbutt 50/15/15/10/5/5 (`:700`); Safari `LCRandom() % 10`
    (`:959`); Bug Contest `LCRandom() % 100`, first slot whose rate <= roll
-   (`overlay_bug_contest.c:178-183`).
+   (`pokeheartgold/src/overlay_bug_contest.c:178-183`).
 4. Level: land and Safari land use the slot's level with the Pressure slot swap
    (`LCRandRange(2) == 0` keeps, `:886-887,961-965,1358-1372`); the design doc's claim that
    HGSS grass spends a level roll was re-verified as **false** (`:886-887` read the slot level;
    `:893` is the rock-smash case). Rock smash, surf, fishing, headbutt: `LCRandom() % range`
    then Pressure `LCRandRange(2) == 0` keeps it else max (`:754-756`); Bug Contest level
-   `LCRandom() % range` with no Pressure roll (`overlay_bug_contest.c:186`).
+   `LCRandom() % range` with no Pressure roll (`pokeheartgold/src/overlay_bug_contest.c:186`).
 5. Keen Eye/Intimidate *opt* (`:1153`), on the regular (`:920`) and Safari (`:966`) paths only:
    the Bug Contest path (`:976-986`) never calls `DoesAbilitySuppressEncounter`.
 6. Cute Charm `LCRandRange(3) != 0` (`:837`), nature `LCRandRange(25)` (Synchronize
    `LCRandRange(2) == 0`, `:734-737`), arithmetic PID via letter 0
-   (`:846`, `pokemon.c:275,292`), IVs.
+   (`:846`, `pokeheartgold/src/pokemon.c:275,292`), IVs.
 7. Safari and Bug Contest without Cute Charm: up to four full creations (nature, PID loop,
    IVs) until one IV is 31 (`:856-869`); `perfectIvTries` reports how many (1..4) and
    `perfectIvFound` whether the last one carried a 31 (false when all four missed).
-8. Held item `LCRandom() % 100` (`pokemon.c:3748`, via `:1350`).
+8. Held item `LCRandom() % 100` (`pokeheartgold/src/pokemon.c:3748`, via `:1350`).
 9. Unown: Sinjoh event hall `LCRandom() % 2` over `!`/`?` (`:1312`, map
    `MAP_RUINS_OF_ALPH_HALL_ENTRANCE_SINJOH_EVENT` = encounter bank 13,
-   `constants/maps.h:495`, `encounter_tables_narc.h:31`); elsewhere the unlocked puzzle letters
+   `pokeheartgold/include/constants/maps.h:495`, `pokeheartgold/include/encounter_tables_narc.h:31`); elsewhere the unlocked puzzle letters
    in the order A-J, R-V, K-Q, W-Z (`:1252-1297`), with the Unown radio `LCRandom() % 100 < 50`
    picking among the uncaught ones (`:1339-1342`).
 
@@ -1703,19 +1714,19 @@ Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
 
 Trigger: the Everstone check is an LCRNG roll, not an MT call: `LCRNG_Next() >= 0xffff/2`
 (= 0x7fff) -> no inheritance (`pokeplatinum/src/overlay005/daycare.c:336-341`; HGSS
-`LCRandom() >= 0x7FFF`, `get_egg.c:241,247`, preceded by `LCRandom() % 2` picking the holder
-when both parents hold one, `:235-240`), so the parent's nature passes only 32767/65536 of the
-time (`GEN4_EVERSTONE_INHERIT_CHANCE`). Then the PID is one MT19937 output (`daycare.c:353`,
-`get_egg.c:262`), or - when the roll passed - the first MT output with the parent's nature and
-nonzero, 2400 tries (`daycare.c:361-367`, `get_egg.c:266-267`). `everstoneNature` models the
+`LCRandom() >= 0x7FFF`, `pokeheartgold/src/get_egg.c:241,247`, preceded by `LCRandom() % 2` picking the holder
+when both parents hold one, `pokeheartgold/src/get_egg.c:235-240`), so the parent's nature passes only 32767/65536 of the
+time (`GEN4_EVERSTONE_INHERIT_CHANCE`). Then the PID is one MT19937 output (`pokeplatinum/src/overlay005/daycare.c:353`,
+`pokeheartgold/src/get_egg.c:262`), or - when the roll passed - the first MT output with the parent's nature and
+nonzero, 2400 tries (`pokeplatinum/src/overlay005/daycare.c:361-367`, `pokeheartgold/src/get_egg.c:266-267`). `everstoneNature` models the
 passed roll and `everstoneProc: false` the failed one (plain MT PID); held and pickup results
 carry `everstoneInherited`. The trigger-time LCRNG state (one call, two with two Everstones in
 HGSS) is not tracked: pickup runs on its own seed. Masuda: up to four
-ARNG rerolls until shiny (`daycare.c:722-724`, `get_egg.c:601-604`). Pickup: IV1, IV2 from
-`Pokemon_InitWith`/`CreateMon` (`daycare.c:734,764`, `get_egg.c:611,631`), then `%6 %5 %4`
-and three `%2` parents (`daycare.c:405-410`, `get_egg.c:317-325`); DPPt removes position `i`
-(Emerald's bug, `daycare.c:406`), HGSS removes the rolled index (`get_egg.c:319`). HGSS power
-items force the first stat and skip one pair of rolls (`get_egg.c:308-312,999-1029`, two items
+ARNG rerolls until shiny (`pokeplatinum/src/overlay005/daycare.c:722-724`, `pokeheartgold/src/get_egg.c:601-604`). Pickup: IV1, IV2 from
+`Pokemon_InitWith`/`CreateMon` (`pokeplatinum/src/overlay005/daycare.c:734,764`, `pokeheartgold/src/get_egg.c:611,631`), then `%6 %5 %4`
+and three `%2` parents (`pokeplatinum/src/overlay005/daycare.c:405-410`, `pokeheartgold/src/get_egg.c:317-325`); DPPt removes position `i`
+(Emerald's bug, `pokeplatinum/src/overlay005/daycare.c:406`), HGSS removes the rolled index (`pokeheartgold/src/get_egg.c:319`). HGSS power
+items force the first stat and skip one pair of rolls (`pokeheartgold/src/get_egg.c:308-312,999-1029`, two items
 -> `LCRandom() % 2` picks the parent).
 
 ## Rarity (exact over the 2^32 cycle, recomputed here)
@@ -1783,16 +1794,16 @@ a readout must show the set of the method in use (each set is pinned by a test).
 |---|---|---|---|---|
 | D1 | Emerald typed slots | Magnet Pull on land only, Static on land and water, neither on rocks (`pokeemerald/src/wild_encounter.c:432,440,445-446`) | applies both leads to every encounter type (`WildGenerator3.cpp`, `if ((lead == Lead::MagnetPull \|\| lead == Lead::Static) && ...)`) | Emerald water tables have no Steel type and rock tables no Electric type, so no shipped table differs; pinned with synthetic tables (`pin D1`) |
 | D2 | Emerald Everstone roll | `Random() >= USHRT_MAX/2` (= 0x7fff) -> no inheritance (`daycare.c:446-447`) | `(rand >> 15) == 0` inherits, so an output of exactly 0x7fff inherits | 1 in 65536 trigger frames (`pin D2`) |
-| D3 | HGSS Bug Contest with a Pressure-family lead | slot and level only (`overlay_bug_contest.c:178-186`) | adds the Pressure `nextUShort(2)` roll (`calculateLevel<true, true>` with force) | Pressure lead in the contest (`pin D3`) |
-| D4 | HGSS Safari surf/fishing with a Pressure-family lead | slot swap on land only (`encounter_check.c:961-965`) | `Grass \|\| safari` -> swap roll on water too | Pressure lead in Safari water (`pin D4`) |
-| D5 | DPPt surf/fishing with Magnet Pull | typed pick overwritten by the Static check (`wild_encounters.c:1113-1115`) | forces the Steel slot | needs a Steel type in a water table (none shipped); pinned with a synthetic table (`pin D5`) |
-| D6 | Gen 4 Everstone | LCRNG roll at trigger, `>= 0x7fff` fails (`daycare.c:336-341`, `get_egg.c:241,247`), then MT loops until the parent's nature (`daycare.c:353-367`, `get_egg.c:259-274`) | `EggGenerator4` ignores the parents' items | our `everstoneNature` / `everstoneProc` options; the oracle vectors run with them off (`pin D6`) |
-| D7 | Feebas roll off the tile | Route 119: `Random()%100` after the map check and before the spot comparison (`pokeemerald/src/wild_encounter.c:121-122,137`, `pokeruby:84-85,98`); Mt. Coronet B1F: `RandMod(2)` first in `PlayerAvatar_IsFacingFeebasTile` (`feebas_fishing.c:37`, via `wild_encounters.c:407`, `map_header.c:194-196`) | `feebasLocation && feebasTile` gates the roll (`WildGenerator3.cpp`, `WildGenerator4.cpp`), so an off-tile cast on the map spends no call | every off-tile cast on the map is one call later than PokeFinder's; `feebasMap` spends it, `feebasTile` can hit (`pin D7`) |
+| D3 | HGSS Bug Contest with a Pressure-family lead | slot and level only (`pokeheartgold/src/overlay_bug_contest.c:178-186`) | adds the Pressure `nextUShort(2)` roll (`calculateLevel<true, true>` with force) | Pressure lead in the contest (`pin D3`) |
+| D4 | HGSS Safari surf/fishing with a Pressure-family lead | slot swap on land only (`pokeheartgold/src/field/encounter_check.c:961-965`) | `Grass \|\| safari` -> swap roll on water too | Pressure lead in Safari water (`pin D4`) |
+| D5 | DPPt surf/fishing with Magnet Pull | typed pick overwritten by the Static check (`pokeplatinum/src/overlay006/wild_encounters.c:1113-1115`) | forces the Steel slot | needs a Steel type in a water table (none shipped); pinned with a synthetic table (`pin D5`) |
+| D6 | Gen 4 Everstone | LCRNG roll at trigger, `>= 0x7fff` fails (`pokeplatinum/src/overlay005/daycare.c:336-341`, `pokeheartgold/src/get_egg.c:241,247`), then MT loops until the parent's nature (`pokeplatinum/src/overlay005/daycare.c:353-367`, `pokeheartgold/src/get_egg.c:259-274`) | `EggGenerator4` ignores the parents' items | our `everstoneNature` / `everstoneProc` options; the oracle vectors run with them off (`pin D6`) |
+| D7 | Feebas roll off the tile | Route 119: `Random()%100` after the map check and before the spot comparison (`pokeemerald/src/wild_encounter.c:121-122,137`, `pokeruby:84-85,98`); Mt. Coronet B1F: `RandMod(2)` first in `PlayerAvatar_IsFacingFeebasTile` (`pokeplatinum/src/overlay006/feebas_fishing.c:37`, via `pokeplatinum/src/overlay006/wild_encounters.c:407`, `pokeplatinum/src/map_header.c:194-196`) | `feebasLocation && feebasTile` gates the roll (`WildGenerator3.cpp`, `WildGenerator4.cpp`), so an off-tile cast on the map spends no call | every off-tile cast on the map is one call later than PokeFinder's; `feebasMap` spends it, `feebasTile` can hit (`pin D7`) |
 
 Not a mechanic but a label: PokeFinder folds the four Ruins of Alph interior banks into one
 location and uses **10** for the Sinjoh-event hall (`hgss.py`, "Ruins of Alpha interior all
 share the same table"); in the decomp that hall is bank 13 and bank 10 is the plain
-underground hall (`encounter_check.c:1388`, `map_headers.h:9466-9467,14746-14747`). The
+underground hall (`pokeheartgold/src/field/encounter_check.c:1388`, `pokeheartgold/src/data/map_headers.h:9466-9467,14746-14747`). The
 vector builder maps PokeFinder location 10 to `sinjoh: true`.
 
 ## Not modelled / open
@@ -1806,10 +1817,10 @@ vector builder maps PokeFinder location 10 to `sinjoh: true`.
   point. `maxNatureTries` defaults to 17 for parity; the `pid != 0` condition (`:477`) is applied.
 - Held items: only the roll and its class (none/common/rare); characteristics: not derived.
 - HGSS two-Everstone parents: an extra `LCRandom() % 2` at trigger picks the holder
-  (`get_egg.c:235-240`); with the trigger-time LCRNG untracked it changes nothing here. The
-  two-Ditto coin flips (`pokeemerald/src/daycare.c:437-442`, `pokeplatinum daycare.c:326-331`)
+  (`pokeheartgold/src/get_egg.c:235-240`); with the trigger-time LCRNG untracked it changes nothing here. The
+  two-Ditto coin flips (`pokeemerald/src/daycare.c:437-442`, `pokeplatinum/src/overlay005/daycare.c:326-331`)
   are dead code: two Dittos are `PARENTS_INCOMPATIBLE` in all three games
-  (`pokeemerald/src/daycare.c:1039-1040`, `pokeplatinum daycare.c:836-838`,
+  (`pokeemerald/src/daycare.c:1039-1040`, `pokeplatinum/src/overlay005/daycare.c:836-838`,
   `pokeheartgold/src/get_egg.c:687-689`).
 - Emerald egg results with a redraw range are ordered by (advances, pickupAdvances, redraws);
   PokeFinder's compare (`EggGenerator3.cpp`) has no tiebreak, so no oracle order exists for the
