@@ -2,13 +2,16 @@
 """Emits core/data/citations.json, the decomp citation registry, from docs/FACTS.md.
 
 Every `repo/path:lines` citation in docs/FACTS.md (repo one of the pret decompilations) becomes one entry keyed by the
-citation as resolved: the repository, the path inside it, the line list, the FACTS.md section it sits in, the FACTS.md
-line number and the sentence or table row around it. Two shorthands FACTS.md uses are resolved too: a bare
-`file.c:lines` inherits the repository of the previous full citation in the same paragraph, and `repo/.../file.c:lines`
-finds the one file of that name in the repository. Each entry is then read in the checkout of pret (--pret, default
-~/AI/pret): the file must exist, every cited line must be inside it, and the first cited line's text is recorded, so
-the registry states what the line said when it was generated. A citation that cannot be resolved or read is a failure
-(exit 1) unless it is listed under "skipped", which the output also carries so nothing is silently dropped.
+citation as resolved: the repository, the path inside it, the line list, the FACTS.md section it sits in (the first
+one, and every section that cites it under "sections"), the FACTS.md line number and the sentence or table row around
+it. Two shorthands FACTS.md uses are resolved too: a bare `file.c:lines` inherits the repository of the previous full
+citation in the same paragraph, and `repo/.../file.c:lines` finds the one file of that name in the repository. Each
+entry is then read in the checkout of pret (--pret, default ~/AI/pret): the file must exist, every cited line must be
+inside it, the first cited line must not be blank or a lone brace (a range that starts there points beside the routine
+it names), and the first cited line's text is recorded, so the registry states what the line said when it was
+generated. A line past the end of its file or a range starting on a blank line or a brace is a failure (exit 1); a
+citation that cannot be resolved is listed under "skipped", which the output also carries so nothing is silently
+dropped.
 
 The web wizard tab (webapp/wizard-ui.js) and the desktop wizard panel (app/App/WizardSupport.cs) render the sources of
 each procedure step as footnotes over this registry: a footnote whose citation is not in the registry says so.
@@ -25,6 +28,8 @@ import sys
 REPOS = ["pokered", "pokeyellow", "pokecrystal", "pokegold", "pokeruby", "pokeemerald", "pokefirered", "pokediamond", "pokeplatinum", "pokeheartgold"]
 LINES = r"\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*"
 FULL = re.compile(r"\b(" + "|".join(REPOS) + r")/((?:\.\.\./)?[A-Za-z0-9_./-]+?\.(?:c|h|asm|inc|s)):(" + LINES + r")\b")
+# a range whose first cited line is one of these points beside the routine it names (a blank line, a brace): refused
+BESIDE = ("", "{", "}", "};")
 BARE = re.compile(r"(?<![A-Za-z0-9_./-])((?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.(?:c|h|asm|inc|s)):(" + LINES + r")\b")
 
 
@@ -108,6 +113,8 @@ def main():
             cite = repo + "/" + path + ":" + lines
             if cite in entries:
                 entries[cite]["count"] += 1
+                if section not in entries[cite]["sections"]:
+                    entries[cite]["sections"].append(section)
                 continue
             full = os.path.join(args.pret, repo, path)
             src = open(full, encoding="utf-8", errors="replace").read().split("\n")
@@ -115,9 +122,13 @@ def main():
             if max(numbers) > len(src):
                 skipped.append({"facts_line": number, "as_written": written, "why": "line " + str(max(numbers)) + " is past the end of " + repo + "/" + path + " (" + str(len(src)) + " lines)"})
                 continue
+            first_line = src[numbers[0] - 1].strip()
+            if first_line in BESIDE:
+                skipped.append({"facts_line": number, "as_written": written, "why": "line " + str(numbers[0]) + " of " + repo + "/" + path + " is " + ("blank" if not first_line else "a lone brace") + ": the range starts beside the routine it names"})
+                continue
             entries[cite] = {
-                "cite": cite, "repo": repo, "path": path, "lines": lines, "as_written": written, "section": section,
-                "facts_line": number, "context": re.sub(r"\s+", " ", line.strip())[:240], "first_line": src[numbers[0] - 1].strip()[:160], "count": 1,
+                "cite": cite, "repo": repo, "path": path, "lines": lines, "as_written": written, "section": section, "sections": [section],
+                "facts_line": number, "context": re.sub(r"\s+", " ", line.strip())[:240], "first_line": first_line[:160], "count": 1,
             }
     if any(s["why"].startswith("line ") for s in skipped):
         for s in skipped:

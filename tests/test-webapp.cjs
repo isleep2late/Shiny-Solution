@@ -485,6 +485,7 @@ W.setCitations(registry);
   registry.entries.forEach((e) => { byCite[e.cite] = e; });
   assert("the registry is generated from docs/FACTS.md by tools/gen-citations.py", registry.source === "docs/FACTS.md" && registry.generator === "tools/gen-citations.py" && registry.entries.length > 100);
   assert("every registry entry names its repository, path, lines, FACTS.md section and line, and the pret line's text", registry.entries.every((e) => e.cite === e.repo + "/" + e.path + ":" + e.lines && /^(pokeruby|pokeemerald|pokefirered|pokediamond|pokeplatinum|pokeheartgold|pokered|pokeyellow|pokecrystal|pokegold)$/.test(e.repo) && typeof e.section === "string" && e.section.length > 0 && Number.isInteger(e.facts_line) && typeof e.first_line === "string"));
+  assert("every registry entry lists the FACTS.md sections that cite it, the first being its section, and none starts on a blank line or a brace", registry.entries.every((e) => Array.isArray(e.sections) && e.sections.length >= 1 && e.sections[0] === e.section && !["", "{", "}", "};"].includes(e.first_line)));
   assert("the registry entries are sorted by citation and unique", registry.entries.every((e, i) => i === 0 || registry.entries[i - 1].cite < e.cite));
   for (const key of Object.keys(W.SOURCES)) {
     const src = W.SOURCES[key];

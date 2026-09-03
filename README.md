@@ -209,7 +209,8 @@ RNG Solution's registry and tables and embedded in every head.
   both runners and a tampered seedtime4 delegate shown failing in the JS runner;
   `tools/check-generator-citations.py` re-reads every cited decomp line.
 - The citation registry (in `run-tests.sh`): `core/data/citations.json` regenerated from `docs/FACTS.md` and pret and
-  required byte-identical, with a FACTS.md copy citing a line past the end of its file shown failing the generator;
+  required byte-identical, with a FACTS.md copy citing a line past the end of its file and one citing a range that
+  starts on a blank line each shown failing the generator;
   `test-webapp.cjs` requires every source the wizard procedures cite to be a registry entry, checks the footnotes of
   the pinned procedures (the scenarios and the 20 random searches) and shows the registry without the Ruby RTC line
   reported as NOT IN THE REGISTRY; it pins the Gen 1 and Gen 2 protocols' footnote lines (the pokered title loop under

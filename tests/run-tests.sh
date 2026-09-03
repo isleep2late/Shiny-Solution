@@ -249,6 +249,21 @@ if [ -d "$HOME/AI/pret/pokeemerald" ]; then
     grep -E 'past the end' "$facts_bad.out" | head -2 | sed 's/^/      /'
   fi
   rm -f "$facts_bad" "$facts_bad.json" "$facts_bad.out"
+  # Negative control: a copy of FACTS.md whose Ruby RTC citation starts on a blank line of pokeruby/src/rtc.c (line 12, beside
+  # sRtcDummy at 13) must make the generator FAIL, and is shown failing: a range that points beside the routine it names
+  # never lands in the registry silently.
+  facts_bad=$(mktemp --suffix=.md)
+  sed 's#pokeruby/src/rtc.c:13,134-140#pokeruby/src/rtc.c:12,134-140#' ../docs/FACTS.md > "$facts_bad"
+  grep -q 'pokeruby/src/rtc.c:12,134-140' "$facts_bad" || { echo "negative control setup: the Ruby RTC citation was not found in FACTS.md"; exit 1; }
+  if python3 ../tools/gen-citations.py --facts "$facts_bad" "$facts_bad.json" > "$facts_bad.out" 2>&1; then
+    echo "negative control (FACTS.md citing a range that starts on a blank line): DID NOT FAIL"
+    rm -f "$facts_bad" "$facts_bad.json" "$facts_bad.out"
+    exit 1
+  else
+    echo "negative control (FACTS.md citing a range that starts on a blank line): FAILED as required ->"
+    grep -E 'is blank' "$facts_bad.out" | head -2 | sed 's/^/      /'
+  fi
+  rm -f "$facts_bad" "$facts_bad.json" "$facts_bad.out"
 else
   echo "no pret checkout at ~/AI/pret; the citation registry is not regenerated (the committed core/data/citations.json is used)"
 fi

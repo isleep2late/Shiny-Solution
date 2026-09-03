@@ -374,7 +374,8 @@ pret at `~/AI/pret` or `--pret`). One entry per distinct citation, sorted by cit
 | `cite` | the citation as resolved, `repo/path:lines` (`pokeruby/src/rtc.c:13,134-140`) |
 | `repo`, `path`, `lines` | its parts; `lines` is the list as written (`13,134-140`) |
 | `as_written` | the text in FACTS.md (a bare `file.c:lines` inherits the repository of the previous full citation in its paragraph; `repo/.../file.c:lines` finds the one file of that name in the repository) |
-| `section` | the heading path of FACTS.md it sits under, `H1 / H2 / H3` with trailing parentheses and backticks dropped |
+| `section` | the heading path of FACTS.md it sits under, `H1 / H2 / H3` with trailing parentheses and backticks dropped (the first occurrence's) |
+| `sections` | every such heading path that cites it, in FACTS.md order; `section` is the first |
 | `facts_line` | the line of FACTS.md |
 | `context` | that line, whitespace collapsed, cut at 240 characters |
 | `first_line` | the text of the first cited line as read in pret, cut at 160 characters |
@@ -383,7 +384,8 @@ pret at `~/AI/pret` or `--pret`). One entry per distinct citation, sorted by cit
 The file also carries `pret` (the HEAD commit of each repository the entries were read in) and `skipped`: every
 citation the generator could not resolve (a bare path with no repository in its paragraph, a file name that is
 not unique) with the FACTS.md line and the reason, so nothing is dropped silently; a cited line past the end of its
-file is an error (exit 1), not a skip. Readers: `webapp/footnotes.js` (as `window.ShinyCitations`, written into
+file, or a range whose first cited line is blank or a lone brace (it points beside the routine it names), is an
+error (exit 1), not a skip. Readers: `webapp/footnotes.js` (as `window.ShinyCitations`, written into
 `gen1-data.js` by `sync-core.sh` and inlined by the mobile bundle; the Gen 1 TID, Gen 2 TID and wizard tabs render
 their footnotes through it) and `app/App/Citations.cs` (embedded as `data.citations`, a `citations.json` beside the
 executable preferred; the three desktop panels render through it): each protocol step, target line, schedule line

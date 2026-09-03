@@ -40,8 +40,9 @@ file:line citations instead.
 The citations in this file are the registry the heads render as footnotes: `tools/gen-citations.py`
 reads every `repo/path:lines` citation here (a bare `file.c:lines` inherits the repository of the
 previous full citation in its paragraph; `repo/.../file.c:lines` finds the one file of that name),
-reads each cited line in the pret checkout, and writes `core/data/citations.json` with the citation,
-the section of this file it sits in, the line of this file and the text of the first cited line
+reads each cited line in the pret checkout (a range whose first line is blank or a lone brace is
+refused), and writes `core/data/citations.json` with the citation, the section of this file it sits in
+(and every section that cites it), the line of this file and the text of the first cited line
 (`docs/DATA.md`). The Gen 1 TID, Gen 2 TID and wizard tabs, and the desktop panels, mark each protocol
 step, target line, schedule line and verify line with `[^n]` and list the sources under the protocol
 (`webapp/footnotes.js`, `app/App/Citations.cs`): a decomp line with the section it is filed under here,
@@ -586,7 +587,7 @@ initializes BOTH the LCRNG and the Mersenne Twister — two independent streams.
 - LCRNG: identical constants to Gen 3 (`0x41C64E6D` / `0x6073`, top 16 bits out) —
   `pokeheartgold/src/math_util.c:70-74`. Used for PIDs, IVs, encounters, Chatot pitch,
   Elm calls, roamers. Advances strictly per use — there is no per-frame advance.
-- Mersenne Twister (textbook MT19937, init 1812433253) — `pokeheartgold/src/math_util.c:79-119`. Used for
+- Mersenne Twister (textbook MT19937, init 1812433253) — `pokeheartgold/src/math_util.c:80-119`. Used for
   TID/SID and the DPPt Poketch Coin Toss.
 - ARNG (`*0x6C078965 + 1`): Masuda-method rerolls, Mystery Gift. Not used by this tool yet.
 
@@ -596,7 +597,7 @@ Decomp-proven in Platinum and HGSS (DP inferred, its new-game path is still asm)
 Game the RNG is re-seeded at the end of the intro/naming sequence, one MT output goes to the
 record-mix seed, and the SECOND MT output is the full 32-bit trainer ID — TID = low 16 bits,
 SID = high 16 (`pokeplatinum/src/game_start.c:144-172`,
-`pokeheartgold/src/overlay_36.c:185-202`). TID manip therefore targets the seed hit at that
+`pokeheartgold/src/overlay_36.c:186-202`). TID manip therefore targets the seed hit at that
 moment, not the title-screen seed.
 
 ## Starters and gifts
@@ -890,7 +891,7 @@ them — the encounter just copies that fixed data into `gEnemyParty`. There is 
   timer and the "Are you ready?" speech (`pokeruby/src/main_menu.c:1130-1319`,
   `data/text/birch_speech.inc:41-55`). From that final press everything is constant-length
   (48-frame shrink anim + two zero-delay palette fades), then `CB2_NewGame` →
-  `NewGameInitData` → `InitPlayerTrainerId` (`overworld.c:1272-1276`, `new_game.c:174`).
+  `NewGameInitData` → `InitPlayerTrainerId` (`overworld.c:1272-1277`, `new_game.c:174`).
   TID is therefore fully determined by the RNG state at the moment of that press.
 - **Starter (RS):** after the YES press on "Do you choose this POKeMON?", the task switches
   callbacks with no message box, fade, or wait in between; `CreateMon` consumes the RNG on
@@ -986,10 +987,10 @@ function names are stable, line numbers are not). Methodologies `emerald/gba/typ
 |---|---|---|
 | Timer1 starts when the PLAYER naming screen is created | `pokeemerald/src/naming_screen.c:411-412` (`DoNamingScreen`: `if (templateNum == NAMING_SCREEN_PLAYER) StartTimer1()`) | `pokefirered/src/naming_screen.c:427-428`; also at the title screen, `pokefirered/src/title_screen.c:351` |
 | the Trainer ID and the seed are the raw Timer1 count at the naming screen's exit, after the fade-out | `pokeemerald/src/naming_screen.c:696-701` `MainState_Exit` -> `SeedRngAndSetTrainerId`; `pokeemerald/src/main.c:208-214`: `val = REG_TM1CNT_L; SeedRng(val); REG_TM1CNT_H = 0; sTrainerId = val` | `pokefirered/src/naming_screen.c:717-723`; `pokefirered/src/main.c:264-270` (`gTrainerId`). The title-screen value (`pokefirered/src/title_screen.c:735`) is overwritten on every New Game |
-| LCRNG | `pokeemerald/src/random.c:11-16`: `gRngValue = 0x41C64E6D * gRngValue + 0x6073`, output `>> 16`; `SeedRng`: `gRngValue = seed` | `pokefirered/src/random.c:8-17`, same constants |
+| LCRNG | `pokeemerald/src/random.c:11-16`: `gRngValue = 0x41C64E6D * gRngValue + 0x6073`, output `>> 16`; `SeedRng`: `gRngValue = seed` | `pokefirered/src/random.c:9-17`, same constants |
 | one `Random()` per VBlank | `pokeemerald/src/main.c:365-366` (skipped only in link / frontier / recorded battles) | `pokefirered/src/main.c:412` (unconditional) |
-| the Secret ID roll | `pokeemerald/src/overworld.c:1532-1537` `CB2_NewGame` -> `NewGameInitData` (`pokeemerald/src/new_game.c:140-164`) -> `InitPlayerTrainerId` (`pokeemerald/src/new_game.c:84-88`): `(Random() << 16) \| GetGeneratedTrainerIdLower()` | `pokefirered/src/overworld.c:1527-1531`; `pokefirered/src/new_game.c:82-96`, `pokefirered/src/new_game.c:54-58` |
-| no other `Random()` on the path | `NewGameInitData` before the roll: `RtcReset`, `ZeroPlayerPartyMons`, `ZeroEnemyPartyMons`, `ResetPokedex`, `ClearFrontierRecord`, `ClearSav1`, `ClearAllMail` draw nothing (grep of `src/rtc.c`, `pokedex.c`, `mail.c`, `frontier_util.c`, `pokemon.c` `ZeroMonData`); `main_menu.c`'s only draw is `Random() % NUM_PRESET_NAMES` at `pokeemerald/src/main_menu.c:1603`, before the naming screen; `naming_screen.c`, `palette.c`, `text.c`, `task.c`, `sprite.c`, `menu.c`, `window.c`, `bg.c`, `sound.c`, `m4a.c` contain no `Random()` | `pokefirered/src/oak_speech.c:2146,2148` draw only for the PLAYER default name, before the naming screen (`:2138-2160`); the rival presets draw nothing; `pokefirered/src/new_game.c:103` `SeedWildEncounterRng(Random())` is in `ResetMenuAndMonGlobals`, run at the title exit (`pokefirered/src/title_screen.c:737`), not on this path; `pokefirered/src/new_game.c:82-96` before the roll draws nothing |
+| the Secret ID roll | `pokeemerald/src/overworld.c:1532-1537` `CB2_NewGame` -> `NewGameInitData` (`pokeemerald/src/new_game.c:149-164`) -> `InitPlayerTrainerId` (`pokeemerald/src/new_game.c:84-88`): `(Random() << 16) \| GetGeneratedTrainerIdLower()` | `pokefirered/src/overworld.c:1527-1531`; `pokefirered/src/new_game.c:107-123`, `pokefirered/src/new_game.c:54-58` |
+| no other `Random()` on the path | `NewGameInitData` before the roll: `RtcReset`, `ZeroPlayerPartyMons`, `ZeroEnemyPartyMons`, `ResetPokedex`, `ClearFrontierRecord`, `ClearSav1`, `ClearAllMail` draw nothing (grep of `src/rtc.c`, `pokedex.c`, `mail.c`, `frontier_util.c`, `pokemon.c` `ZeroMonData`); `main_menu.c`'s only draw is `Random() % NUM_PRESET_NAMES` at `pokeemerald/src/main_menu.c:1603`, before the naming screen; `naming_screen.c`, `palette.c`, `text.c`, `task.c`, `sprite.c`, `menu.c`, `window.c`, `bg.c`, `sound.c`, `m4a.c` contain no `Random()` | `pokefirered/src/oak_speech.c:2146,2148` draw only for the PLAYER default name, before the naming screen (`:2138-2160`); the rival presets draw nothing; `pokefirered/src/new_game.c:103` `SeedWildEncounterRng(Random())` is in `ResetMenuAndMonGlobals`, run at the title exit (`pokefirered/src/title_screen.c:737`), not on this path; `pokefirered/src/new_game.c:107-123` before the roll draws nothing |
 
 So with **k = the number of VBlanks between the seed and the roll**,
 `SID = hi16(LCRNG^(k+1)(TID))` and `TSV = (TID ^ SID) >> 3`; PokeFinder's `IDGenerator3::generateFRLGE`
@@ -1544,10 +1545,10 @@ pokeplatinum `7c0aa10b`, pokeheartgold `814275e`; PokeFinder `7adce35`.
 - Gender: 0/254/255 fixed male/female/genderless, else female iff `genderRatio > (PID & 0xFF)`
   (`pokeemerald/src/pokemon.c:3471-3485`); reported 0 = M, 1 = F, 2 = none.
 - Ability: bit `PID & 1` selects the second ability only when the species has one
-  (`pokeemerald/src/pokemon.c:2298-2302`, `pokeplatinum/src/pokemon.c:475-483`). Results carry
+  (`pokeemerald/src/pokemon.c:2298-2302`, `pokeplatinum/src/pokemon.c:476-483`). Results carry
   `abilityBit`, the effective `abilitySlot` and `abilityId`.
 - Shiny iff `TID ^ SID ^ PIDhi ^ PIDlo < 8` (`pokeemerald/include/pokemon.h:371`,
-  `pokeplatinum/src/pokemon.c:2755`). `shinyType` 2/1/0 (equal / < 8 / not) is PokeFinder's
+  `pokeplatinum/src/pokemon.c:2754`). `shinyType` 2/1/0 (equal / < 8 / not) is PokeFinder's
   display split; the games only test `< 8`.
 - Hidden Power: power = `40 * bit1-pack / 63 + 30`, type = `15 * bit0-pack / 63 + 1`, +1 past
   TYPE_MYSTERY (`pokeemerald/src/battle_script_commands.c:8905-8909`,
@@ -1585,7 +1586,7 @@ Call script from the frame, in order. Rolls marked *opt* are outside PokeFinder'
 | slot | `Random()%100` over 20/20/10/10/10/10/5/5/4/4/1/1 land, 60/30/5/4/1 water and rock, 70/30, 60/20/20, 40/40/15/4/1 rods (`:182-262`) | `:144-230` | `:71-130` |
 | level | `Random()%range` (`:286`); Pressure/Hustle/Vital Spirit `Random()%2 == 0` -> max, else `rand--` if nonzero (`:292-297`) | `:254` | `:172` |
 | Keen Eye/Intimidate *opt* (`lead.level`) | `Random()%2 == 0` suppresses when lead level > 5 and wild level <= lead-5 (`:906`, gated by `WILD_CHECK_KEEN_EYE` `:453`) | none | none |
-| Cute Charm | `Random()%3 != 0` when the species' gender is not fixed (`:397-398`), then the PID loop demands the opposite gender of the lead (`:410`, `pokeemerald/src/pokemon.c:2340-2343`) | none | none |
+| Cute Charm | `Random()%3 != 0` when the species' gender is not fixed (`:397-398`), then the PID loop demands the opposite gender of the lead (`:410`, `pokeemerald/src/pokemon.c:2337-2342`) | none | none |
 | Safari | one `Random()%100` (the `< 80` Pokeblock check, no block assumed: `:341`) | `:278` | none |
 | nature | Synchronize `Random()%2 == 0` -> lead nature (`:371-372`) else `Random()%25` (`:378`) | `Random()%25` (`:305`) | `Random()%NUM_NATURES` (`:232`) |
 | PID | `Random32()` until nature (and gender) match (`pokeemerald/src/pokemon.c:2305-2311,2340-2343`) | `:311` | `:232`; Unown: `(Random()<<16)|Random()` until the chamber letter (`:237,243-251`), no nature roll |
@@ -1673,7 +1674,7 @@ bit 15 of the PID is set (`pokeemerald:784-791`).
     (`:1210-1216`), then step 6 onward. Poke Radar with the chain kept: no slot roll
     (`:1149-1161`), a broken chain rolls the slot (`:1164-1194`); shiny patches use the shiny
     PID with a Cute Charm gender loop or a Synchronize nature loop (`:983-1045`); patch odds
-    `1/max(200, 8200 - 200*chain)` (`pokeplatinum/src/pokeradar.c:473-478`).
+    `1/max(200, 8200 - 200*chain)` (`pokeplatinum/src/pokeradar.c:474-479`).
 
 `battleAdvances` = frame + `callsUsed` + 1 (ball position) + 1 for fishing + 4 on DP, 0 for
 Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
@@ -1726,7 +1727,7 @@ passed roll and `everstoneProc: false` the failed one (plain MT PID); held and p
 carry `everstoneInherited`. The trigger-time LCRNG state (one call, two with two Everstones in
 HGSS) is not tracked: pickup runs on its own seed. Masuda: up to four
 ARNG rerolls until shiny (`pokeplatinum/src/overlay005/daycare.c:722-724`, `pokeheartgold/src/get_egg.c:601-604`). Pickup: IV1, IV2 from
-`Pokemon_InitWith`/`CreateMon` (`pokeplatinum/src/overlay005/daycare.c:734,764`, `pokeheartgold/src/get_egg.c:611,631`), then `%6 %5 %4`
+`Pokemon_InitWith`/`CreateMon` (`pokeplatinum/src/overlay005/daycare.c:735,764`, `pokeheartgold/src/get_egg.c:611,631`), then `%6 %5 %4`
 and three `%2` parents (`pokeplatinum/src/overlay005/daycare.c:405-410`, `pokeheartgold/src/get_egg.c:317-325`); DPPt removes position `i`
 (Emerald's bug, `pokeplatinum/src/overlay005/daycare.c:406`), HGSS removes the rolled index (`pokeheartgold/src/get_egg.c:319`). HGSS power
 items force the first stat and skip one pair of rolls (`pokeheartgold/src/get_egg.c:308-312,999-1029`, two items
@@ -1795,7 +1796,7 @@ a readout must show the set of the method in use (each set is pinned by a test).
 
 | # | Where | Decomp | PokeFinder | Effect |
 |---|---|---|---|---|
-| D1 | Emerald typed slots | Magnet Pull on land only, Static on land and water, neither on rocks (`pokeemerald/src/wild_encounter.c:432,440,445-446`) | applies both leads to every encounter type (`WildGenerator3.cpp`, `if ((lead == Lead::MagnetPull \|\| lead == Lead::Static) && ...)`) | Emerald water tables have no Steel type and rock tables no Electric type, so no shipped table differs; pinned with synthetic tables (`pin D1`) |
+| D1 | Emerald typed slots | Magnet Pull on land only, Static on land and water, neither on rocks (`pokeemerald/src/wild_encounter.c:430,432,438,443-444`) | applies both leads to every encounter type (`WildGenerator3.cpp`, `if ((lead == Lead::MagnetPull \|\| lead == Lead::Static) && ...)`) | Emerald water tables have no Steel type and rock tables no Electric type, so no shipped table differs; pinned with synthetic tables (`pin D1`) |
 | D2 | Emerald Everstone roll | `Random() >= USHRT_MAX/2` (= 0x7fff) -> no inheritance (`daycare.c:446-447`) | `(rand >> 15) == 0` inherits, so an output of exactly 0x7fff inherits | 1 in 65536 trigger frames (`pin D2`) |
 | D3 | HGSS Bug Contest with a Pressure-family lead | slot and level only (`pokeheartgold/src/overlay_bug_contest.c:178-186`) | adds the Pressure `nextUShort(2)` roll (`calculateLevel<true, true>` with force) | Pressure lead in the contest (`pin D3`) |
 | D4 | HGSS Safari surf/fishing with a Pressure-family lead | slot swap on land only (`pokeheartgold/src/field/encounter_check.c:961-965`) | `Grass \|\| safari` -> swap roll on water too | Pressure lead in Safari water (`pin D4`) |
