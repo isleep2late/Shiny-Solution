@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 python3 reference.py > vectors.json
 node test.cjs vectors.json
+node test-data.cjs
 if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   export DOTNET_ROOT="$HOME/.dotnet"
   export PATH="$HOME/.dotnet:$PATH"
