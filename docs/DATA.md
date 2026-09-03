@@ -9,10 +9,10 @@ tables and the static/gift catalogue for Gen 3 and Gen 4. No engine code reads t
 |---|---|---|
 | `species-gen3.json` | 159,990 | 386 species: base stats, gender byte, abilities, egg groups, types (Emerald primary, Ruby/FireRed cross-checked) |
 | `species-gen4.json` | 258,457 | 493 species (Platinum primary, HeartGold/Diamond cross-checked) plus the Gen 3 to Gen 4 difference list |
-| `encounters-gen3.json` | 1,028,632 | wild tables for Ruby, Sapphire, Emerald, FireRed, LeafGreen |
-| `encounters-gen4.json` | 3,009,222 | wild tables for Platinum, HeartGold, SoulSilver, Diamond, Pearl; HGSS bug contest / safari / headbutt |
+| `encounters-gen3.json` | 1,032,300 | wild tables for Ruby, Sapphire, Emerald, FireRed, LeafGreen; the Route 119 Feebas record (RSE) |
+| `encounters-gen4.json` | 3,051,027 | wild tables for Platinum, HeartGold, SoulSilver, Diamond, Pearl; DPPt `encdata_ex` extras (honey trees, Trophy Garden dailies, Feebas, Great Marsh lookout), Unown form groups, swarm host maps; HGSS bug contest / safari / headbutt / swarm hosts |
 | `statics-gen3.json` | 65,758 | 71 static, gift, egg, event and roamer entries with decomp citations |
-| `statics-gen4.json` | 101,232 | 116 entries; Diamond/Pearl entries carry PokeFinder provenance |
+| `statics-gen4.json` | 102,841 | 117 entries; Diamond/Pearl entries carry PokeFinder provenance |
 
 ## Regeneration
 
@@ -20,10 +20,14 @@ tables and the static/gift catalogue for Gen 3 and Gen 4. No engine code reads t
 python3 tools/gen-guide-data.py                     # writes core/data/*.json from ~/AI/pret
 python3 tools/gen-guide-data.py --check             # regenerates in memory, fails if core/data differs
 python3 tools/gen-guide-data.py --pokefinder /tmp/PokeFinder/Core/Resources/EncounterTables
-                                                    # ... and diffs against PokeFinder's generator output
+                                                    # --check, plus a diff against PokeFinder's generator output and
+                                                    # its hard-coded Gen 4 tables; exit 1 on any mismatch that is not
+                                                    # in KNOWN_DELIBERATE; nothing is written unless --write is added
+python3 tools/gen-guide-data.py --relocate          # a moved citation line is reported with its new number (exit 1)
 PRET_DIR=/elsewhere python3 tools/gen-guide-data.py # or --pret DIR
 node tests/test-data.cjs                            # the data assertions (wired into tests/run-tests.sh)
 DATA_TEST_NEGATIVE=1 node tests/test-data.cjs       # negative control: two Snorlax assertions made wrong on purpose
+DATA_DIR=/tmp/mutated node tests/test-data.cjs      # run the assertions against another directory
 ```
 
 Python 3 standard library only. The output is deterministic (sorted keys, custom
@@ -32,13 +36,21 @@ generator twice gives byte-identical files, which `--check` relies on. Every fil
 the commit of each decomp it was read from in `meta.sources`.
 
 The generator refuses to run if any cited decomp line no longer contains the cited text
-(see "Static catalogue" below), so a pret update that moves a script line fails loudly
-instead of silently drifting.
+on **exactly** the cited line (no tolerance; see "Static catalogue" below), so a pret update
+that moves a script line fails loudly instead of silently drifting. `--relocate` searches
++-40 lines and prints the corrected literals so they can be pasted back into the script.
+
+`--pokefinder` is a check, not a write: it implies `--check`, compares every table and
+every extra against PokeFinder, prints the known deliberate catalogue differences
+(`KNOWN_DELIBERATE` in the script) separately from real mismatches, returns exit 1 when a
+real mismatch exists, and removes its temporary directory.
 
 Inputs (read-only): `~/AI/pret/{pokeruby,pokeemerald,pokefirered,pokeplatinum,pokeheartgold,pokediamond}`.
 PokeFinder's `EncounterTableGenerator` submodule is only needed for `--pokefinder`; the
 generator imports it in a subprocess with `PYTHONDONTWRITEBYTECODE=1` and writes its
-`.bin` tables to a temporary directory, never into the clone.
+`.bin` tables to a temporary directory (deleted afterwards), never into the clone. It also
+reads `Core/Gen4/Encounters4.cpp` and `EncounterArea4.cpp` for the tables PokeFinder
+hard-codes (Trophy Garden pools, Great Marsh lookout sets, honey tree hosts, Feebas, Unown).
 
 ## Conventions shared by all files
 
@@ -55,7 +67,7 @@ generator imports it in a subprocess with `PYTHONDONTWRITEBYTECODE=1` and writes
 
 ## `species-gen3.json`
 
-`meta`: `species_count` (386), `primary_source`, `cross_checked_against`, `sources`
+`meta`: `species_count` (386), `generation`, `generator`, `primary_source`, `cross_checked_against`, `sources`
 (per game: repo, commit, files), `gender_ratio_byte` (the `PERCENT_FEMALE(p) =
 min(254, (p*255)/100)` formula, truncated to `u8`; `pokeemerald/src/data/pokemon/species_info.h:1-3`,
 `include/constants/pokemon.h:169-171`), `internal_id_note`, `hidden_ability` (none in Gen 3),
@@ -80,7 +92,9 @@ Held items, catch rate, EV yields and friendship are not exported (not needed by
 
 ## `species-gen4.json`
 
-Same record shape plus:
+`meta` adds `names_source` (the HGSS message bank the English names come from),
+`differences_from_gen3` and `warnings` (species-name disagreements between the three
+personal tables; empty in this checkout). Same record shape plus:
 
 | Field | Meaning | Provenance |
 |---|---|---|
@@ -122,7 +136,7 @@ Each map record:
 
 | Field | Meaning |
 |---|---|
-| `index` | position in the version-filtered `gWildMonHeaders` list. This is PokeFinder's location number: its generator enumerates the same list and merely *skips* duplicate tables (Altering Cave 2-9, Mt. Pyre floors, Seafloor Cavern rooms, ...), so Emerald has 124 maps here and 86 records there with the same numbering |
+| `index` | position in the version-filtered `gWildMonHeaders` list. This is PokeFinder's location number: its generator enumerates the same list and merely *skips* tables it does not expose (Altering Cave 2-9, eight *distinct* Mareep/Pineco/Houndour/Teddiursa/Aipom/Shuckle/Stantler/Smeargle tables that its generator comments as "8 unused tables", the "Unused" Cave of Origin tables, and floors that share a table), so Emerald has 124 maps here and 86 records there with the same numbering |
 | `map`, `name`, `base_label` | `MAP_*` constant, a display name derived from it, the C label |
 | `land` | `{rate, slots[12]}`; slots `{species, constant, min_level, max_level}` (Gen 3 land slots always have `min == max`) |
 | `water`, `rock_smash` | `{rate, slots[5]}` |
@@ -131,6 +145,15 @@ Each map record:
 
 A section is absent when the map has no encounters of that kind (exactly as in the source JSON).
 Level roll for water/rock/fishing: `min + Random() % (max - min + 1)` (`pokeemerald/src/wild_encounter.c:268-301`).
+
+`games.<ruby|sapphire|emerald>.feebas`: the Route 119 Feebas record, which is not in any
+table: `{species 349, min_level 20, max_level 25, map MAP_ROUTE119, index, any_rod, note,
+sources}`. `FishingWildEncounter` first runs `CheckFeebas()` (Route 119, the rod tile is one
+of the six Feebas tiles derived from the Dewford trend seed, and `Random() % 100 <= 49`) and
+if it passes bypasses the fishing table for every rod with
+`CreateWildMon(SPECIES_FEEBAS, ChooseWildMonLevel({20, 25}))`
+(`pokeemerald/src/wild_encounter.c:67,137,784-788`; `pokeruby/src/wild_encounter.c:23,98,602-606`).
+FireRed/LeafGreen have no Feebas code and carry no record.
 
 ## `encounters-gen4.json`
 
@@ -155,8 +178,20 @@ order from `res/field/encounters/encounters.order`; the JSON layout is
 | `surf`, `old_rod`, `good_rod`, `super_rod` | `{rate, slots[5]}`, slots `{species, constant, min_level, max_level}` |
 | `map_category` | raw from the JSON |
 
-`games.platinum.extra`: `honey_tree` (common/uncommon/rare lists) and `great_marsh_lookout`,
-raw from the same directory (`encdata_ex`).
+`games.platinum.extra`: everything the wild generators need that is not in a per-map table.
+`encdata_ex_order` lists the 12 members of `encdata_ex.narc`
+(`res/field/encounters/encdata_ex.order`): 0-1 Feebas species/tiles, 2-4 honey tree
+common/uncommon/rare, 5-7 the same three again (Pearl's unused copy), 8 Trophy Garden dailies,
+9-11 Great Marsh lookout (with dex / without dex / binocular coordinates).
+
+| Key | Content | Decomp |
+|---|---|---|
+| `honey_tree` | `common/uncommon/rare` (6 constants each, raw from `encounters_honey_tree.json`), `encdata_ex_members {2,3,4}`, `unused_pearl_members [5,6,7]`, `hosts[21]` (`MAP_HEADER_*` and the map's wild `table_index`, `null` for Eterna Forest outside and Floaroma Meadow which have `ENCOUNTERS_NONE`), `min_level 5`, `max_level 15`, `group_rates` (normal tree 10/70/20/0, Munchlax tree 9/20/70/1 for none/A/B/C), `slot_rates [40,20,20,10,5,5]`, `sources` | `overlay005/honey_tree.c:41,66,73,212,238,456,461`; level `overlay006/wild_encounters.c:1196,1208,1210` (`5 + LCRNG_RandMod(11)`, Hustle/Vital Spirit/Pressure `RandMod(2) != 0` forces 15); `include/field/field_system.h:44` |
+| `great_marsh_lookout` | `before_national_dex[32]`, `after_national_dex[32]`, `binocular_coords[36]` (raw), `encdata_ex_members {9,10,11}`, `replaces_grass_slots [6,7]`, `sources` | `overlay006/great_marsh_daily_encounters.c:11,19,21,25` (member 9 with the dex, 10 without; index = 5 bits of `DAILY_MARSH` per area), `wild_encounters.c:1393` |
+| `trophy_garden_daily` | `pool[16]` (`{species, constant}`, member 8), `table_index 117`, `replaces_grass_slots [6,7]`, `requires_national_dex`, `sources` | `overlay006/trophy_garden_daily_encounters.c:14,19,36` (`LCRNG_RandMod(16)` re-rolled until it differs from both current indices), `wild_encounters.c:209,216,336`, `include/special_encounter.h:13`, `src/map_header.c:201` |
+| `feebas` | `species 349`, `min_level 10`, `max_level 20`, `table_index 22` (Mt. Coronet B1F), `map_dimensions [228,300]`, `tile_count 528`, `tiles[]` (map-tile indices, member 1), `encdata_ex_members {0,1}`, `all_rods`, `sources` | `wild_encounters.c:407,411,412` (facing one of the day's four Feebas tiles replaces all five slots of the rod table with Feebas), `overlay006/feebas_fishing.c:55,99,101,102,108`, `src/map_header.c:196` |
+| `unown_tables` | `tables[8]`: `{unown_table 1..8, array, form_count, form_ids, letters}`; a table's `unown_table` value selects row value-1 (0 = no Unown); the form is `forms[LCRNG_Next() % form_count]`, one extra RNG call after the PID. Row 1 = the 20 forms of the dead-end rooms, rows 2-7 = F, R, I, N, E, D (table order), row 8 = `!`/`?` | `wild_encounters.c:116-179,1489,1541`, `include/constants/forms.h:21-48` |
+| `swarm_hosts` | `hosts[22]` (`MAP_HEADER_*`, `table_index`), `replaces_grass_slots [0,1]` | `overlay006/swarm.c:12,37`, `include/overlay006/swarm.h:4`, `wild_encounters.c:195,202,335` (`DAILY_SWARM % 22` picks the host; grass slots 0 and 1 become the table's `swarm[0..1]`) |
 
 `games.heartgold` / `games.soulsilver` (142 tables each, `index` = `gs_enc_data` member;
 layout `pokeheartgold/include/wild_encounter.h:17-56`; the JSON's `{"HEARTGOLD": x, "SOULSILVER": y}`
@@ -170,11 +205,15 @@ values are resolved per version):
 | `surf[5]`, `rock_smash[2]`, `old_rod[5]`, `good_rod[5]`, `super_rod[5]` | `{rate, slots}` with `min_level`/`max_level` |
 | `swarm` | `{land, surf, night_fish, fish}` replacement species, keys present only when the JSON has them |
 
-`hgss_shared`: `bug_contest` (`files/data/mushi/mushi_encount.csv`: species, level range,
-rate, score), `safari_zone` (`files/arc/safari_enc.json`, raw: 12 areas, land/surf/rods by
-time of day, block bonus tables) and `headbutt` (`files/arc/headbutt.json`, raw, only the
-maps that have trees). These are carried verbatim (species as constants) for the later
-generator phase; nothing is derived from them yet.
+`hgss_shared`: `bug_contest` (`files/data/mushi/mushi_encount.csv`: 40 slots = 4 areas x 10,
+species, level range, rate, score), `safari_zone` (`files/arc/safari_enc.json`, raw: 12 areas,
+land/surf/rods by time of day, block bonus tables), `headbutt` (`files/arc/headbutt.json`, raw,
+the 60 tables that have trees; species that differ by version are `{"gold": .., "silver": ..}`
+objects) and `swarm_hosts` (`hosts[20]`: `map`, `kind` land/surf/fish, `table_index`,
+`table`; `src/unk_02097F6C.c:13,16,49`, `src/field/encounter_check.c:167,175,182`:
+`Roamers_GetRand(2) % 20` picks the row; land replaces land slots 0-1 with `landSwarm`, surf
+the surf slot with `surfSwarm`, fish the rod slots (old 2; good 0,2,3; super all) with
+`fishSwarm`). Bug contest, safari and headbutt are carried verbatim (species as constants).
 
 `games.diamond` / `games.pearl` (183 tables each): pokediamond has **no JSON or C form** of
 the wild tables. What it does have is the retail NARC members committed as binaries,
@@ -185,6 +224,38 @@ layout to Platinum's `WildEncounters` struct. The generator parses those with th
 rows of `map_header.c`. The records are marked `provenance: EMPIRICAL (ROM dump carried by
 the decomp)`: they are the same kind of source as PokeFinder's `d_enc_data.narc`, not
 decompiled text. They match PokeFinder's diamond/pearl tables exactly (below).
+
+`games.diamond.extra` / `games.pearl.extra`: the same `encdata_ex` archive read from
+`pokediamond/files/arc/encdata_ex/narc_0000..0011.bin` (member sizes 4, 1068, 24 x 6, 64,
+128, 128, 144; pokediamond has no decompiled reader, `arm9/src/filesystem.c:119` only names
+the archive), parsed with the layouts of Platinum's converters
+(`pokeplatinum/tools/jsoncnv/encdata_ex_{elusive_rod,honey_trees,trophy_garden,great_marsh}.py`)
+and marked `provenance: EMPIRICAL`. Keys: `honey_tree` (Diamond reads members 2-4, Pearl 5-7,
+the split `overlay005/honey_tree.c:452-458` keeps and PokeFinder `Gen4/dp.py:92-93` uses;
+Diamond's common list has Silcoon where Pearl's has Cascoon), `feebas` (member 0 species,
+member 1 tiles: the same 528 tiles as Platinum), `trophy_garden_daily` (member 8: Porygon
+where Platinum has Ditto) and `great_marsh_lookout` (members 9-11). Their `min_level`/`max_level`
+carry a `level_provenance` note: the numbers are Platinum's code, and PokeFinder applies the
+same to D/P (`Gen4/pack.py:149-150`, `Core/Gen4/Encounters4.cpp:540-541`). `not_derivable`
+names what pokediamond cannot give: swarm host maps, the Unown form groups (the D/P tables
+carry the same `unown_table` ids 1..8, and PokeFinder applies one table to all of DPPt,
+`Core/Gen4/EncounterArea4.cpp:23-30,93-112`) and honey tree host maps.
+
+### Encounter kinds: present, deliberately out, pending
+
+Present (per game unless noted): grass/land, surf, rock smash, old/good/super rod, Gen 3
+Route 119 Feebas (RSE), FRLG Unown letters, DPPt swarm / day / night / radar / dual-slot species,
+Platinum swarm hosts, DPPt Trophy Garden dailies, DPPt honey trees, DPPt Feebas tiles, DPPt Great
+Marsh lookout, Platinum Unown form groups, HGSS morning/day/night, Hoenn/Sinnoh Sound, HGSS
+swarm species and host maps, HGSS bug contest, safari zone (raw) and headbutt (raw).
+
+Deliberately out: D/P swarm hosts, D/P Unown groups and D/P honey hosts (not in pokediamond's
+C; see `not_derivable`); Gen 3 Feebas *tile* positions (a function of the Dewford trend seed,
+not a table); the HGSS Safari Zone block-bonus arithmetic (carried raw, not derived). The
+Gen 3 Altering Cave tables 2-9 are exported like every other `gWildMonHeaders` entry.
+
+Pending (needed by the generators, not derived here yet): the HGSS safari and headbutt
+records as `{species, constant, min_level, max_level}` slots rather than raw JSON.
 
 Pruning: in every Gen 4 table a section whose rate is 0 and whose slots are all
 `SPECIES_NONE` is omitted, as are all-`NONE` `swarm/day/night/radar/hoenn_sound/sinnoh_sound`
@@ -202,9 +273,9 @@ encounters of this kind on this table" (the comparison code treats absence as ze
 | `games` | subset of `ruby sapphire emerald firered leafgreen` / `diamond pearl platinum heartgold soulsilver` |
 | `species`, `constant`, `name`, `internal_id` (Gen 3) | as in the species files |
 | `level` | the level the script or C code passes to the creation call (eggs: 5 in Gen 3 = `EGG_HATCH_LEVEL`, 1 in Gen 4) |
-| `location`, `held_item`, `form`, `shiny`, `catchable`, `notes` | `shiny: "always"` only for the Lake of Rage Gyarados (`WildBattle ..., 1`); `catchable: false` only for the ghost Marowak |
+| `location`, `held_item`, `form`, `shiny`, `catchable`, `notes` | `shiny: "always"` only for the Lake of Rage Gyarados (`WildBattle ..., 1`); `shiny: "never"` only for the Spiky-eared Pichu (fixed PID); `catchable: false` only for the ghost Marowak |
 | `creation` | the call chain from the script command to `CreateMon`/`Pokemon_InitWith`/the wild generator, and which RNG method that implies (Method 1 for gifts, roamers and every Gen 3 static; the wild generator = Method J / K for Gen 4 scripted battles) |
-| `sources[]` | `{repo, file, line, text}`: the decomp lines the entry rests on. The generator re-reads each line (tolerance +-3 lines) and aborts if the cited text is missing, so the species and level of every decomp-sourced entry are re-verified on every run |
+| `sources[]` | `{repo, file, line, text}`: the decomp lines the entry rests on. The generator re-reads each line (no tolerance: the text must be on exactly that line) and aborts if the cited text is missing, so the species and level of every decomp-sourced entry are re-verified on every run; `--relocate` reports moved lines |
 | `provenance` | `decomp` or `pokefinder` |
 | `level_verified_against_decomp` | `true` iff provenance is `decomp` (all Gen 3 entries; all Platinum and HGSS entries) |
 
@@ -233,7 +304,22 @@ and Latias in SoulSilver (`scr_seq_0750_T03.s:383-396`) while the **roamer** is 
 Steven's Vermilion script `Compare VAR_TEMP_x4004, 8` -> `CreateRoamer 3` (Latios) for
 SoulSilver, else `CreateRoamer 2` (Latias) (`scr_seq_0776_T06.s:64-87`, `include/constants/roamer.h:6-7`).
 Ruby/Sapphire aliases (`SPECIES_LATIAS_OR_LATIOS`, `SPECIES_GROUDON_OR_KYOGRE`) are resolved from
-`pokeruby/constants/version.inc:21-31`.
+`pokeruby/constants/version.inc:21-31`. Suicune cites both scripted battle sites, Route 25
+(`scr_seq_0216_R25.s:559`) and Burned Tower B1F (`scr_seq_0024_D18R0102.s:247`), both L40.
+
+`hgss/gift/pichu-spiky-eared` is the one entry that is not RNG-manipulable: `GiveSpikyEarPichu`
+(`scr_seq_0092_D36R0101.s:1910`, Ilex Forest shrine) creates it with a personality fixed by
+`ChangePersonalityToNatureGenderAndAbility(trainer id, 0xac, NATURE_NAUGHTY, MON_FEMALE, 0, 0)`
+(`src/field/scrcmd_pokemon_misc.c:1120-1121`), so only its IVs are rolled; it carries
+`shiny: "never"` so the wizard can refuse it with the reason.
+
+Deliberately out of the catalogue (fixed data or no decomp text): the HGSS NPC-trade loans
+Shuckie (`scr_seq_0880_T24R0201.s:47 GiveLoanMon 6, 20, 75`) and Kenya
+(`scr_seq_0241_R35R0101.s:61 GiveLoanMon 7, 20, 101`), created by `_CreateTradeMon` with the
+trade record's fixed PID and OT (`src/npc_trade.c:191-197`); the other NPC trades likewise;
+and the Diamond/Pearl Darkrai / Shaymin / Arceus event statics, for which pokediamond has no
+text script and PokeFinder lists only the Platinum versions (its `events` category is
+Manaphy x2, Darkrai and Shaymin, both `Game::Platinum`).
 
 Diamond/Pearl: pokediamond ships field scripts only as assembled binaries
 (`files/fielddata/script/scr_seq_release/*.bin`) and its C has no roamer table, so the D/P
@@ -250,10 +336,11 @@ pokeplatinum `7c0aa10b`, pokeheartgold `814275e`, pokediamond `038cccae`; PokeFi
 `7adce35` with EncounterTableGenerator `9a2ed62`.
 
 **(a) Wild tables vs PokeFinder's `EncounterTableGenerator`.** `--pokefinder` runs
-PokeFinder's own `emerald/rs/frlg/pt/hgss/dp` generators, parses the packed records
-(134 bytes Gen 3, 176 bytes DPPt, 196 bytes HGSS, layouts from its `pack.py`) and compares
-every rate, species, level, form/letter, swarm, time-of-day, radar, radio and dual-slot value
-with the table of the same location number:
+PokeFinder's own `emerald/rs/frlg/pt/hgss/dp` generators plus its `honey`, `bug` and
+`headbutt` packers, parses the packed records (134 bytes Gen 3, 176 bytes DPPt, 196 bytes
+HGSS, 74 bytes honey and headbutt, 42 bytes per bug-contest area; layouts from its `pack.py`)
+and compares every rate, species, level, form/letter, swarm, time-of-day, radar, radio and
+dual-slot value with the table of the same location number:
 
 | Game | PokeFinder records compared | Mismatches |
 |---|---|---|
@@ -263,6 +350,10 @@ with the table of the same location number:
 | Platinum | 122 | 0 |
 | Diamond / Pearl | 122 / 122 | 0 |
 | HeartGold / SoulSilver | 123 / 123 | 0 |
+| Platinum / Diamond / Pearl honey trees (`pt/d/p_honey.bin`: 18 species, levels 5-15, 21 host locations) | 21 / 21 / 21 | 0 |
+| HGSS bug contest (`hgss_bug.bin`, 4 areas x 10 slots) | 4 | 0 |
+| HeartGold / SoulSilver headbutt (`hg/ss_headbutt.bin`, 12 tree + 6 special slots, special flag) | 59 / 59 | 0 |
+| Trophy Garden pools vs `trophyGardenDP/Pt`, Great Marsh sets vs `greatMarsh{DP,DPDex,Pt,PtDex}`, Feebas vs `feebasLocation`/`Slot(349, 10, 20)`, Unown rows vs `unown0..7` and the eight `case` locations (`Core/Gen4/Encounters4.cpp:193-204,540-541`, `EncounterArea4.cpp:23-30,32-39,93-112`) | constants | 0 |
 
 Two things looked like mismatches on the first run and were representation, not data:
 PokeFinder packs a zero row for tables that have no land/radio section while the HGSS JSON
@@ -283,16 +374,34 @@ Chansey `254`, Tauros `0`, Pikachu `127`, Clefairy `191`, Growlithe `63`. Assert
 files); `--check` reports every file `unchanged`.
 
 **Static catalogue vs PokeFinder's `encounters.json` (Gen 3 and Gen 4).** Every PokeFinder
-entry (species, level, game set) has a matching entry here. Three entries here are not in
-PokeFinder, all deliberate: the Emerald Mystery Gift Surfing Pichu egg
-(`data/scripts/gift_pichu.inc:31`), the uncatchable ghost Marowak
-(`PokemonTower_6F/scripts.inc:9`, `catchable: false`) and Platinum's Arceus at L80
-(`scripts_hall_of_origin.s:46`). One correction went the other way: the first draft had the
+(species, level) pair is covered by entries here whose game sets together contain its games
+(PokeFinder's `DPPt` starters and fossils, for instance, are matched by a `pt/` row citing
+Platinum plus a `dp/` row with PokeFinder provenance). Four entries here are not in
+PokeFinder, all deliberate and listed in `KNOWN_DELIBERATE`: the Emerald Mystery Gift Surfing
+Pichu egg (`data/scripts/gift_pichu.inc:31`), the uncatchable ghost Marowak
+(`PokemonTower_6F/scripts.inc:9`, `catchable: false`), Platinum's Arceus at L80
+(`scripts_hall_of_origin.s:46`) and the Spiky-eared Pichu (`shiny: "never"`). Any other
+difference makes `--pokefinder` exit 1. One correction went the other way: the first draft had the
 HGSS Eon roamers inverted (HeartGold Latios / SoulSilver Latias); PokeFinder disagreed, and
 the Vermilion script above proved PokeFinder right. The citation check does not catch a
 wrong *version* assignment by itself, only a wrong species or level, which is why the
 PokeFinder diff stays in the verification step.
 
-**Test negative control.** `DATA_TEST_NEGATIVE=1 node tests/test-data.cjs` flips the
+**(e) Citations.** Every `sources` line is checked on exactly the cited line. Fourteen
+literals (Platinum starters `choose_starter_app.c:50-52`, the five Platinum roamer species
+and level lines in `roaming_pokemon.c:256-277`, `scrcmd_party.c:97`) had drifted by one or
+two lines at the pinned commit and were corrected; the JSON already carried the resolved
+numbers, so no data changed. `--relocate` demonstrates the check: citing `roaming_pokemon.c:255`
+for `species = SPECIES_MESPRIT` aborts without it and reports `255 -> 256` with it.
+
+**Test negative controls.** `DATA_TEST_NEGATIVE=1 node tests/test-data.cjs` flips the
 expected Snorlax byte to 30; the run fails with exactly the two Snorlax assertions
-(`2 of 100 data checks failed`), exit 1.
+(`2 of 128 data checks failed`), exit 1. Running the assertions with `DATA_DIR` pointing at
+a copy in which every new extra field was altered (Trophy Garden Ditto/Porygon swapped, honey
+members, Feebas levels and tile count, Unown letters, swarm host indices, Gen 3 Feebas levels,
+the Pichu `shiny` flag, the second Suicune source) fails all 23 of the new assertions. The
+`--pokefinder` comparisons were each shown to report when one value is mutated in memory
+(trophy pool, honey list / level / host, Feebas level / location, Unown forms / table id, Great
+Marsh lists, bug slot level, headbutt species / secret flag, a static's level, an un-allowlisted
+extra static, and removing an id from `KNOWN_DELIBERATE`), returning 1 in every case and 0
+on the unmodified data.
