@@ -1,6 +1,7 @@
 namespace ShinySolution.Core;
 
-// Timer models ported from EonTimer (MIT, https://github.com/DasAmpharos/EonTimer, main @ ad10886).
+// Timer models ported from EonTimer (MIT, https://github.com/DasAmpharos/EonTimer, main @ ad10886;
+// its MIT notice is reproduced in THIRD_PARTY_NOTICES.md at the repo root).
 // Mirrors core/timers.js function-for-function and keeps EonTimer's operation order so the two
 // ports and EonTimer agree bit-for-bit (tests/timer-vectors.json, tests/timer-parity.json).
 // Constants cite EonTimer file:line; see docs/FACTS.md "Timer models".
@@ -59,12 +60,21 @@ public static class Timers
         TimerConsole.Dsi => "DSI", TimerConsole.ThreeDs => "3DS", TimerConsole.Custom => "CUSTOM",
         _ => throw new ArgumentOutOfRangeException(nameof(c))
     };
-    public static TimerConsole ParseConsole(string s) => s switch
+    public static bool TryParseConsole(string s, out TimerConsole console)
     {
-        "GBA" => TimerConsole.Gba, "NDS_SLOT1" => TimerConsole.NdsSlot1, "NDS_SLOT2" => TimerConsole.NdsSlot2,
-        "DSI" => TimerConsole.Dsi, "3DS" => TimerConsole.ThreeDs, "CUSTOM" => TimerConsole.Custom,
-        _ => throw new ArgumentException($"unknown console {s}")
-    };
+        switch (s)
+        {
+            case "GBA": console = TimerConsole.Gba; return true;
+            case "NDS_SLOT1": console = TimerConsole.NdsSlot1; return true;
+            case "NDS_SLOT2": console = TimerConsole.NdsSlot2; return true;
+            case "DSI": console = TimerConsole.Dsi; return true;
+            case "3DS": console = TimerConsole.ThreeDs; return true;
+            case "CUSTOM": console = TimerConsole.Custom; return true;
+            default: console = default; return false;
+        }
+    }
+    public static TimerConsole ParseConsole(string s)
+        => TryParseConsole(s, out var console) ? console : throw new ArgumentException($"unknown console {s}");
     public static string Gen3ModeName(Gen3Mode m) => m == Gen3Mode.Standard ? "STANDARD" : "VARIABLE_TARGET";
     public static Gen3Mode ParseGen3Mode(string s) => s switch
     {
@@ -122,7 +132,7 @@ public static class Timers
             case TimerConsole.Custom:
                 if (settings.CustomFps == 0) throw new ArgumentException("Custom framerate must be greater than 0");
                 return settings.CustomFps;
-            default: return NdsSlot1Fps;
+            default: return NdsSlot1Fps;              // calibrator.ts:54-55: any value outside the enum
         }
     }
 
@@ -253,7 +263,7 @@ public static class Timers
         return 0;
     }
 
-    public static Gen4Model Gen4Calibrated(TimerSettings settings, Gen4Model model, double delayHit) // Gen4Panel.tsx:219-224
+    public static Gen4Model Gen4Calibrated(TimerSettings settings, Gen4Model model, double delayHit) // Gen4Panel.tsx:45-50
         => model with { CalibratedDelay = model.CalibratedDelay + CalibrateGen4(settings, model, delayHit) };
 
     // ---- Gen 5 model, gen5Timer.ts ----
@@ -307,7 +317,7 @@ public static class Timers
         return new Gen5CalibrationResult(calibrationDelta, entralinkCalibrationDelta, frameCalibrationDelta);
     }
 
-    public static Gen5Model Gen5Calibrated(TimerSettings settings, Gen5Model model, Gen5Hits hits) // Gen5Panel.tsx:366-377
+    public static Gen5Model Gen5Calibrated(TimerSettings settings, Gen5Model model, Gen5Hits hits) // Gen5Panel.tsx:63-74
     {
         var r = CalibrateGen5(settings, model, hits);
         return model with
@@ -338,6 +348,6 @@ public static class Timers
         return phase.Target - hit;
     }
 
-    public static CustomPhase CustomPhaseCalibrated(TimerSettings settings, CustomPhase phase, double hit) // CustomPanel.tsx:619-628
+    public static CustomPhase CustomPhaseCalibrated(TimerSettings settings, CustomPhase phase, double hit) // CustomPanel.tsx:104-110
         => phase with { Calibration = phase.Calibration + CalibrateCustomPhase(settings, phase, hit) };
 }

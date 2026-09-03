@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using ShinySolution.Core;
 
 // C# side of the timer-model verification:
@@ -9,11 +10,19 @@ public static class TimerChecks
 {
     static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
 
+    // The vector whose corrupted copy is the negative control; its absence fails the run.
+    const string ControlVectorId = "default-gen4-phases-NDS_SLOT1";
+
+    // A console name outside the wire vocabulary (the "unknown-console-*" vectors use
+    // "constructor") becomes an out-of-range enum value, so Timers.Fps takes EonTimer's default
+    // branch (calibrator.ts:54-55) exactly as core/timers.js does for a name CONSOLES does not own.
+    static TimerConsole ConsoleOf(string name) => Timers.TryParseConsole(name, out var c) ? c : (TimerConsole)(-1);
+
     static TimerSettings Settings(JsonElement e)
     {
         if (e.ValueKind == JsonValueKind.Null || e.ValueKind == JsonValueKind.Undefined) return Timers.DefaultSettings;
         return new TimerSettings(
-            Timers.ParseConsole(e.GetProperty("console").GetString()!),
+            ConsoleOf(e.GetProperty("console").GetString()!),
             e.GetProperty("customFps").GetDouble(),
             e.GetProperty("precisionCalibration").GetBoolean(),
             e.GetProperty("minimumLengthMs").GetDouble());
@@ -136,36 +145,68 @@ public static class TimerChecks
     public static int CheckVectors(string path)
     {
         var doc = JsonDocument.Parse(File.ReadAllText(path)).RootElement;
-        int total = 0, failed = 0, py = 0;
+        int total = 0, failed = 0, py = 0, problems = 0;
         JsonElement? control = null;
         foreach (var v in doc.GetProperty("vectors").EnumerateArray())
         {
             total++;
-            if (v.GetProperty("id").GetString()!.StartsWith("py-")) py++;
-            if (control is null && v.GetProperty("fn").GetString() == "gen4Phases") control = v;
+            var id = v.GetProperty("id").GetString()!;
+            if (id.StartsWith("py-")) py++;
+            if (id == ControlVectorId) control = v;
             if (!CheckOne(v, false)) failed++;
         }
         Console.WriteLine($"C# timer vectors: {total} checked, {failed} failed ({py} transcribed from EonTimer's Python unit tests)");
 
-        // Negative control: corrupt one vector in memory and require the checker to reject it.
-        int controlFailures = 0;
-        if (control is JsonElement c)
+        // An empty file must not pass: zero checks is not a green run.
+        if (total == 0)
         {
-            var text = c.GetRawText();
-            var expect = c.GetProperty("expect");
-            var corruptedExpect = "[" + (Num(expect[0]) + 1).ToString("R") + "," + expect[1].GetRawText() + "]";
-            var corrupted = JsonDocument.Parse(text.Replace(expect.GetRawText(), corruptedExpect)).RootElement;
+            problems++;
+            Console.Error.WriteLine("FAIL no vectors: the file's \"vectors\" array is empty");
+        }
+
+        // The file's own header says how many vectors it should carry (written by the builder);
+        // a silently truncated or hand-pruned file fails here.
+        if (!doc.TryGetProperty("count", out var count) || count.ValueKind != JsonValueKind.Number)
+        {
+            problems++;
+            Console.Error.WriteLine("FAIL vector count: the file has no numeric \"count\" header field");
+        }
+        else if (count.GetInt32() != total)
+        {
+            problems++;
+            Console.Error.WriteLine($"FAIL vector count: header says {count.GetInt32()}, file has {total}");
+        }
+        else
+        {
+            Console.WriteLine($"vector count matches the header ({total})");
+        }
+
+        // Negative control: corrupt one vector in memory and require the checker to reject it.
+        // The control vector must be present; a file without it has not exercised the checker.
+        if (control is not JsonElement c)
+        {
+            problems++;
+            Console.Error.WriteLine($"FAIL negative control: vector \"{ControlVectorId}\" is missing, so the checker was not exercised");
+        }
+        else
+        {
+            var node = JsonNode.Parse(c.GetRawText())!.AsObject();
+            var expect = node["expect"]!.AsArray();
+            var corruptedId = c.GetProperty("id").GetString() + " [CORRUPTED +1 ms on phase 1]";
+            expect[0] = expect[0]!.GetValue<double>() + 1;
+            node["id"] = corruptedId;
+            var corrupted = JsonSerializer.SerializeToElement(node);
             if (CheckOne(corrupted, true))
             {
-                controlFailures++;
-                Console.Error.WriteLine($"FAIL negative control: corrupted vector {c.GetProperty("id").GetString()} was NOT detected");
+                problems++;
+                Console.Error.WriteLine($"FAIL negative control: corrupted vector {corruptedId} was NOT detected");
             }
             else
             {
-                Console.WriteLine($"negative control: corrupted vector \"{c.GetProperty("id").GetString()} [+1 ms on phase 1]\" correctly fails (expected {corruptedExpect}, actual {expect.GetRawText()})");
+                Console.WriteLine($"negative control: corrupted vector \"{corruptedId}\" correctly fails (expected {expect.ToJsonString()}, actual {c.GetProperty("expect").GetRawText()})");
             }
         }
-        return failed + controlFailures == 0 ? 0 : 1;
+        return failed + problems == 0 ? 0 : 1;
     }
 
     // mulberry32 — the same 32-bit generator core/timers tests could reproduce; all ops mod 2^32.

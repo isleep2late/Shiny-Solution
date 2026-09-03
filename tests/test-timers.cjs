@@ -3,7 +3,9 @@
 // tests, and (2) tests/timer-parity.json, 200 random parameter sets evaluated by the C# port
 // (app/Core/Timers.cs) — every number must match bit-for-bit. Also measures how far the legacy
 // gen4.js timer (still what the webapp uses) sits from EonTimer's rounding, and runs a negative
-// control that corrupts one vector and proves the checker notices.
+// control that corrupts one vector and proves the checker notices. An empty vectors array, a
+// vector count that disagrees with the file's own "count" header, or a missing control vector
+// fails the run outright.
 //
 //   node tests/test-timers.cjs [timer-vectors.json] [timer-parity.json]
 const fs = require("fs");
@@ -87,6 +89,7 @@ function checkVector(v, quiet) {
 }
 
 // ---- 1. EonTimer vectors ----
+const CONTROL_VECTOR_ID = "default-gen4-phases-NDS_SLOT1";
 const doc = JSON.parse(fs.readFileSync(vectorsPath, "utf8"));
 const perFn = {};
 let vectorFailures = 0;
@@ -97,18 +100,42 @@ for (const v of doc.vectors) {
 failures += vectorFailures;
 console.log(`timer vectors: ${doc.vectors.length} checked, ${vectorFailures} failed (${Object.keys(perFn).length} functions; ${doc.vectors.filter((v) => v.id.startsWith("py-")).length} transcribed from EonTimer's Python unit tests)`);
 
+// An empty file must not pass: zero checks is not a green run.
+if (doc.vectors.length === 0) {
+  failures++;
+  console.error('FAIL no vectors: the file\'s "vectors" array is empty');
+}
+
+// The file's own header says how many vectors it should carry (written by the builder); a
+// silently truncated or hand-pruned file fails here.
+if (typeof doc.count !== "number") {
+  failures++;
+  console.error('FAIL vector count: the file has no numeric "count" header field');
+} else if (doc.count !== doc.vectors.length) {
+  failures++;
+  console.error(`FAIL vector count: header says ${doc.count}, file has ${doc.vectors.length}`);
+} else {
+  console.log(`vector count matches the header (${doc.count})`);
+}
+
 // ---- 2. Negative control: a corrupted copy of one vector must fail ----
+// The control vector must be present; a file without it has not exercised the checker.
 {
-  const original = doc.vectors.find((v) => v.fn === "gen4Phases" && v.id.indexOf("default-gen4-phases-NDS_SLOT1") === 0) || doc.vectors[0];
-  const corrupted = JSON.parse(JSON.stringify(original));
-  corrupted.id = original.id + " [CORRUPTED +1 ms on phase 1]";
-  corrupted.expect = Array.isArray(corrupted.expect) ? [corrupted.expect[0] + 1].concat(corrupted.expect.slice(1)) : corrupted.expect + 1;
-  const detected = !checkVector(corrupted, true);
-  if (!detected) {
+  const original = doc.vectors.find((v) => v.id === CONTROL_VECTOR_ID);
+  if (!original) {
     failures++;
-    console.error(`FAIL negative control: corrupted vector ${corrupted.id} was NOT detected`);
+    console.error(`FAIL negative control: vector "${CONTROL_VECTOR_ID}" is missing, so the checker was not exercised`);
   } else {
-    console.log(`negative control: corrupted vector "${corrupted.id}" correctly fails (expected ${fmt(decode(corrupted.expect))}, actual ${fmt(call(original.fn, original.settings, decode(original.args)))})`);
+    const corrupted = JSON.parse(JSON.stringify(original));
+    corrupted.id = original.id + " [CORRUPTED +1 ms on phase 1]";
+    corrupted.expect = [corrupted.expect[0] + 1].concat(corrupted.expect.slice(1));
+    const detected = !checkVector(corrupted, true);
+    if (!detected) {
+      failures++;
+      console.error(`FAIL negative control: corrupted vector ${corrupted.id} was NOT detected`);
+    } else {
+      console.log(`negative control: corrupted vector "${corrupted.id}" correctly fails (expected ${fmt(decode(corrupted.expect))}, actual ${fmt(call(original.fn, original.settings, decode(original.args)))})`);
+    }
   }
 }
 
@@ -123,6 +150,7 @@ check("GBA fps is rng.js's constant", T.GBA_FPS, 16777216 / 280896);
 check("NDS slot-1 fps is gen4.js's constant", T.NDS_SLOT1_FPS, 59.8261);
 check("NDS slot-2 fps", T.NDS_SLOT2_FPS, 59.6555);
 check("DSI and 3DS use the slot-1 rate", [T.CONSOLES.DSI, T.CONSOLES["3DS"]], [59.8261, 59.8261]);
+check("unknown console names, including Object.prototype keys, fall to slot-1 (calibrator.ts:54-55)", ["UNKNOWN", "constructor", "toString", "hasOwnProperty"].map((c) => T.fps({ console: c })), [59.8261, 59.8261, 59.8261, 59.8261]);
 check("custom fps 0 throws", (() => { try { T.msPerFrame({ console: "CUSTOM", customFps: 0 }); return false; } catch (e) { return true; } })(), true);
 check("half-to-even ties", [0.5, 1.5, 2.5, 3.5, -0.5, -1.5, -2.5].map(T.roundHalfToEven), [0, 2, 2, 4, 0, -2, -2]);
 check("gen3 calibrated model", T.gen3Calibrated({ console: "GBA" }, T.DEFAULTS.gen3, 990).calibration, T.calibrateFrame({ console: "GBA" }, 1000, 990));

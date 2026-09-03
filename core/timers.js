@@ -1,4 +1,5 @@
-// Timer models ported from EonTimer (MIT, https://github.com/DasAmpharos/EonTimer, main @ ad10886).
+// Timer models ported from EonTimer (MIT, https://github.com/DasAmpharos/EonTimer, main @ ad10886;
+// its MIT notice is reproduced in THIRD_PARTY_NOTICES.md at the repo root).
 // Every constant and formula cites the EonTimer file:line it was read from; see docs/FACTS.md
 // "Timer models". The arithmetic is kept in EonTimer's operation order so that this file,
 // app/Core/Timers.cs and EonTimer itself agree bit-for-bit (tests/timer-vectors.json).
@@ -80,8 +81,9 @@
       if (s.customFps === 0) throw new Error("Custom framerate must be greater than 0");
       return s.customFps;
     }
-    var f = CONSOLES[s.console];
-    return f === undefined ? NDS_SLOT1_FPS : f;   // calibrator.ts:54-55 default branch
+    // Own-property lookup: prototype names ("constructor", "toString") are unknown consoles and
+    // take EonTimer's default branch (calibrator.ts:54-55) instead of reading Object.prototype.
+    return Object.prototype.hasOwnProperty.call(CONSOLES, s.console) ? CONSOLES[s.console] : NDS_SLOT1_FPS;
   }
 
   function msPerFrame(settings) {
@@ -225,7 +227,7 @@
     return 0;
   }
 
-  function gen4Calibrated(settings, model, delayHit) {        // Gen4Panel.tsx:219-224
+  function gen4Calibrated(settings, model, delayHit) {        // Gen4Panel.tsx:45-50
     var next = {};
     for (var k in model) next[k] = model[k];
     next.calibratedDelay = model.calibratedDelay + calibrateGen4(settings, model, delayHit);
@@ -288,7 +290,7 @@
     return { calibrationDelta: calibrationDelta, entralinkCalibrationDelta: entralinkCalibrationDelta, frameCalibrationDelta: frameCalibrationDelta };
   }
 
-  function gen5Calibrated(settings, model, hits) {            // Gen5Panel.tsx:366-377
+  function gen5Calibrated(settings, model, hits) {            // Gen5Panel.tsx:63-74
     var r = calibrateGen5(settings, model, hits);
     var next = {};
     for (var k in model) next[k] = model[k];
@@ -315,7 +317,7 @@
     return phase.target - hit;
   }
 
-  function customPhaseCalibrated(settings, phase, hit) {      // CustomPanel.tsx:619-628
+  function customPhaseCalibrated(settings, phase, hit) {      // CustomPanel.tsx:104-110
     return { unit: phase.unit, target: phase.target, calibration: phase.calibration + calibrateCustomPhase(settings, phase, hit) };
   }
 

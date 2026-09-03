@@ -361,11 +361,19 @@ truth is EonTimer (MIT, https://github.com/DasAmpharos/EonTimer), `main` @
 `ad10886d83bc455ad208c82925610c642d9e8864` (2026-04-20, the React/TypeScript rewrite; the
 project went Kotlin `2.x` → C++ `3.x-cpp` → Python `3.x-python` → TS). Ported function-for-function
 into `core/timers.js` and `app/Core/Timers.cs` with EonTimer's operation order kept, and verified
-by `tests/timer-vectors.json` (467 vectors, every expected value computed by running EonTimer's
+by `tests/timer-vectors.json` (469 vectors, every expected value computed by running EonTimer's
 own TS; 47 of them are the literal assertions of its Python unit tests at
 `3.x-python` @ `13d15f72`, which the TS reproduces exactly) plus a 200-parameter-set JS/C#
 cross-check (`tests/timer-parity.json`, also recomputed by EonTimer's TS with 0 mismatches).
+Both vector checkers (`tests/test-timers.cjs`, `app/Tests/TimerChecks.cs`) fail outright on an
+empty vector array, on a vector count that disagrees with the file's own `count` header, or when
+the negative-control vector `default-gen4-phases-NDS_SLOT1` is absent.
 Paths below are inside the EonTimer repo.
+
+License: EonTimer's MIT notice is reproduced in `THIRD_PARTY_NOTICES.md` at the repo root.
+`main` @ ad10886 ships no LICENSE file — its `README.md:74` links a `LICENSE.md` that exists only
+on the `2.x` and `3.x-cpp` branches (Copyright (c) 2019 dylmeadows) and on `3.x-python`
+(Copyright (c) 2019 DasAmpharos); the notice reproduced is `origin/3.x-python:LICENSE.md`.
 
 ## Console frame rates
 
@@ -376,13 +384,14 @@ Paths below are inside the EonTimer repo.
 | NDS slot-2 (GBA cart in a DS) | 59.6555 | 16.76291372966449 | `constants.ts:25,29`; `calibrator.ts:42-43` |
 | DSi, 3DS | = slot-1 (59.8261) | | `calibrator.ts:44-47` (`case Console.DSI: case Console.THREE_DS:` fall into slot-1) |
 | Custom | user fps; 0 throws | 1000 / fps | `calibrator.ts:48-53` |
-| (unknown) | falls back to slot-1 | | `calibrator.ts:54-55` |
+| (unknown) | falls back to slot-1 | | `calibrator.ts:54-55`; `core/timers.js` looks consoles up as own properties so `Object.prototype` keys such as `"constructor"` count as unknown (vectors `unknown-console-constructor-*`) |
 
 The exact ratio for GBA is TS-only: the Python (`eon_timer/settings/timer/model.py:8`) and C++
 (`src/models/Console.cpp:8`) branches use 59.7275, and the 2019 Kotlin branch used 59.7271
 (`model/settings/Console.kt:6`). `core/timers.js` takes GBA from `rng.js` (`GBA_FPS`) and slot-1
-from `gen4.js` (`NDS_FPS`), so the three engines share one constant each. Note the RNG guide's
-shorthand "3DS 59.6555" is wrong by EonTimer's table: 59.6555 is slot-2; 3DS is slot-1.
+from `gen4.js` (`NDS_FPS`), so the three engines share one constant each. The RNG guide design
+doc (`RNG-Solution/docs/RNG_GUIDE_DESIGN.md:805`) lists the same table — slot-2 59.6555, DSi/3DS =
+slot-1 — with GBA as the 59.7275 shorthand.
 
 ## Rounding
 
@@ -394,7 +403,7 @@ frame↔ms conversion is a whole number. The Python tests pin the ties: 1.5→2,
 (`test/timers/calibrator_test.py:14-18`). The C# port uses 2^-52 explicitly (`double.Epsilon`
 is the smallest denormal, not machine epsilon).
 
-`precisionCalibration` (default off, `src/store/index.ts:125`): when on, calibration values are
+`precisionCalibration` (default off, `src/store/index.ts:124`): when on, calibration values are
 kept in ms (`calibrateToMilliseconds` returns the value unchanged, `calibrateToDelays` rounds to
 whole ms, `calibrator.ts:67-75`); when off they are stored in whole frames
 (`toDelays`/`toMilliseconds`).
@@ -430,11 +439,12 @@ subtraction — this is the half-frame gap between EonTimer and `gen4.js`.
   (`delayTimer.ts:9-22`). Calibrate from a delay hit: `Δ = toMilliseconds(hit) −
   toMilliseconds(target)`, ×0.75 if \|Δ\| ≤ 167 else ×1.0, then `calibratedDelay +=
   toDelays(Δ)`; a hit of 0 is ignored (`delayTimer.ts:24-34`, `gen4Timer.ts:31-40`,
-  `Gen4Panel.tsx:219-224`). Gen 4 always rounds to whole frames — it bypasses
+  `Gen4Panel.tsx:45-50`). Gen 4 always rounds to whole frames — it bypasses
   `precisionCalibration`. Defaults 600 / 50 / 500 / 14 (`store/index.ts:142-147`).
 - **Second (Gen 5 Standard)**: `[toMinimumLength(second×1000 + calibrateToMilliseconds(cal) +
   200)]` (`secondTimer.ts:3-9`, `gen5Timer.ts:24,29`); calibrate `cal +=
-  calibrateToDelays(secondHit rule)` (`gen5Timer.ts:96-103`).
+  calibrateToDelays(secondHit rule)` (`gen5Timer.ts:96-103`; every Gen 5 mode's deltas are
+  applied in `Gen5Panel.tsx:63-74`).
 - **C-Gear (Gen 5)**: the Delay model with `calibrateToMilliseconds(cal)`; calibrate from the
   delay hit only (`gen5Timer.ts:31,104-111`).
 - **Entralink (Gen 5)**: Delay phases, then `+250` on phase 1 and `− calibrateToMilliseconds
@@ -446,12 +456,13 @@ subtraction — this is the half-frame gap between EonTimer and `gen4.js`.
   second 50, advances 100 (`store/index.ts:132-140`).
 - **Custom**: per phase `unit ∈ {ms, advances, hex}`, `value + calibration` with advances/hex
   first through `toMilliseconds` (`customTimer.ts:10-18`); calibrate `calibration +=
-  toMilliseconds(target − hit)` (ms unit: `target − hit`) (`customTimer.ts:20-29`).
+  toMilliseconds(target − hit)` (ms unit: `target − hit`) (`customTimer.ts:20-29`, applied per
+  phase in `CustomPanel.tsx:104-110`).
 
 ## Community starting calibrations (not in EonTimer's code)
 
 −95 is EonTimer's own Gen 5 default (`store/index.ts:134`, also `3.x-python
-eon_timer/timers/gen5/model.py:18`, Kotlin `Gen5TimerConstants.kt:7`). The −424 "3DS"
+eon_timer/timers/gen5/model.py:18`, Kotlin `Gen5TimerConstants.kt:6`). The −424 "3DS"
 calibration named in the RNG guide design appears in **no** EonTimer branch (grepped `main`,
 `2.x`, `3.x-cpp`, `3.x-python`); it is carried as `GEN5_COMMUNITY_CALIBRATION["3DS"]` /
 `Gen5CommunityCalibration3ds` for the guide's use, source not recorded, re-measure per console.
