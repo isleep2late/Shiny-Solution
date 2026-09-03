@@ -426,7 +426,13 @@ without saying why.
 > `rtc-brackets/` CSVs, every sha1 recorded in `inputs_sha1`). Both ports are checked against
 > `tests/gen2tid-vectors.json`, emitted by `tests/gen2_reference.py`, which reads the CSVs directly and
 > restates every rule below in its own arithmetic (3,893 cases; a corrupted vector is shown failing in
-> both runners). No head (webapp tab, desktop panel) exists for Gen 2 yet.
+> both runners). The head over it is the web app's Gen 2 TID tab (`webapp/gen2tid-ui.js`, also the Electron app
+> and the mobile bundle): it resolves game, console, methodology and RTC state from this data, prints every
+> methodology's protocol and validity conditions verbatim, names the methodology id on every output, states that no
+> hardware sample exists and that the published route IDs need their community scripts, shows the reachability rule
+> below, and calibrates in bins (`isOutlierBins` plus `gen1tid`'s `isDuplicate`; `gen1tid`'s `addSample` throws on
+> a bin-centre offset, checked in `tests/test-webapp.cjs`) under `shinySolution.gen2tid.calibration` per mode. No
+> desktop panel exists for Gen 2 yet.
 
 Labels as in the derivation folder: **STRUCTURAL** = read in the pret decomp (paths under
 `pokegold/` and `pokecrystal/`), **EMPIRICAL** = measured on pokemon-speedrunning/gambatte-core

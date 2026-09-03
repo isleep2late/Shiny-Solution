@@ -170,19 +170,71 @@ promoted), the desktop app's
    press itself (button overlay, hand cam) or its first visible effect (the DMG's 38.83-frame
    and the GBA's 8.7-frame press-to-visible lag are subtracted).
 
-## Gen 2 Trainer ID / Lucky ID (Gold / Silver / Crystal): the engine from node
+## Gen 2 Trainer ID / Lucky ID (Gold / Silver / Crystal): the one timed A tap
 
-No tab shows Gen 2 yet. The engine (`core/gen2tid.js`; the same functions in `app/Core/Gen2Tid.cs`)
-runs over `core/data/gen2-tid.json` from node in a checkout, and this is what a tab will do. The
-methodology is `<game>/<gbp|gbc|dmg>/hold-start-v1` (Gold and Silver also `dmg/late-start-v1`):
-clear the save data (Up+B+Select on the title), hold START from power-on until the NEW GAME menu
-box appears, release it as it appears, and tap A once for 4-8 frames at the cue; on Gold and
-Silver press nothing else until the roll is over (about 0.35 s). The target is a 4-frame poll bin
-(0-598), not a frame, and the Trainer ID, the Lucky ID and (Crystal) the Secret ID are fixed per
-bin. The tables are emulator-derived with no hardware sample: on a console the first attempts are
-a transfer test, as for Gen 1 Blue and Yellow. Gold and Silver also depend on the cartridge's RTC:
+TARGET mode, human input only, in the web app's **Gen 2 TID** tab (the same page in the Electron app
+and the mobile bundle; no desktop panel yet). The methodology is `<game>/<gbp|gbc|dmg>/hold-start-v1`
+(Gold and Silver also `dmg/late-start-v1`): clear the save data (Up+B+Select on the title), hold
+START from power-on until the NEW GAME menu box appears, release it as it appears, and tap A once for
+4-8 frames at the cue; on Gold and Silver press nothing else until the roll is over (about 0.35 s).
+The target is a 4-frame poll bin (0-598) counted from the menu box you can see, not a frame, and the
+Trainer ID, the Lucky ID and (Crystal) the Secret ID are fixed per bin. **No hardware sample exists
+for any Gen 2 configuration**: the tables are emulator-derived (GSE / gambatte-speedrun in GBP mode
+is the exact case), so on a console the first attempts are a transfer test, as for Gen 1 Blue and
+Yellow; the tab says so on every protocol. Gold and Silver also depend on the cartridge's RTC:
 `days0` (a running clock under 140 days) and `days512` (the carry bit) recur; the other brackets
 and the halted-clock family last one boot.
+
+1. **Game, console, methodology, RTC state.** Pick Gold, Silver or Crystal and the console: GSE /
+   gambatte-speedrun in GBP mode (emulator-exact), a GameCube Game Boy Player, a GBA / GBA SP / GBA
+   HD, a Game Boy Color or the original Game Boy (which offers two methodologies: hold-start, START
+   down before the boot logo ends, and late-start, START first pressed during the white gap or the
+   copyright text). Read the **methodology** it resolves to (e.g. `gold/gbp/hold-start-v1`) and, in
+   the details, every methodology of the game with its protocol text and validity conditions
+   verbatim. For Gold and Silver choose the cartridge's **RTC state**: `days0` for GSE, a fresh
+   battery or any cartridge booted before (or `days512` with the carry bit); a 140-511-day bracket
+   or a halted-clock state only for a cartridge's FIRST boot since the battery went in or the clock
+   was halted, and the tab marks every such state, row and protocol *first boot only*. Crystal is
+   immune and has one table.
+2. **Target.** The table lists the bins that give a route target under the target sets in force,
+   in the chosen state and in the console's other states (a row in another state switches the
+   state and is first boot only): in `days0` there is none, because the published Gold/Silver
+   route IDs (09705, 55785, the NSC pair, the glitchless Lucky ID 01001) and Crystal's 26FB/186F
+   need their community multi-step scripts, which the tab says and does not tabulate. Otherwise
+   type the Trainer ID you want (and the Lucky ID for a pair) and take one of its bins, or any bin.
+3. **Anchor and correction.** The anchor is the moment you press ANCHOR (or Space): the NEW GAME /
+   OPTION box appearing (recommended, the only anchor on a Game Boy Player), the power switch
+   (handhelds, a Game Boy Color, a DMG; INFERRED on a GBA, where the power-on-to-boot delay is not
+   measured), or GSE's Ctrl+R reset (the 2.175 s fade and stall are added). The correction starts at
+   200 ms (menu) or 100 ms (power-on, reset) and becomes the mean of your calibrated attempts. Read
+   the **PROTOCOL**: clear the save, hold START inside the window, release it as the box appears,
+   then four short beeps and one long high beep: tap A ON the long beep, once, 67-134 ms, and press
+   nothing for 0.35 s.
+4. **Cue.** Press ANCHOR at the anchor moment: the schedule plays from the Gen 1 tab's player (one
+   pre-rendered buffer, every beep on an exact sample, the screen flashing with each). The cue log
+   names the attempt's mode.
+5. **What did you get?** Type the Trainer ID (and, once you have seen it on the Radio Tower lottery
+   screen, the Lucky ID). It inverts to the bin you hit in the outcome scope (the chosen first-boot
+   state, else the two-state prior); the implied correction (used + bins late x 4 x 16.7427 ms) is
+   averaged in; a hit more than 15 bins (60 frames) from the aim or the same attempt entered twice
+   is refused unless you tick force; IDs absent from the scope teach nothing, and if they are
+   produced in another RTC state of the console the tab says which (a first-boot state, the clock
+   rather than your timing). Samples are kept per console and anchor under
+   `shinySolution.gen2tid.calibration` with their methodology id, RTC state and mode, per mode as
+   in the Gen 1 tab (PRACTICE / HUNT has its own store; a sample of the other mode is listed as
+   ignored, never averaged).
+6. **Invert.** Any Trainer ID (and Lucky ID) against the console's tables in a chosen scope (the
+   two-state prior, every state, the running or the halted family, the chosen state): each
+   candidate table and bin, whether it recurs after the first boot, and the scope's ambiguity
+   statistics (Gold under the prior: 14 of 1184 Trainer IDs ambiguous, no pair collision; over the
+   18 GBP states 769, max 5 candidates, 2 pair collisions).
+7. **Verify (moderators).** The Trainer ID (and Lucky ID) and the seconds from the visible menu box
+   to the A press measured from the video: the bin that time predicts against the bins that produce
+   the IDs, consistent within one bin. No press-to-visible lag is known for Gen 2 (no hardware
+   sample): measure the press itself.
+
+The same engine from node (`core/gen2tid.js`; the same functions in `app/Core/Gen2Tid.cs`) over
+`core/data/gen2-tid.json` in a checkout, which is what the tab calls:
 
 1. **What a bin gives, and what a typed ID inverts to.** `lookup` reads one table; `invert` takes
    the Trainer ID you typed (and the Lucky ID if you have it) back to the bin, under the two-state
@@ -344,7 +396,7 @@ The no-emulator toolset (all searchers, calculators, checkers, and both timers) 
 available without installing anything:
 
 - **hackmons.com/rng-solution** (in preview until it is promoted) — the full toolset in the
-  browser, including the Gen 1 TID tab and the Emerald / FRLG Secret ID search (no capture reading
+  browser, including the Gen 1 TID tab, the Emerald / FRLG Secret ID search and the Gen 2 TID tab (no capture reading
   by design: `webapp/hunt/` is never bundled into it, and the RUN / PRACTICE-HUNT switch above the
   tabs only changes which calibration store is in force). **hackmons.com/shiny-solution** is the
   live page with the earlier tools until then.
