@@ -225,8 +225,8 @@ RNG Solution's registry and tables and embedded in every head.
 - `tests/test-sw.cjs` (in `run-tests.sh`): `webapp/sw.js` driven in a node sandbox with fake caches, fetch and clients:
   install precaches every file `index.html` loads, activate drops the caches of other builds, and with the network gone
   the shell, a navigation to the page and a wizard table opened once are served from the caches while a table
-  never opened is not (a navigation to another path under the scope is redirected to the page offline, since the
-  shell's relative URLs resolve only beside `index.html`; the precache asks with cache mode reload); the build stamp in `sw.js` equals the one in `index.html` and the hash the shipped sources give
+  never opened is not (a navigation to another path under the scope gets, offline, a page that sends the browser to
+  `index.html`, since the shell's relative URLs resolve only beside it; the precache asks with cache mode reload); the build stamp in `sw.js` equals the one in `index.html` and the hash the shipped sources give
   now; a copy of `sw.js` with its data route cut out is shown failing. `run-tests.sh` also loads the mobile bundle in
   headless Chrome with an Android WebView user agent at 360x780 and reads from its DOM that no worker is registered,
   why, and that no page error was raised.

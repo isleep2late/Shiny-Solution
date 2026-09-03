@@ -621,7 +621,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
 <script src="gen1tid-ui.js"></script>
 <script src="gen2tid-ui.js"></script>
 <script src="wizard-ui.js"></script>
-<script>window.SHINY_BUILD = "c521de99d9b0";</script>
+<script>window.SHINY_BUILD = "3890d21d2111";</script>
 <script id="sw-register">
 // The offline copy: sw.js is registered over http or https only. Under file:// (the Electron app, the headless
 // self-tests) nothing is registered and the status line says so; the mobile bundle has this element stripped
@@ -634,7 +634,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
   if (!/^https?:$/.test(location.protocol)) return say("not registered under " + location.protocol + " (the service worker needs http or https)");
   if (!("serviceWorker" in navigator)) return say("not available in this browser");
   function state() { say(navigator.serviceWorker.controller ? "controlled by " + navigator.serviceWorker.controller.scriptURL.replace(/^.*\//, "") + ", the page and the wizard tables opened so far work offline" : "registered, this load came from the network; the next one is served by sw.js"); }
-  navigator.serviceWorker.register("sw.js").then(function () { state(); navigator.serviceWorker.addEventListener("controllerchange", state); }, function (err) { say("registration failed: " + (err && err.message || err)); });
+  navigator.serviceWorker.register("sw.js").then(function () { state(); navigator.serviceWorker.addEventListener("controllerchange", state); }, function (err) { var c = navigator.serviceWorker.controller; say(c ? "controlled by " + c.scriptURL.replace(/^.*\//, "") + ", the page and the wizard tables opened so far work offline (the update check failed: " + (err && err.message || err) + ")" : "registration failed: " + (err && err.message || err)); });
 })();
 </script>
 </body>

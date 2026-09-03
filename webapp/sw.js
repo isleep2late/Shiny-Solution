@@ -7,12 +7,13 @@
 //   shiny-data-<BUILD>   data/*.js (the wizard's tables), cached on first use and cache-first from then
 //                        on, so the wizard works offline after the tab was opened once online.
 // A navigation to the scope root or to index.html (any query, offline or not) is answered with the cached index.html;
-// a navigation to any other path under the scope goes to the network and, offline, is redirected to index.html, since
-// the shell's script and stylesheet URLs are relative and resolve only beside index.html.
+// a navigation to any other path under the scope goes to the network and, offline, gets a small page that sends the
+// browser to index.html (a script, a meta refresh and a link), since the shell's script and stylesheet URLs are relative
+// and resolve only beside index.html.
 // BUILD is stamped by webapp/sync-core.sh (a hash of the shipped sources, written here and into
 // index.html): a changed sw.js installs as a new worker, precaches into new caches and, at activate,
 // deletes every shiny-* cache of another build, so a new sync invalidates the old copy.
-const BUILD = "c521de99d9b0";
+const BUILD = "3890d21d2111";
 const SHELL_CACHE = "shiny-shell-" + BUILD;
 const DATA_CACHE = "shiny-data-" + BUILD;
 const INDEX = "index.html";
@@ -36,6 +37,15 @@ self.addEventListener("activate", function (event) {
   }).then(function () { return self.clients.claim(); }));
 });
 
+// the offline answer to a navigation away from index.html: the shell's relative URLs resolve only beside index.html, so
+// the browser is sent there (a script, a meta refresh for a browser without scripts, and a link)
+function toIndex() {
+  const to = new URL(INDEX, self.location.href).href;
+  const html = '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=' + to + '"><title>Shiny-Solution</title>' +
+    '<script>location.replace(' + JSON.stringify(to) + ');</script><p>Offline: <a href="' + to + '">' + to + '</a></p>';
+  return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+}
+
 function isDataFile(url) {
   return /\/data\/[^/]+\.js$/.test(url.pathname);
 }
@@ -50,8 +60,8 @@ self.addEventListener("fetch", function (event) {
       // the shell, whatever the query; the network only when the shell is not cached yet
       event.respondWith(caches.match(INDEX).then(function (cached) { return cached || fetch(request); }));
     } else {
-      // another path under the scope: the network; offline, index.html by redirect (the shell's relative URLs resolve only beside it)
-      event.respondWith(fetch(request).catch(function () { return Response.redirect(new URL(INDEX, self.location.href).href, 302); }));
+      // another path under the scope: the network; offline, the page that sends the browser to index.html
+      event.respondWith(fetch(request).catch(function () { return toIndex(); }));
     }
     return;
   }

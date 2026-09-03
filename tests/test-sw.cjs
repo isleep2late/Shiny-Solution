@@ -2,8 +2,8 @@
 // install precaches the app shell (every script index.html loads, the stylesheet, the manifest, the icons), activate
 // deletes the caches of other builds and claims the clients, and, with the network gone, a fetch for a shell file, a
 // navigation to the scope root or to index.html and a data file opened once before are all answered from the caches; a
-// navigation to another path under the scope goes to the network online and is redirected to index.html offline (the
-// shell's relative URLs resolve only beside it); the precache asks with cache mode reload; the data route is
+// navigation to another path under the scope goes to the network online and gets, offline, a page that sends the browser
+// to index.html (the shell's relative URLs resolve only beside it); the precache asks with cache mode reload; the data route is
 // cache-first (a second online request never reaches the network), a data file never opened is not served offline,
 // and cross-origin requests are left alone. The build stamp in sw.js must be the one in index.html
 // and the precache list must name every file the page loads, each present under webapp/.
@@ -188,7 +188,7 @@ network.files["/app/data/wizard-gen4.js"] = "window.ShinyWizardData4 = {};";
   assert("offline: only the never-opened tables were asked of the network", JSON.stringify(network.log) === JSON.stringify([BASE + "data/wizard-gen4.js"]), network.log);
   network.log.length = 0;
   r = await fetchEvent(BASE + "some/other/page", "navigate");
-  assert("offline: a navigation to another path under the scope is redirected to index.html (the shell's relative URLs resolve only beside it), not served the shell in place", r.handled && r.response && r.response.status === 302 && r.response.headers.get("location") === BASE + "index.html", r.error ? String(r.error) : (r.response && r.response.status));
+  assert("offline: a navigation to another path under the scope gets a page that sends the browser to index.html by script, meta refresh and link (the shell's relative URLs resolve only beside it), not the shell in place", r.handled && r.response && r.response.status === 200 && /^text\/html/.test(r.response.headers.get("content-type") || "") && r.text.includes('location.replace("' + BASE + 'index.html")') && r.text.includes('content="0; url=' + BASE + 'index.html"') && r.text.includes('<a href="' + BASE + 'index.html">') && !r.text.includes("shell:index.html"), r.error ? String(r.error) : (r.response && r.response.status));
   assert("offline: that navigation was tried on the network first", JSON.stringify(network.log) === JSON.stringify([BASE + "some/other/page"]), network.log);
   r = await fetchEvent(BASE + "app.js?v=2", "no-cors");
   assert("offline: a shell file asked with a query is served ignoring the search", r.handled && r.text === "shell:app.js");
