@@ -7,11 +7,11 @@ generator engines (`core/generators.js`, `app/Core/Generators.cs`) take these sp
 slot records as arguments, `tools/build-generator-vectors.cjs` resolves PokeFinder's cases
 against them, and `tests/test-data.cjs` asserts them.
 
-TODO (wizard phase): no shipped head loads these six files yet, so `webapp/sync-core.sh`,
+TODO: no shipped head loads these six files yet, so `webapp/sync-core.sh`,
 `webapp/build-mobile-bundle.mjs`, `electron/build.sh` and the `build-desktop` workflow carry
 only `gen1-tid.json` / `gen3-sid.json` / `gen2-tid.json` (as `gen1-data.js`; the Gen 2 tables are
-1,034,058 bytes, carried where the Gen 1 records are carried although no head reads them yet, so
-the plain mobile bundle is about 1.6 MB) and the engines, `core/generators.js` included. The wizard phase adds species/encounters/statics to those four the same way once a
+1,034,046 bytes, carried where the Gen 1 records are carried although no head reads them yet, so
+the plain mobile bundle is about 1.6 MB) and the engines, `core/generators.js` included. Species, encounters and statics join those three the same way once a
 tab consumes them (4.7 MB of JSON in total; a per-game split or a lazy fetch is the open choice).
 
 | File | Bytes | Content |

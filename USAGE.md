@@ -158,6 +158,81 @@ promoted), the desktop app's
    press itself (button overlay, hand cam) or its first visible effect (the DMG's 38.83-frame
    and the GBA's 8.7-frame press-to-visible lag are subtracted).
 
+## Gen 2 Trainer ID / Lucky ID (Gold / Silver / Crystal): the engine from node
+
+No tab shows Gen 2 yet. The engine (`core/gen2tid.js`; the same functions in `app/Core/Gen2Tid.cs`)
+runs over `core/data/gen2-tid.json` from node in a checkout, and this is what a tab will do. The
+methodology is `<game>/<gbp|gbc|dmg>/hold-start-v1` (Gold and Silver also `dmg/late-start-v1`):
+clear the save data (Up+B+Select on the title), hold START from power-on until the NEW GAME menu
+box appears, release it as it appears, and tap A once for 4-8 frames at the cue; on Gold and
+Silver press nothing else until the roll is over (about 0.35 s). The target is a 4-frame poll bin
+(0-598), not a frame, and the Trainer ID, the Lucky ID and (Crystal) the Secret ID are fixed per
+bin. The tables are emulator-derived with no hardware sample: on a console the first attempts are
+a transfer test, as for Gen 1 Blue and Yellow. Gold and Silver also depend on the cartridge's RTC:
+`days0` (a running clock under 140 days) and `days512` (the carry bit) recur; the other brackets
+and the halted-clock family last one boot.
+
+1. **What a bin gives, and what a typed ID inverts to.** `lookup` reads one table; `invert` takes
+   the Trainer ID you typed (and the Lucky ID if you have it) back to the bin, under the two-state
+   prior unless you scope it (`family`, `states`):
+
+   ```
+   node -e 'const g=require("./core/gen2tid.js"),d=require("./core/data/gen2-tid.json");const r=g.lookup(d,"gold","gbp","days0",300);console.log("bin 300:",g.hex(r.tid,4),g.hex(r.lid,4),"offsets",r.offsets,"visible",r.visible,"aim",r.aim);const inv=g.invert(d,"gold",r.tid,{platformKey:"gbp"});console.log("invert",g.hex(r.tid,4),"->",inv.ambiguous?"ambiguous":"resolved",inv.candidates.map(c=>c.table+" bin "+c.bin+" LID "+g.hex(c.lid,4)+(c.reachableAfterFirstBoot?"":" (first boot only)")).join("; "))'
+   ```
+   ```
+   bin 300: 4F62 EE7C offsets [ 1205, 1208 ] visible [ 1201, 1204 ] aim 1206.5
+   invert 4F62 -> resolved gold/gbp/days0 bin 300 LID EE7C
+   ```
+   `offsets` are frames after the game's menu detector at which A may go down, `visible` the same
+   frames counted from the menu box you can see (4 frames later). A candidate in a bracket or
+   halted state is marked `(first boot only)`; no candidate means the IDs are absent from every
+   table in scope (wrong platform, a dead-battery clock, or a violated protocol), never an error.
+
+2. **Target sets and verdicts.** The route IDs are `community-script` sets: `verdictText` says
+   so, and `targetsAllStates` searches every RTC state of a platform for a single-tap bin that
+   produces a member:
+
+   ```
+   node -e 'const g=require("./core/gen2tid.js"),d=require("./core/data/gen2-tid.json");const sets=g.targetSetsFor(d,"gold");sets.forEach(s=>console.log(g.setDescribe(s)));console.log(g.verdictText(0xE83B,null,null,sets));console.log(g.verdictText(0x25E9,null,null,sets));const hits=g.targetsAllStates(d,"gold","gbp",sets);console.log("single-press hits on gold/gbp over every RTC state:",hits.length?hits.map(h=>h.state+" bin "+h.bin+" "+g.hex(h.tid,4)+"/"+g.hex(h.lid,4)+" "+h.sets.join(",")+(h.reachableAfterFirstBoot?"":" (first boot only)")).join("; "):"none")'
+   ```
+   ```
+   psr-gs-any-09705: TID $25E9 (9705)
+   psr-gs-old-55785: TID $D9E9 (55785)
+   psr-gold-nsc-d900: TID $D900 + LID $D3EC
+   glitchless-lid-01001: Lucky ID $03E9 (01001)
+   not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001)
+   route target (target set psr-gs-any-09705); the published protocol for it is a community multi-step script, not this single-tap methodology
+   single-press hits on gold/gbp over every RTC state: halt-days200 bin 392 6F53/03E9 glitchless-lid-01001 (first boot only)
+   ```
+   None of the published IDs is a single-tap target in the day-0 table: they need their
+   community scripts (which of those reproduce in the harness is in the README's support table
+   and in each set's `provenance`). The one hit above gives the Lucky ID on a halted-clock first
+   boot, with a different Trainer ID from the published pair.
+
+3. **The cue schedule.** `scheduleGen2` renders the cues for a bin under a methodology; the
+   `menu` anchor is the moment the NEW GAME box becomes visible (press ANCHOR then), `poweron`
+   the power switch, `reset` GSE's reset (which needs `resetExtraS`, the fade + stall):
+
+   ```
+   node -e 'const g=require("./core/gen2tid.js"),d=require("./core/data/gen2-tid.json");const s=g.scheduleGen2(d,"gold/gbp/hold-start-v1",300,200,{anchor:"menu"});console.log("A at",s.tA.toFixed(3),"s after the visible menu (aim",s.aimV,"frames, minus the 200 ms correction); A window",s.aWindow.map(x=>x.toFixed(3)).join("-"),"s; tap",s.tapMs.map(x=>x.toFixed(0)).join("-"),"ms; then nothing for",s.rollSettleS,"s");s.cues.forEach(c=>console.log(" ",c.t.toFixed(3),"s",c.label,c.freq+" Hz",c.ms+" ms"))'
+   ```
+   ```
+   A at 19.933 s after the visible menu (aim 1202.5 frames, minus the 200 ms correction); A window 20.108-20.175 s; tap 67-134 ms; then nothing for 0.35 s
+     15.933 s count-4 880 Hz 60 ms
+     16.933 s count-3 880 Hz 60 ms
+     17.933 s count-2 880 Hz 60 ms
+     18.933 s count-1 880 Hz 60 ms
+     19.933 s A 1320 Hz 150 ms
+   ```
+   Four count-in beeps a second apart, then the long high beep: tap A on it. The 200 ms is the
+   default menu-anchor correction (100 ms for the other anchors); after an attempt,
+   `sampleFromHit(data, game, platform, state, tid, lid, aimedBin, correctionUsed)` inverts what
+   you typed, takes the candidate nearest the aim and builds a sample the Gen 1 helpers average
+   (`meanCorrection`, `isDuplicate`), with the outlier guard in bins (`isOutlierBins`). Bins
+   close to the menu drop count-in beeps that would fall before the anchor (`droppedCountIn`).
+   `verify(data, game, platform, tid, lid, measuredS)` is the moderator's check: the seconds from
+   the visible menu box to the press against the bins that produce the typed IDs.
+
 ## Emerald / FireRed / LeafGreen: the Secret ID from a typed Trainer ID
 
 These games cannot have their Trainer ID chosen (it is the raw Timer1 count at the naming
@@ -204,6 +279,42 @@ The tab gives you targets, a two-phase timer, and seed verification:
    method, per pokemonrng.com guides, then trigger the encounter.
    HGSS starters: all three are rolled when the selection scene opens — Chikorita occupies
    advances 1–4, Cyndaquil 5–8, Totodile 9–12.
+
+## Gen 4 seed-to-time from node
+
+The seed-to-time layer (`core/seedtime4.js`; the same functions in `app/Core/SeedTime4.cs`) has
+no tab yet either. It answers the reverse question of the Gen 4 tab above: which DS clock setting
+and delay reach a seed that produces the mon you want, and how to tell which delay you hit. No DS
+session has landed one of its times yet; the delay a console reaches is the open hardware gate.
+
+```
+node -e 'const s=require("./core/seedtime4.js");const rows=s.wantedToTimes({ivs:{hp:31,atk:31,def:31,spa:31,spd:31,spe:31},method:"M1",maxFrame:100,delayMin:0,delayMax:65535,targetDelay:600,limit:3});rows.forEach(r=>console.log(s.hex8(r.seed),"frame",r.frame,r.year+"-"+r.month+"-"+r.day,r.hour+":"+r.minute+":"+r.second,"delay",r.delay,"PID",s.hex8(r.pid),r.natureName));const t=s.seedToTimes(0x7B0448D1,2000,{limit:2});console.log("7B0448D1 in 2000:",t.map(x=>x.month+"/"+x.day+" "+x.hour+":"+x.minute+":"+x.second+" delay "+x.delay).join("; "));const p=s.planAdvances(0,7,{partyCount:1,tools:["journal","chatot"]});console.log("advance 0 -> 7:",p.plan.map(x=>x.uses+" x "+x.tool+" ("+x.label+")").join(", "),"remainder",p.remainder);const c=s.calibrateRows(0x7B0448D1,1,0,"DPPt");console.log("calibrate rows:",c.map(r=>s.hex8(r.seed)+" delay "+r.delay+" "+r.sequence.slice(0,23)+"...").join(" | "))'
+```
+```
+7B100958 frame 23 2099-1-5 16:59:59 delay 2293 PID 685011A9 Modest
+FB100958 frame 23 2099-5-27 16:57:59 delay 2293 PID E85091A9 Docile
+700217A2 frame 66 2099-1-1 2:52:59 delay 5951 PID E9375A48 Calm
+7B0448D1 in 2000: 1/5 4:59:59 delay 18641; 1/6 4:58:59 delay 18641
+advance 0 -> 7: 3 x journal (EMPIRICAL), 1 x chatot (STRUCTURAL) remainder 0
+calibrate rows: 7B0448D0 delay 18640 H, H, T, T, T, T, T, H,... | 7B0448D1 delay 18641 H, T, T, H, H, H, T, H,... | 7B0448D2 delay 18642 T, T, T, T, T, T, T, H,...
+```
+
+- `wantedToTimes` takes IVs (Method 1, or `method: "M4"` for the VBlank-skip statics), a PID, or
+  `tid`, `sid`, `shiny: true` and a nature; reverses them to seeds (PKHeX's algorithm), keeps the
+  seeds a clock can produce within `maxFrame` (the hour byte must be 0-23) and lists the date,
+  time and delay of each, nearest `targetDelay` first. A flawless Method 1 mon within 100 frames
+  is not reachable near delay 600: the nearest is delay 2293 at frame 23. The year is a delay
+  knob (+1 year = -1 delay for the same seed), which is why the rows sit in 2099.
+- `seedToTimes(seed, year)` lists every time of a year that produces one seed, so a row's
+  neighbours are one call away.
+- `planAdvances(current, target, {partyCount, tools})` spends the frames with the tools you name:
+  a Journal page flip is +2 (EMPIRICAL: a community convention with no LCRNG call in Platinum's
+  journal code), a Chatot cry +1, a 128-step friendship cycle +1 per party member, an Elm call +1
+  (STRUCTURAL, each cited in `advanceCosts()`).
+- `calibrateRows(seed, delayRange, secondRange, game)` is the verification table: the Poketch
+  coin-flip strings of the neighbouring delays (DPPt; the Chatot pitch bands and the HGSS Elm calls
+  and roamer routes are the other readouts) tell you which delay you actually hit, as the tab's
+  **Verify** does for the timer.
 
 ## Troubleshooting
 

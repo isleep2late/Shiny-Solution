@@ -39,7 +39,7 @@ file:line citations instead.
 
 # Gen 1/2 (Game Boy)
 
-## The RNG
+## The RNG (the hardware divider)
 
 No seedable PRNG exists. The state is two HRAM bytes (`hRandomAdd`/`hRandomSub`) stirred by
 the free-running hardware divider register rDIV: `Random_` adds rDIV into one byte and
@@ -419,7 +419,7 @@ without saying why.
 > `~/Desktop/Red-WR-Practice/gen2-tid`: its `README.md`, `REVIEW.md`, the 10 primary CSVs and the 152
 > `rtc-brackets/` CSVs, every sha1 recorded in `inputs_sha1`). Both ports are checked against
 > `tests/gen2tid-vectors.json`, emitted by `tests/gen2_reference.py`, which reads the CSVs directly and
-> restates every rule below in its own arithmetic (3,863 cases; a corrupted vector is shown failing in
+> restates every rule below in its own arithmetic (3,893 cases; a corrupted vector is shown failing in
 > both runners). No head (webapp tab, desktop panel) exists for Gen 2 yet.
 
 Labels as in the derivation folder: **STRUCTURAL** = read in the pret decomp (paths under
@@ -742,7 +742,7 @@ checks, a JS/C# cross-check on 310 random inputs (10 of them carry cases), and n
 (corrupted vectors, tampered cross-check answers, and the module with its carry, target check and
 legend line tampered) shown failing in both suites.
 
-### Not measured
+### Not measured (seed-to-time)
 
 No DS session: the delay a console actually reaches, and whether a chosen (date, time, delay) lands
 its seed on hardware, remain the hardware gate for Gen 4 seed-to-time: one DS session. The roamer model inherits PokeFinder's
@@ -750,7 +750,7 @@ assumption that the player is not standing on a roamer map at load.
 
 # Gen 3 (Game Boy Advance)
 
-## The RNG
+## The RNG (the LCRNG)
 
 One global 32-bit LCRNG. `pokeruby/src/random.c:7-13`:
 
@@ -1161,7 +1161,7 @@ methodology or Trainer ID (a pin is a fact about one save). Negative controls in
 the worked example's shiny PID pinned as NOT shiny drops the true row; a vector with a corrupted state
 fails the LCRNG parity check.
 
-#### Not measured
+#### Not measured (Secret ID)
 
 A `B` press instead of `A` (B on the name box answers NO and re-rolls the Trainer ID; B is also accepted by
 the text waits); a rival name longer than one letter on the NEW NAME path (it prints in two boxes, so 4
@@ -1282,7 +1282,7 @@ calibration named in the RNG guide design appears in **no** EonTimer branch (gre
 `2.x`, `3.x-cpp`, `3.x-python`); it is carried as `GEN5_COMMUNITY_CALIBRATION["3DS"]` /
 `Gen5CommunityCalibration3ds` for the guide's use, source not recorded, re-measure per console.
 
-## Where Shiny Solution's shipped timers differ from EonTimer (unchanged in this phase)
+## Where Shiny Solution's shipped timers differ from EonTimer
 
 - `core/gen4.js` `timerPhases` / `Gen4Timer.Phases`: no rounding anywhere (`calibration =
   ms(cd) − cs×1000` instead of `toMilliseconds(cd − toDelays(cs×1000))`); measured gap 7.489 ms
