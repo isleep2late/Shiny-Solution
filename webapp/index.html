@@ -18,6 +18,7 @@
   <button data-tab="g12">Gen 1/2 DVs</button>
   <button data-tab="g1tid">Gen 1 TID</button>
   <button data-tab="g2tid">Gen 2 TID</button>
+  <button data-tab="wizard">Wizard (Gen 3/4)</button>
   <button data-tab="about">About</button>
 </nav>
 <div id="mode-bar">
@@ -429,6 +430,140 @@
       <pre id="g2-verify-out" class="text"></pre>
     </div>
   </section>
+  <section id="tab-wizard" class="tab">
+    <div class="card">
+      <h2>1. Wanted-IVs wizard (Gen 3 / Gen 4): from the Pokemon you want to the frame, the seed and the procedure</h2>
+      <p>TARGET mode, human input only: pick the game, the encounter and the outcome you want; the wizard lists the
+      (PID, IVs) frames that satisfy it from the game's seed model, the times and delays that reach them, the timer
+      and a numbered procedure, then learns from what you type after the attempt. Every output names the seed model it
+      runs under and that model's validation status. Nothing here reads a capture.</p>
+      <div class="row">
+        <label>Game <select id="wz-game"></select></label>
+        <label>Console <select id="wz-console"></select></label>
+        <label id="wz-seed-row">Seed (hex) <input id="wz-seed" class="mono" value="00000000"><span id="wz-seed-note" class="hint"></span></label>
+      </div>
+      <p id="wz-model" class="result pre"></p>
+      <p id="wz-status" class="result pre"></p>
+    </div>
+    <div class="card hidden" id="wz-encounter-card">
+      <h2>2. Encounter and wanted outcome</h2>
+      <div class="row">
+        <label>Encounter <select id="wz-kind"><option value="static">static / gift (the catalogue)</option><option value="wild">wild slot (the encounter tables)</option></select></label>
+        <label id="wz-static-row">Entry <select id="wz-static"></select></label>
+      </div>
+      <div class="row" id="wz-wild-row">
+        <label>Map / table <select id="wz-table"></select></label>
+        <label>Kind <select id="wz-enc-kind"></select></label>
+        <label id="wz-time-row">Time of day <select id="wz-time"><option value="morning">morning (the base table)</option><option value="day">day</option><option value="night">night</option></select></label>
+        <label>Species <select id="wz-species"></select></label>
+      </div>
+      <p id="wz-encounter-note" class="hint"></p>
+      <div class="row">
+        <label id="wz-method-row">Method <select id="wz-method"><option value="M1">Method 1 (no VBlank skip)</option><option value="M2">Method 2 / H-2 (a VBlank between PID and IVs)</option><option value="M4">Method 4 / H-4 (a VBlank between the IV words)</option></select></label>
+        <label id="wz-lead-row">Lead <select id="wz-lead"></select></label>
+        <label id="wz-lead-nature-row" style="display:none">Lead nature <select id="wz-lead-nature"></select></label>
+        <label id="wz-lead-gender-row" style="display:none">Lead gender <select id="wz-lead-gender"><option value="F">female</option><option value="M">male</option></select></label>
+        <label id="wz-lead-level-row" style="display:none">Lead level <input id="wz-lead-level" type="number" min="1" max="100" value="50"></label>
+      </div>
+      <p id="wz-lead-note" class="hint"></p>
+      <h3>Wanted IVs (min / max per stat), nature, ability, gender, shiny</h3>
+      <div class="row">
+        <label>HP <input id="wz-min-hp" type="number" min="0" max="31" value="0"><input id="wz-max-hp" type="number" min="0" max="31" value="31"></label>
+        <label>Atk <input id="wz-min-atk" type="number" min="0" max="31" value="0"><input id="wz-max-atk" type="number" min="0" max="31" value="31"></label>
+        <label>Def <input id="wz-min-def" type="number" min="0" max="31" value="0"><input id="wz-max-def" type="number" min="0" max="31" value="31"></label>
+        <label>SpA <input id="wz-min-spa" type="number" min="0" max="31" value="0"><input id="wz-max-spa" type="number" min="0" max="31" value="31"></label>
+        <label>SpD <input id="wz-min-spd" type="number" min="0" max="31" value="0"><input id="wz-max-spd" type="number" min="0" max="31" value="31"></label>
+        <label>Spe <input id="wz-min-spe" type="number" min="0" max="31" value="0"><input id="wz-max-spe" type="number" min="0" max="31" value="31"></label>
+      </div>
+      <div class="row">
+        <label>Nature <select id="wz-nature"></select></label>
+        <label id="wz-ability-row">Ability <select id="wz-ability"></select></label>
+        <label id="wz-gender-row">Gender <select id="wz-gender"><option value="">any</option><option value="M">male</option><option value="F">female</option></select></label>
+        <label class="check"><input id="wz-shiny" type="checkbox"> shiny (needs the IDs)</label>
+        <label>Trainer ID <input id="wz-tid" type="number" min="0" max="65535"></label>
+        <label>Secret ID <input id="wz-sid" type="number" min="0" max="65535"></label>
+      </div>
+      <p id="wz-wanted-note" class="hint"></p>
+      <div class="row" id="wz-gen3-window">
+        <label>Search horizon (minutes after the seed, at most 240) <input id="wz-minutes" type="number" min="1" max="240" value="60"></label>
+      </div>
+      <div class="row" id="wz-gen4-window">
+        <label>Frame limit (0..2000) <input id="wz-maxframe" type="number" min="0" max="2000" value="100"></label>
+        <label>Years <input id="wz-year-min" type="number" min="2000" max="2099" value="2000"><input id="wz-year-max" type="number" min="2000" max="2099" value="2099"></label>
+        <label>Delay window <input id="wz-delay-min" type="number" min="0" max="16777215" value="0"><input id="wz-delay-max" type="number" min="0" max="16777215" value="65535"></label>
+        <label>Target delay (nearest first) <input id="wz-delay-target" type="number" min="0" max="16777215" value="600"></label>
+      </div>
+      <div class="row"><button id="wz-search">Search</button></div>
+      <pre id="wz-search-out" class="text"></pre>
+      <div id="wz-results"></div>
+      <p id="wz-target-info" class="result">Target: none yet (click a row)</p>
+    </div>
+    <div class="card">
+      <h2>3. Result card and procedure</h2>
+      <pre id="wz-card" class="text"></pre>
+      <pre id="wz-procedure" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>4. Timer</h2>
+      <p>The page's two-phase countdown (the Gen 4 tab's) over EonTimer's models from core/timers.js: Gen 3 a pre-timer
+      then the target frame in milliseconds plus the calibration; Gen 4 the delay model with the calibrated delay and
+      second. Start it (or press Space with nothing focused) at the moment the procedure names; Space again cancels.</p>
+      <div class="row" id="wz-timer-gen3">
+        <label>Pre-timer (ms) <input id="wz-pretimer" type="number" min="0" step="100" value="5000"></label>
+        <label>Calibration (ms) <input id="wz-cal3" type="number" step="0.1" value="0"></label>
+      </div>
+      <div class="row" id="wz-timer-gen4">
+        <label>Calibrated delay <input id="wz-cald" type="number" step="1" value="500"></label>
+        <label>Calibrated second <input id="wz-cals" type="number" min="0" max="59" value="14"></label>
+        <label>Frame you are at after loading <input id="wz-current-frame" type="number" min="0" value="0"></label>
+        <label>Party members <input id="wz-party" type="number" min="1" max="6" value="1"></label>
+      </div>
+      <div class="row" id="wz-hgss-row">
+        <span class="field">Roamers active on the save (each re-rolls once on continue)</span>
+        <label class="check"><input id="wz-roam-raikou" type="checkbox"> Raikou</label>
+        <label class="check"><input id="wz-roam-entei" type="checkbox"> Entei</label>
+        <label class="check"><input id="wz-roam-lati" type="checkbox"> Latias / Latios</label>
+      </div>
+      <p id="wz-timer-note" class="result pre"></p>
+      <p id="wz-phase"></p>
+      <div id="wz-display" class="bigtime">--:--.---</div>
+      <div class="row">
+        <button id="wz-start">Start (Space)</button>
+        <button id="wz-cancel" class="secondary">Cancel</button>
+      </div>
+      <pre id="wz-timer-log" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>5. What did you get?</h2>
+      <div id="wz-got-gen3">
+        <div class="row">
+          <label>Nature <select id="wz-got-nature"></select></label>
+          <label>IVs HP/Atk/Def/SpA/SpD/Spe
+            <span class="row"><input id="wz-got-iv-hp" type="number" min="0" max="31"><input id="wz-got-iv-atk" type="number" min="0" max="31"><input id="wz-got-iv-def" type="number" min="0" max="31"><input id="wz-got-iv-spa" type="number" min="0" max="31"><input id="wz-got-iv-spd" type="number" min="0" max="31"><input id="wz-got-iv-spe" type="number" min="0" max="31"></span></label>
+        </div>
+        <div class="row">
+          <label>or the six stats at the level (HP/Atk/Def/SpA/SpD/Spe)
+            <span class="row"><input id="wz-got-stat-hp" type="number" min="1"><input id="wz-got-stat-atk" type="number" min="1"><input id="wz-got-stat-def" type="number" min="1"><input id="wz-got-stat-spa" type="number" min="1"><input id="wz-got-stat-spd" type="number" min="1"><input id="wz-got-stat-spe" type="number" min="1"></span></label>
+          <button id="wz-record3">Find the frame I hit and calibrate</button>
+        </div>
+      </div>
+      <div id="wz-got-gen4">
+        <div class="row">
+          <label><span id="wz-got-calls-label">Coin flips you got (H/T, in order)</span> <input id="wz-got-calls" class="mono" size="30"></label>
+          <label>delay +- <input id="wz-delay-range" type="number" min="1" max="2000" value="100"></label>
+          <label>second +- <input id="wz-second-range" type="number" min="0" max="30" value="1"></label>
+          <button id="wz-record4">Find the delay I hit and calibrate</button>
+          <button id="wz-calrows" class="secondary">Show the neighbouring delays</button>
+        </div>
+        <pre id="wz-calrows-out" class="text"></pre>
+      </div>
+      <div class="row"><button id="wz-clear" class="secondary">Clear (this game, console, seed model and mode)</button></div>
+      <pre id="wz-outcome" class="text"></pre>
+      <p class="hint">Calibration samples are kept in this browser under shinySolution.wizard.calibration per game and console, each
+      stamped with the seed model and the mode it was made in (RUN or PRACTICE / HUNT, each mode its own store); only samples
+      of the mode in force under the active seed model are in force, the rest are listed as left out.</p>
+    </div>
+  </section>
   <section id="tab-about" class="tab">
     <div class="card">
       <h2>About</h2>
@@ -472,5 +607,6 @@
 <script src="app.js"></script>
 <script src="gen1tid-ui.js"></script>
 <script src="gen2tid-ui.js"></script>
+<script src="wizard-ui.js"></script>
 </body>
 </html>

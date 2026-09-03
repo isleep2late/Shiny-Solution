@@ -1,7 +1,8 @@
-// Webapp smoke test for the Gen 1 and Gen 2 Trainer ID tabs: (1) the mobile bundle (build-mobile-bundle.mjs)
-// carries the tabs, the engines, the tab modules and the embedded data; (2) the tabs' pure modules
-// (webapp/gen1tid-ui.js, webapp/gen2tid-ui.js) loaded in node agree with the engines, with RNG
-// Solution's numbers and with the Gen 2 derivation's (docs/FACTS.md).
+// Webapp smoke test for the Gen 1 and Gen 2 Trainer ID tabs and the wizard tab: (1) the mobile bundle
+// (build-mobile-bundle.mjs) carries the tabs, the engines, the tab modules and the embedded data (and states
+// that the wizard's tables are not in it); (2) the tabs' pure modules (webapp/gen1tid-ui.js, webapp/gen2tid-ui.js,
+// webapp/wizard-ui.js) loaded in node agree with the engines, with RNG Solution's numbers, with the Gen 2
+// derivation's (docs/FACTS.md) and with the generator and seed-to-time vectors.
 // usage: node test-webapp.cjs [bundle.ts]   (the bundle is built into a temp file when not given)
 const fs = require("fs");
 const os = require("os");
@@ -233,7 +234,16 @@ assert("the Gen 2 tab module comes after the engine, mode.js and the Gen 1 tab m
 assert("the Gen 1 tab module exposes its cue player to the Gen 2 tab", html.includes("api.cuePlayer = { prepare: prepare, play: play, stop: stop, warmAudio: warmAudio"));
 assert("the Gen 2 tab states that no hardware sample exists", html.includes("No hardware sample exists for any Gen 2 configuration"));
 assert("the Gen 2 self-test keeps storage in memory", html.includes('root.location.search.indexOf("g2selftest") !== -1') && html.includes("if (MEMORY_ONLY) return;"));
-assert("mode.js keeps the mode in memory under both self-tests", html.includes('root.location.search.indexOf("g2selftest") !== -1));') && html.includes('root.location.search.indexOf("g1selftest") !== -1 ||'));
+assert("mode.js keeps the mode in memory under all three self-tests", html.includes('root.location.search.indexOf("wizselftest") !== -1));') && html.includes('root.location.search.indexOf("g1selftest") !== -1 ||') && html.includes('root.location.search.indexOf("g2selftest") !== -1 ||'));
+// the wizard tab (webapp/wizard-ui.js) in the bundle: the tab, the module, the page's shared countdown, and the stated
+// absence of its tables (the bundle inlines no species, encounter or static JSON: docs/DATA.md)
+assert("bundle has the wizard tab button", html.includes('data-tab="wizard"'));
+assert("bundle has the wizard section", html.includes('id="tab-wizard"'));
+assert("bundle embeds the wizard module", html.includes("root.ShinyWizardUi = api"));
+assert("app.js shares its countdown with the wizard", html.includes("window.ShinyCountdown = Countdown;"));
+assert("the bundle tells the wizard it carries no tables", html.includes('window.SHINY_WIZARD_NO_DATA = "the mobile bundle inlines no species, encounter or static tables"') && html.indexOf("SHINY_WIZARD_NO_DATA = ") < html.indexOf("root.ShinyWizardUi = api"));
+assert("the bundle inlines no wizard tables", !html.includes("window.ShinyWizardData3") && !html.includes("window.ShinyWizardData4") && !html.includes('"species_count": 386'));
+assert("the wizard self-test keeps storage in memory", html.includes('root.location.search.indexOf("wizselftest") !== -1);') && html.includes("if (MEMORY_ONLY) return;\n    try { if (root.localStorage) root.localStorage.setItem(key, value); }"));
 assert("bundle embeds the Gen 2 Gold GBP table verbatim", html.includes(GEN2DATA.methodologies["gold/gbp/hold-start-v1"].table_data.tids_hex));
 globalThis.ShinyGen2Tid = require(path.join(root, "core", "gen2tid.js"));
 globalThis.ShinyGen2TidData = GEN2DATA;
@@ -372,6 +382,128 @@ assert("Gen 2 verify right timing is CONSISTENT", U2.verifyLines(g2plat, tidAt(3
 assert("Gen 2 verify wrong timing is INCONSISTENT", !U2.verifyLines(g2plat, tidAt(300), null, 22.13).consistent);
 const v2 = U2.verifyLines(g2plat, tidAt(300), null, 20.13).lines.join("\n");
 assert("Gen 2 verify text names the bin, the methodology and the missing lag", v2.includes("the tables produce them at bin 300") && v2.includes("Methodology: gold/gbp/hold-start-v1") && v2.includes("no press-to-visible lag is known for Gen 2"));
+
+// ---- 4. the wizard's pure module in node (webapp/wizard-ui.js over core/data/*.json) ----------------------
+// Three end-to-end scenarios with known answers from tests/generators-vectors.json and tests/seedtime4-vectors.json,
+// plus the honest limits, the procedures, the typed-outcome calibration and the mode wall.
+globalThis.ShinyGen4 = require(path.join(root, "core", "gen4.js"));
+globalThis.ShinySeedTime4 = require(path.join(root, "core", "seedtime4.js"));
+globalThis.ShinyGenerators = require(path.join(root, "core", "generators.js"));
+globalThis.ShinyTimers = require(path.join(root, "core", "timers.js"));
+const W = require(path.join(root, "webapp", "wizard-ui.js"));
+const GV = JSON.parse(fs.readFileSync(path.join(root, "tests", "generators-vectors.json"), "utf8"));
+const SV = JSON.parse(fs.readFileSync(path.join(root, "tests", "seedtime4-vectors.json"), "utf8"));
+const loadGen = (g) => ({ species: JSON.parse(fs.readFileSync(path.join(root, "core", "data", "species-gen" + g + ".json"), "utf8")), encounters: JSON.parse(fs.readFileSync(path.join(root, "core", "data", "encounters-gen" + g + ".json"), "utf8")), statics: JSON.parse(fs.readFileSync(path.join(root, "core", "data", "statics-gen" + g + ".json"), "utf8")) });
+let wthrew = null;
+try { W.staticEntries("emerald"); } catch (e) { wthrew = e.message; }
+assert("the wizard refuses to resolve before its tables are loaded", /not loaded/.test(wthrew || ""));
+W.setData(3, loadGen(3)); W.setData(4, loadGen(4));
+assert("ten games in the design's order", W.GAME_ORDER.join(",") === "ruby,sapphire,emerald,firered,leafgreen,diamond,pearl,platinum,heartgold,soulsilver");
+for (const g of W.GAME_ORDER) {
+  const model = W.modelOf(g);
+  assert(`${g} names a seed model with a validation status that says no hardware session`, /EMPIRICAL \/ model output: no (hardware|DS) session/.test(model.status));
+  assert(`${g} lists static entries and wild tables`, W.staticEntries(g).length > 0 && W.wildTables(g).length > 0);
+  assert(`${g} offers consoles of its generation`, W.consolesFor(g).every((c) => c.gen === W.GAMES[g].gen) && W.consolesFor(g).length === 2);
+}
+assert("the fixed seeds: RS 0x5A0, Emerald 0, FRLG typed", W.modelOf("ruby").seed === 0x5a0 && W.modelOf("emerald").seed === 0 && W.modelOf("firered").kind === "typed" && W.modelOf("firered").seed === null);
+assert("frames to time at the console rate", near(W.frameToMs(215019, "GBA"), 215019 * 1000 / (16777216 / 280896)) && near(W.fpsOf("NDS_SLOT1"), 59.8261) && near(W.fpsOf("NDS_SLOT2"), 59.6555));
+const ivObj = (a) => ({ hp: a[0], atk: a[1], def: a[2], spa: a[3], spd: a[4], spe: a[5] });
+// A: static3[0] "Ruby Groudon Method 4" (seed 0 typed, since the dead-battery model is 0x5A0): advance 3 -> its PID and IVs
+const groudonVec = GV.static3.find((c) => c.name === "Ruby Groudon Method 4");
+const groudon = W.staticEntries("ruby").find((e) => e.id === "ruby/legend/groudon");
+assert("Groudon resolves as a Ruby static at L45", !!groudon && groudon.level === 45 && groudon.species.dex === 383 && !groudon.refused);
+const cfgA = { game: "ruby", console: "GBA", seed: groudonVec.seed, kind: "static", method: "M4", species: groudon.species, level: groudon.level, wanted: { ivMin: ivObj(groudonVec.results[3].ivs), ivMax: ivObj(groudonVec.results[3].ivs), tid: GV.meta.tid, sid: GV.meta.sid }, maxFrame: 215019, limit: 20 };
+const rA = W.searchGen3(cfgA);
+assert("A: the Groudon vector's frame 3 is the one hit in an hour", rA.hits.length === 1 && rA.hits[0].frame === 3 && rA.hits[0].pid === groudonVec.results[3].pid && JSON.stringify(rA.hits[0].ivArray) === JSON.stringify(groudonVec.results[3].ivs) && JSON.stringify(rA.hits[0].stats) === JSON.stringify(groudonVec.results[3].stats));
+assert("A: the exact-cycle first frame agrees", rA.exactFirst && rA.exactFirst.first.frame === 3 && rA.exactFirst.first.pid === groudonVec.results[3].pid);
+assert("A: the search lines name the seed model and its status", W.gen3SearchLines(rA, cfgA).join("\n").includes("Seed model: rs/gba/boot-seed-v0 (defined and emulator-verified") && W.gen3SearchLines(rA, cfgA).join("\n").includes("no hardware session"));
+const cardA = W.cardLines(rA.hits[0], { gen: 3, species: groudon.species, hasIds: true, tid: GV.meta.tid, sid: GV.meta.sid, seed: 0, model: W.modelOf("ruby"), timeText: "" }).join("\n");
+assert("A: the result card", cardA.includes("Groudon L45  PID 8E4231B0  nature Bashful  gender none  ability DROUGHT (slot 1)") && cardA.includes("IVs 12/22/24/30/25/27") && cardA.includes("stats at L45 150/149/141/108/97/98") && cardA.includes("shiny: no for TID 12345 / SID 54321") && cardA.includes("seed model rs/gba/boot-seed-v0"));
+const procA = W.gen3Procedure(Object.assign({ staticLabel: groudon.label }, cfgA), rA.hits[0], { mode: "STANDARD", preTimer: 5000, targetFrame: 3, calibration: 0 }).join("\n");
+assert("A: the procedure is numbered under the seed model and says no hardware session", /^1\. /m.test(procA) && /^6\. /m.test(procA) && procA.startsWith("Procedure (rs/gba/boot-seed-v0; EMPIRICAL / model output: no hardware session"));
+const idA = W.gen3IdentifyHit(cfgA, 3, { nature: 18, ivs: ivObj(groudonVec.results[3].ivs) }, 3000);
+assert("A: the typed outcome inverts to frame 3", idA.hit && idA.hit.frame === 3 && idA.candidates === 1);
+assert("A: the typed stats invert to frame 3 too", W.gen3IdentifyHit(cfgA, 3, { nature: 18, stats: ivObj(groudonVec.results[3].stats) }, 3000).hit.frame === 3);
+// B: wild3[0] "Emerald Route 111 Grass" (seed 1C71C71C typed): advance 7's species, nature and IVs -> frame 7, its PID and slot
+const wildVec = GV.wild3.find((c) => c.name === "Emerald Route 111 Grass");
+const slB = W.slotsFor("emerald", wildVec.location, "grass", {});
+assert("B: the Route 111 table resolves to the vector's slots", slB.rate === wildVec.rate && slB.slots.length === 12 && slB.slots.every((s, i) => s.species.dex === wildVec.slots[i].species.dex && s.minLevel === wildVec.slots[i].minLevel && s.maxLevel === wildVec.slots[i].maxLevel));
+const vB = wildVec.results[7];
+const cfgB = { game: "emerald", console: "GBA", seed: wildVec.seed, kind: "wild", method: "M1", slots: slB.slots, rate: slB.rate, encounter: "grass", lead: null, options: {}, wanted: { ivMin: ivObj(vB.ivs), ivMax: ivObj(vB.ivs), nature: vB.nature, species: vB.specie, tid: GV.meta.tid, sid: GV.meta.sid }, maxFrame: 215019, limit: 20 };
+const rB = W.searchGen3(cfgB);
+assert("B: the wild vector's frame 7 is the one hit", rB.hits.length === 1 && rB.hits[0].frame === 7 && rB.hits[0].pid === vB.pid && rB.hits[0].encounterSlot === vB.encounterSlot && rB.hits[0].level === vB.level);
+assert("B: the feasibility names the slot share", W.gen3SearchLines(rB, cfgB).join("\n").includes("slot share 35.0 %") && near(W.speciesShare("emerald", "grass", slB.slots, 328), 0.35));
+// the honest limit: a flawless Treecko from Emerald's seed 0 has no frame in an hour; the first is 176,562,488 (34.2 days, design 5.3)
+const treecko = W.staticEntries("emerald").find((e) => e.id === "rse/starter/treecko");
+const cfgF = { game: "emerald", console: "GBA", seed: 0, kind: "static", method: "M1", species: treecko.species, level: 5, wanted: { ivMin: ivObj([31, 31, 31, 31, 31, 31]), ivMax: ivObj([31, 31, 31, 31, 31, 31]) }, maxFrame: 215019, limit: 20 };
+const rF = W.searchGen3(cfgF);
+const linesF = W.gen3SearchLines(rF, cfgF).join("\n");
+assert("flawless Emerald: no hit in an hour, the limit stated", rF.hits.length === 0 && linesF.includes("No matching frame within the first 215019 frames (60:00.000)"));
+assert("flawless Emerald: 6 states, first frame 176562488 = 34.2 days", rF.exactFirst.states === SV.collisions[0].count && rF.exactFirst.first.frame === 176562488 && linesF.includes("frame 176562488 from this seed = 34.2 days"));
+assert("flawless Emerald: the feasibility is the exact count", rF.feasibility.ivExact && near(rF.feasibility.ivPer100k, 6 / 4294967296 * 100000));
+// refusals: a shiny target without IDs, an IV range out of order, FRLG without a seed
+let msg = "";
+try { W.buildFilter({ ivMin: {}, ivMax: {}, shiny: true }); } catch (e) { msg = e.message; }
+assert("a shiny target needs the IDs typed", /Trainer ID and Secret ID typed/.test(msg));
+try { W.buildFilter({ ivMin: { hp: 5 }, ivMax: { hp: 4 } }); } catch (e) { msg = e.message; }
+assert("an IV range out of order is refused", /HP IV range/.test(msg));
+try { W.searchGen3({ game: "firered", console: "GBA", seed: null, kind: "static", species: treecko.species, level: 5, wanted: { ivMin: {}, ivMax: {} }, maxFrame: 10 }); } catch (e) { msg = e.message; }
+assert("FRLG without a typed seed is stated unavailable", /no seed: FireRed \/ LeafGreen seed the RNG from a Timer1 count/.test(msg));
+assert("eggs and the fixed-PID Pichu are listed as refused with the reason", W.staticEntries("emerald").some((e) => e.id === "rse/egg/wynaut" && /an egg/.test(e.refused)) && W.staticEntries("heartgold").some((e) => e.id === "hgss/gift/pichu-spiky-eared" && /not RNG-manipulable/.test(e.refused)));
+assert("Gen 4 statics resolve their method from the creation chain", W.staticEntries("platinum").find((e) => e.id === "dppt/legend/uxie").method === "J" && W.staticEntries("heartgold").find((e) => e.id === "hg/legend/lugia").method === "K" && W.staticEntries("heartgold").find((e) => e.id === "hg/legend/lugia").level === 70 && W.staticEntries("diamond").find((e) => e.id === "dp/starter/turtwig").method === "M1" && W.staticEntries("diamond").find((e) => e.id === "d/legend/dialga").method === "J" && W.staticEntries("heartgold").find((e) => e.id === "hgss/static/gyarados").shinyMode === "always");
+assert("RS / FRLG roamers carry the IV bug, Emerald's do not", W.staticEntries("ruby").find((e) => e.category === "roamer").buggedRoamer === true && W.staticEntries("emerald").find((e) => e.category === "roamer").buggedRoamer === false);
+// C: the design's gate seed (seedtime4-vectors gate[0]): flawless Method 1 -> 7B0448D1 at frame 0, hour 4, delay 18641 in 2000
+const gate = SV.gate[0];
+const turtwig = W.staticEntries("platinum").find((e) => e.id === "pt/starter/turtwig");
+const cfgC = { game: "platinum", console: "NDS_SLOT1", kind: "static", staticMethod: "M1", species: turtwig.species, level: 5, shinyMode: "random", wanted: { ivMin: gate.ivs, ivMax: gate.ivs }, maxFrame: 100, yearMin: 2000, yearMax: 2000, delayMin: 0, delayMax: 65535, targetDelay: gate.delayIn2000, limit: 30 };
+const rC = W.searchGen4(cfgC);
+const gateRow = rC.rows.find((r) => r.seed === gate.seed && r.frame === gate.frame);
+assert("C: the gate seed is found at frame 0 with hour 4 and delay 18641", !!gateRow && gateRow.hour === gate.hour && gateRow.delay === gate.delayIn2000 && gateRow.year === 2000 && gateRow.month === 1 && gateRow.day === 5 && gateRow.minute === 59 && gateRow.second === 59);
+assert("C: the gate row is the nearest to the target delay", rC.rows[0].seed === gate.seed && rC.rows[0].frame === 0 && rC.rows[0].delayDistance === 0);
+assert("C: the gate mon is the flawless Modest Turtwig 685011A9 (USAGE's seed-to-time example)", gateRow.mon.pid === 0x685011a9 && gateRow.mon.natureName === "Modest" && gateRow.mon.ivArray.join("/") === "31/31/31/31/31/31" && gateRow.mon.level === 5);
+assert("C: origins match the flawless state count and every candidate is verified", rC.origins === SV.collisions[0].count && rC.verified === rC.candidates && rC.candidates === 68);
+assert("C: the search lines name the seed model and the DS gate", W.gen4SearchLines(rC, cfgC).join("\n").includes("Seed model: dppt/nds/seed-to-time-v0") && W.gen4SearchLines(rC, cfgC).join("\n").includes("no DS session has landed a seed chosen by this tool"));
+const tmC = { targetDelay: gateRow.delay, targetSecond: gateRow.second, calibratedDelay: 500, calibratedSecond: 14 };
+const planC = Object.assign(globalThis.ShinySeedTime4.planAdvances(10, 137, { partyCount: 3, tools: ["walk128", "journal", "chatot"] }), { current: 10, partyCount: 3 });
+const procC = W.gen4Procedure(Object.assign({ staticLabel: turtwig.label }, cfgC), gateRow, tmC, planC).join("\n");
+assert("C: the Gen 4 procedure sets the clock, the timer phases, the coin flips and the advance plan", procC.includes("2. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before the target minute") && procC.includes("target second 59, target delay 18641 -> seed 7B0448D1 (dppt/nds/seed-to-time-v0)") && procC.includes("open the Poketch coin toss") && procC.includes("42 x walk128 (+3 each, STRUCTURAL), 1 x chatot (+1 each, STRUCTURAL) from frame 10"));
+assert("C: the timer phases are EonTimer's delay model", JSON.stringify(globalThis.ShinyTimers.gen4Phases({ console: "NDS_SLOT1" }, tmC)) === JSON.stringify(globalThis.ShinyTimers.delayPhases({ console: "NDS_SLOT1" }, 18641, 59, globalThis.ShinyTimers.createCalibration({ console: "NDS_SLOT1" }, 500, 14))));
+// the typed coin flips identify the delay hit: the target's own flips -> 18641; the neighbour 7B0448D5's -> 18645, calibrated delay 500 -> 503
+const targetC = { year: 2000, month: 1, day: 5, hour: 4, minute: 59, second: 59, delay: 18641, seed: gate.seed };
+const idC = W.gen4IdentifyHit("platinum", targetC, globalThis.ShinyGen4.coinFlips(gate.seed, 12), 100, 1, {});
+assert("C: the target's flips identify delay 18641 alone", idC.matches.length === 1 && idC.matches[0].delay === 18641 && idC.matches[0].secondOffset === 0 && idC.rows === 603);
+const idC2 = W.gen4IdentifyHit("platinum", targetC, "T, T, T, H, T, H, H, H, T, H, H, T", 100, 1, {});
+assert("C: a neighbour's flips (with separators) identify delay 18645", idC2.matches.length === 1 && idC2.matches[0].delay === 18645 && idC2.typed === "TTTHTHHHTHHT");
+assert("C: the calibrated delay moves 500 -> 503 (4 x 0.75, half to even)", globalThis.ShinyTimers.gen4Calibrated({ console: "NDS_SLOT1" }, tmC, 18645).calibratedDelay === 503);
+assert("C: too few flips are refused", /at least 5 coin flips/.test(W.gen4IdentifyHit("platinum", targetC, "HTH", 10, 0, {}).error || ""));
+assert("C: HGSS reads Elm calls", W.gen4IdentifyHit("heartgold", targetC, "EKEKE", 10, 0, {}).family === "HGSS");
+assert("C: the combination cap is stated", /narrow the ranges to at most 4096 combinations/.test(W.searchGen4(Object.assign({}, cfgC, { wanted: { ivMin: ivObj([0, 0, 0, 0, 0, 0]), ivMax: ivObj([31, 31, 31, 31, 31, 31]) } })).error || ""));
+// D: wild4[3] "Route 222 Grass Magnet Pull" (seed 5D1745D0, hour byte 23: reachable): advance 0's species and IVs -> that seed at frame 0
+const w4 = GV.wild4.find((c) => c.name === "Route 222 Grass Magnet Pull");
+const slD = W.slotsFor("platinum", w4.location, "grass", { time: "morning" });
+assert("D: Route 222's morning table is the vector's", slD.rate === w4.rate && slD.slots.every((s, i) => s.species.dex === w4.slots[i].species.dex && s.maxLevel === w4.slots[i].maxLevel));
+const vD = w4.results[0];
+const cfgD = { game: "platinum", console: "NDS_SLOT1", kind: "wild", slots: slD.slots, rate: slD.rate, encounter: "grass", lead: w4.lead, options: {}, wanted: { ivMin: ivObj(vD.ivs), ivMax: ivObj(vD.ivs), species: vD.specie, tid: GV.meta.tid, sid: GV.meta.sid }, maxFrame: 50, yearMin: 2000, yearMax: 2099, delayMin: 0, delayMax: 65535, targetDelay: 600, limit: 30 };
+const rD = W.searchGen4(cfgD);
+const rowD = rD.rows.find((r) => r.seed === w4.seed && r.frame === 0);
+assert("D: the Magnet Pull vector's seed is reached at frame 0 with its PID, slot and level", !!rowD && rowD.mon.pid === vD.pid && rowD.mon.encounterSlot === vD.encounterSlot && rowD.mon.level === vD.level && JSON.stringify(rowD.mon.ivArray) === JSON.stringify(vD.ivs));
+assert("D: the wild candidates were verified by the wild generator, not assumed", rD.verified < rD.candidates && rD.verified >= 1);
+assert("D: Cute Charm is not offered for Gen 4 wild and the note says why", !W.leadOptions("platinum", "wild").some((l) => l.key === "CUTE_CHARM") && /arithmetic/.test(W.GEN4_CUTE_CHARM_NOTE) && W.leadOptions("emerald", "wild").some((l) => l.key === "CUTE_CHARM") && W.leadOptions("ruby", "wild").length === 1);
+const hgLand = W.wildTables("heartgold").find((t) => t.kinds.includes("grass"));
+assert("HGSS land tables pick the species by time of day (Route 29: Hoothoot at night)", hgLand.name.startsWith("Route 29") && W.slotsFor("heartgold", hgLand.index, "grass", { time: "night" }).slots[0].species.dex === 163 && W.slotsFor("heartgold", hgLand.index, "grass", { time: "day" }).slots[0].species.dex === 16);
+assert("a table without the kind is refused", (() => { try { W.slotsFor("heartgold", 0, "grass", {}); return false; } catch (e) { return /no land table/.test(e.message); } })());
+// the store and the mode wall: a sample carries the mode and the seed model; another mode's or model's sample is never in force
+const store = {};
+W.addSample(store, "platinum", "NDS_SLOT1", { model: "dppt/nds/seed-to-time-v0", target: 18641, hit: 18645, before: { calibratedDelay: 500, calibratedSecond: 14 }, after: { calibratedDelay: 503, calibratedSecond: 14 }, when: "t" }, RUN);
+let force = W.inForce(store, "platinum", "NDS_SLOT1", RUN, "dppt/nds/seed-to-time-v0");
+assert("the RUN sample is in force in RUN", force.value.calibratedDelay === 503 && force.samples.length === 1 && store["platinum/NDS_SLOT1"].samples[0].mode === RUN);
+store["platinum/NDS_SLOT1"].samples.push({ model: "dppt/nds/seed-to-time-v0", target: 18641, hit: 18700, before: { calibratedDelay: 503, calibratedSecond: 14 }, after: { calibratedDelay: 560, calibratedSecond: 14 }, when: "p", mode: PRACTICE });
+store["platinum/NDS_SLOT1"].samples.push({ model: "other/model", target: 1, hit: 1, before: { calibratedDelay: 0, calibratedSecond: 0 }, after: { calibratedDelay: 999, calibratedSecond: 0 }, when: "m", mode: RUN });
+force = W.inForce(store, "platinum", "NDS_SLOT1", RUN, "dppt/nds/seed-to-time-v0");
+assert("a practice sample and another model's sample are left out in RUN and named", force.value.calibratedDelay === 503 && force.ignored.length === 2 && W.ignoredLines(force.ignored, RUN, "dppt/nds/seed-to-time-v0").join("\n").includes("recorded in PRACTICE / HUNT mode, not RUN") && W.ignoredLines(force.ignored, RUN, "dppt/nds/seed-to-time-v0").join("\n").includes("recorded under other/model"));
+assert("the practice sample is the one in force in PRACTICE", W.inForce(store, "platinum", "NDS_SLOT1", PRACTICE, "dppt/nds/seed-to-time-v0").value.calibratedDelay === 560);
+assert("the wizard's stores are separate keys per mode", globalThis.ShinyMode.storeKey(W.STORE_KEY, RUN) !== globalThis.ShinyMode.storeKey(W.STORE_KEY, PRACTICE) && W.STORE_KEY === "shinySolution.wizard.calibration");
+assert("the Gen 3 default calibration is 0 ms with a 5 s pre-timer", W.inForce({}, "ruby", "GBA", RUN, "rs/gba/boot-seed-v0").value.calibration === 0 && W.inForce({}, "ruby", "GBA", RUN, "rs/gba/boot-seed-v0").value.preTimer === 5000);
 
 if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
 console.log(`webapp smoke: ${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}`);

@@ -369,7 +369,7 @@ fi
 if grep -qE 'Practice & Hunt|createHuntWindow|electron-source|preload|hunt\.html|GetSourceScreenshot|obs-websocket|"ws"' ../electron/main.js || grep -q '"ws"' ../electron/package.json; then
   echo "FAIL: electron/main.js or package.json carries the hunt window code path or its package"; exit 1
 fi
-echo "the plain electron stage: no hunt/ directory, no sentinel; main.js names no hunt window and package.json no ws; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; }); gen2tid-ui.js staged: $([ -f ../electron/webapp/gen2tid-ui.js ] && echo yes || { echo no; exit 1; })"
+echo "the plain electron stage: no hunt/ directory, no sentinel; main.js names no hunt window and package.json no ws; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; }); gen2tid-ui.js staged: $([ -f ../electron/webapp/gen2tid-ui.js ] && echo yes || { echo no; exit 1; }); wizard-ui.js and its lazily loaded tables staged: $([ -f ../electron/webapp/wizard-ui.js ] && [ -f ../electron/webapp/data/wizard-gen3.js ] && [ -f ../electron/webapp/data/wizard-gen4.js ] && grep -q '^window.ShinyWizardData3 = {' ../electron/webapp/data/wizard-gen3.js && grep -q '^window.ShinyWizardData4 = {' ../electron/webapp/data/wizard-gen4.js && echo yes || { echo no; exit 1; })"
 
 # Negative control: a bundle whose gen2tid.js UMD line is renamed (the engine no longer registers as ShinyGen2Tid) must FAIL,
 # and is shown failing, so the carry of core/gen2tid.js into the bundle is a checked fact.
@@ -428,6 +428,25 @@ else
 fi
 rm -f "$bundle.g2ui" "$bundle.out"
 
+# Negative control: a bundle whose wizard tab module no longer registers as ShinyWizardUi (its export line renamed) must
+# FAIL, and is shown failing, so the carry of webapp/wizard-ui.js into the bundle is a checked fact.
+node -e '
+const fs = require("fs");
+const ts = fs.readFileSync(process.argv[1], "utf8");
+const needle = "root.ShinyWizardUi = api";
+if (!ts.includes(needle)) { console.error("negative control setup: the wizard tab module export line was not found in the bundle"); process.exit(1); }
+fs.writeFileSync(process.argv[2], ts.split(needle).join("root.ShinyWizardUiRenamed = api"));
+' "$bundle" "$bundle.wz"
+if node test-webapp.cjs "$bundle.wz" > "$bundle.out" 2>&1; then
+  echo "negative control (bundle with the wizard tab module renamed): DID NOT FAIL"
+  rm -f "$bundle" "$bundle.wz" "$bundle.out"
+  exit 1
+else
+  echo "negative control (bundle with the wizard tab module renamed): FAILED as required ->"
+  grep -E '^FAIL|failure' "$bundle.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$bundle.wz" "$bundle.out"
+
 # Negative control: a bundle without the tab's button (the string deleted) must FAIL, and is shown failing.
 node -e '
 const fs = require("fs");
@@ -474,6 +493,9 @@ PROBE
   # the Gen 2 TID tab's self-test (?g2selftest) in the same profile: its stores and the mode stay in memory too, so the
   # after-probe below covers both tabs
   chrome_dom 8000 "file://$(cd ../webapp && pwd)/index.html?g2selftest" | grep -o '<pre id="g2-selftest">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.dom2"
+  # the wizard tab's self-test (?wizselftest) in the same profile: its tables load lazily from webapp/data/ over file://
+  # (script elements written by sync-core.sh), its store and the mode stay in memory
+  chrome_dom 30000 "file://$(cd ../webapp && pwd)/index.html?wizselftest" | grep -o '<pre id="wz-selftest">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.dom3"
   chrome_dom 1000 "file://$probe" | grep -o '<pre id="ls">.*</pre>' | sed 's/<[^>]*>//g' > "$profile.after"
   rm -rf "$profile" "$probe"
   node -e '
@@ -601,6 +623,45 @@ for (const [label, ok] of checks) if (!ok) { bad++; console.error("FAIL browser 
 if (r.error) { bad++; console.error("FAIL browser (Gen 2): " + r.error); }
 console.log("browser self-test (Gen 2 TID tab): " + checks.length + " checks, " + bad + " failure" + (bad === 1 ? "" : "s"));
 fs.unlinkSync(process.argv[1] + ".dom2");
+process.exit(bad ? 1 : 0);
+' "$profile"
+  # The wizard tab in the browser (webapp/wizard-ui.js): the same page under ?wizselftest, its tables loaded lazily, driven
+  # through the tab's own handlers: the Ruby Groudon Method 4 vector at frame 3 from the typed seed 0 with its card, procedure
+  # and typed outcome; a flawless Treecko on Emerald's seed 0 with no hit in an hour and the exact first frame stated; the
+  # Emerald Route 111 wild vector at frame 7; the design's gate seed 7B0448D1 at frame 0 for a flawless Turtwig with the
+  # coin-flip calibration (the target's flips, then a neighbour's moving the calibrated delay 500 -> 503); the Route 222
+  # Magnet Pull vector's seed 5D1745D0 at frame 0; the mode wall with a planted practice sample; nothing written to the origin.
+  node -e '
+const fs = require("fs");
+const un = (s) => s.replace(/&quot;/g, "\"").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "\x27");
+let r; try { r = JSON.parse(un(fs.readFileSync(process.argv[1] + ".dom3", "utf8"))); } catch (e) { r = { error: "no report from the wizard self-test: " + e.message }; }
+const checks = [
+  ["the wizard tab is on the page and shares app.js countdown", r.tabPresent === true && r.countdownShared === true],
+  ["Ruby resolves to rs/gba/boot-seed-v0, seed 0x5A0, status saying no hardware session", r.rubyModel === "rs/gba/boot-seed-v0" && r.rubyStatus === true && r.rubyFixedSeed === "000005A0"],
+  ["A: the Groudon Method 4 vector is the one hit in an hour from the typed seed 0 (frame 3, PID 8E4231B0)", r.groudonRows === 1 && !!r.groudonFirst && r.groudonFirst.frame === 3 && r.groudonFirst.pid === 2386702768 && JSON.stringify(r.groudonFirst.ivs) === "[12,22,24,30,25,27]" && r.groudonExactFirst === 3],
+  ["A: the result card names the mon, the IVs, the stats, the seed model and EMPIRICAL", /Groudon L45  PID 8E4231B0  nature Bashful/.test(r.groudonCard || "") && /IVs 12\/22\/24\/30\/25\/27/.test(r.groudonCard || "") && /stats at L45 150\/149\/141\/108\/97\/98/.test(r.groudonCard || "") && /seed model rs\/gba\/boot-seed-v0/.test(r.groudonCard || "") && /EMPIRICAL/.test(r.groudonCard || "")],
+  ["A: the procedure is numbered under the seed model and the timer totals the pre-timer plus frame 3", /^Procedure \(rs\/gba\/boot-seed-v0; EMPIRICAL/.test(r.groudonProcedure || "") && /\n6\. /.test(r.groudonProcedure || "") && r.groudonTimerTotal === "00:05.050"],
+  ["A: the typed nature and IVs invert to frame 3 and the sample is stored under the model and mode", /^You hit frame 3, aimed 3: on the frame; 1 candidate/.test(r.groudonOutcome || "") && !!(r.groudonStored && r.groudonStored["ruby/GBA"] && r.groudonStored["ruby/GBA"].samples.length === 1 && r.groudonStored["ruby/GBA"].samples[0].model === "rs/gba/boot-seed-v0" && r.groudonStored["ruby/GBA"].samples[0].mode === "run")],
+  ["Emerald seeds 0; a flawless Treecko has no frame in an hour and the exact first frame (34.2 days) is stated", r.emeraldSeed === "00000000" && r.flawlessRows === 0 && /No matching frame within the first 215019 frames \(60:00.000\)/.test(r.flawlessOut || "") && /frame 176562488 from this seed = 34.2 days/.test(r.flawlessOut || "")],
+  ["B: the Route 111 wild vector at frame 7 (Trapinch, slot 1) with the slot share in the feasibility", r.wildRows === 1 && !!r.wildFirst && r.wildFirst.frame === 7 && r.wildFirst.pid === 1885610868 && r.wildFirst.slot === 1 && r.wildWanted.dex === 328 && r.wildOutHasShare === true && /Trapinch L20  PID 70642374/.test(r.wildCard || "")],
+  ["Platinum resolves to dppt/nds/seed-to-time-v0 with the DS gate stated", r.platinumModel === "dppt/nds/seed-to-time-v0" && r.platinumStatus === true],
+  ["C: the gate seed 7B0448D1 at frame 0, hour 4, delay 18641, 2000-01-05 04:59:59, Modest 685011A9 flawless", !!r.gateRow && r.gateRow.seed === "7B0448D1" && r.gateRow.frame === 0 && r.gateRow.hour === 4 && r.gateRow.delay === 18641 && r.gateRow.year === 2000 && r.gateRow.month === 1 && r.gateRow.day === 5 && r.gateRow.minute === 59 && r.gateRow.second === 59 && r.gateRow.pid === "685011A9" && r.gateRow.nature === "Modest" && JSON.stringify(r.gateRow.ivs) === "[31,31,31,31,31,31]"],
+  ["C: the search lines count 6 origins -> 68 reachable seeds, all verified", /6 IV origin states after the PID filter -> 68 seeds a clock can produce within 100 frames \(hour byte 0-23\) -> 68 candidates confirmed/.test(r.gateOut || "")],
+  ["C: the card and procedure name the clock setting, the model and the coin flips", /Turtwig L5  PID 685011A9  nature Modest/.test(r.gateCard || "") && /2\. DS clock: set 2000-01-05 04:59 and confirm it 5 minutes before/.test(r.gateProcedure || "") && /Poketch coin toss/.test(r.gateProcedure || "") && /dppt\/nds\/seed-to-time-v0/.test(r.gateProcedure || "")],
+  ["C: the timer note gives the phases and the minutes before", /Phases: 00:41.964 then 05:17.236; set the clock 5 minutes before/.test(r.gateTimerNote || "")],
+  ["C: the target seed own flips identify delay 18641 on the target and leave the calibrated delay", /You hit delay 18641 \(seed 7B0448D1, second \+0\), aimed 18641: on the target; 1 row of 603 match/.test(r.gateOutcome || "") && /Calibrated delay 500 -> 500/.test(r.gateOutcome || "") && /The seed is hit/.test(r.gateOutcome || "")],
+  ["C: a neighbour delay flips move the calibrated delay 500 -> 503", /You hit delay 18645 \(seed 7B0448D5, second \+0\), aimed 18641: 4 delays late/.test(r.gateNeighbourOutcome || "") && /Calibrated delay 500 -> 503/.test(r.gateNeighbourOutcome || "") && r.caldAfter === "503"],
+  ["D: the Route 222 Magnet Pull vector seed 5D1745D0 at frame 0 (Luxio slot 7 L40, PID 960698807)", r.wild4Slot7 === 404 && !!r.wild4Row && r.wild4Row.seed === "5D1745D0" && r.wild4Row.frame === 0 && r.wild4Row.pid === 960698807 && r.wild4Row.slot === 7 && r.wild4Row.level === 40 && /confirmed by the wild generator frame by frame/.test(r.wild4Out || "")],
+  ["RUN is the default; PRACTICE / HUNT through the switch shows the banner and its own store", r.modeDefault === "run" && r.modeAfterToggle === "practice" && r.bannerShown === true && /PRACTICE \/ HUNT mode \(store shinySolution.wizard.calibration.practice\)/.test(r.timerNoteInPractice || "") && r.caldInPracticeBefore === "500"],
+  ["the practice sample is stamped, stored under the practice key, and the RUN store is untouched", /You hit delay 18645/.test(r.practiceOutcome || "") && !!(r.practiceStored && r.practiceStored["platinum/NDS_SLOT1"] && r.practiceStored["platinum/NDS_SLOT1"].samples.length === 1 && r.practiceStored["platinum/NDS_SLOT1"].samples[0].mode === "practice") && r.runStoreUnchangedByPractice === true],
+  ["back in RUN the RUN calibration is in force (503) and a planted practice sample is named, never in force", r.modeBack === "run" && r.caldBackInRun === "503" && r.runNoteAboutPractice === true && r.caldWithPlanted === "503"],
+  ["the self-test never wrote the wizard stores or the mode to the origin", !!r.realStorage && r.realStorage["shinySolution.wizard.calibration"] === null && r.realStorage["shinySolution.wizard.calibration.practice"] === null && r.realStorage["shinySolution.mode"] === null]
+];
+let bad = 0;
+for (const [label, ok] of checks) if (!ok) { bad++; console.error("FAIL browser (wizard): " + label); }
+if (r.error) { bad++; console.error("FAIL browser (wizard): " + r.error); }
+console.log("browser self-test (wizard tab): " + checks.length + " checks, " + bad + " failure" + (bad === 1 ? "" : "s"));
+fs.unlinkSync(process.argv[1] + ".dom3");
 process.exit(bad ? 1 : 0);
 ' "$profile"
   # The Practice & Hunt page (webapp/hunt/hunt.html) in the same browser, straight from the source tree: it carries no

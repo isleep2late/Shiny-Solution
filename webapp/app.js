@@ -157,6 +157,10 @@
     if (idleText !== undefined) this.display.textContent = idleText;
   };
 
+  // The two-phase countdown is the page's one countdown: the wizard tab (wizard-ui.js) runs its Gen 3 frame
+  // timer and its Gen 4 delay timer through the same class.
+  window.ShinyCountdown = Countdown;
+
   var g3state = { mode: null, target: null };
   var g3timer = null;
 

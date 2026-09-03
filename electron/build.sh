@@ -30,9 +30,11 @@ fi
 rm -rf webapp
 mkdir -p webapp/data
 bash "$src/sync-core.sh"
-cp "$src/index.html" "$src/app.css" "$src/mode.js" "$src/app.js" "$src/downloads.js" "$src/gen1tid-ui.js" "$src/gen2tid-ui.js" \
+cp "$src/index.html" "$src/app.css" "$src/mode.js" "$src/app.js" "$src/downloads.js" "$src/gen1tid-ui.js" "$src/gen2tid-ui.js" "$src/wizard-ui.js" \
    "$src/rng.js" "$src/gen4.js" "$src/gen12.js" "$src/gen1tid.js" "$src/timers.js" "$src/gen5.js" "$src/seedtime4.js" "$src/generators.js" "$src/gen2tid.js" "$src/gen1-data.js" webapp/
 cp "$src/data/gen1-tid.json" "$src/data/gen3-sid.json" "$src/data/gen2-tid.json" webapp/data/
+# the wizard tab's tables, loaded lazily by the page on first use (file:// script elements, no fetch)
+cp "$src/data/wizard-gen3.js" "$src/data/wizard-gen4.js" webapp/data/
 if [ "$with_hunt" = 1 ]; then
   cp -r "$src/hunt" webapp/hunt
   echo "--with-hunt: webapp/hunt/ staged (a PRACTICE / HUNT build, not for publishing)"

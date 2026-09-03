@@ -54,7 +54,11 @@ for (const name of ["rng.js", "gen4.js", "gen12.js", "gen1tid.js", "timers.js", 
 const inlineJson = (name) => readFileSync(join(here, "..", "core", "data", name), "utf8").trim().replace(/<\//g, "<\\/");
 const dataJs = "window.ShinyGen1Data = " + inlineJson("gen1-tid.json") + ";\nwindow.ShinyGen3SidData = " + inlineJson("gen3-sid.json") + ";\nwindow.ShinyGen2TidData = " + inlineJson("gen2-tid.json") + ";\n";
 html = html.replace('<script src="gen1-data.js"></script>', "<script>\n" + dataJs + "</script>");
-for (const local of ["downloads.js", "mode.js", "app.js", "gen1tid-ui.js", "gen2tid-ui.js"]) {
+// The wizard's species, encounter and static tables (4.7 MB of JSON) are not inlined: the bundle is one HTML
+// string with no file beside it to load lazily, so the wizard tab is told and says the tables need the static
+// page or the Electron app (docs/DATA.md records the choice).
+html = html.replace('<script src="wizard-ui.js"></script>', '<script>\nwindow.SHINY_WIZARD_NO_DATA = "the mobile bundle inlines no species, encounter or static tables";\n</script>\n<script src="wizard-ui.js"></script>');
+for (const local of ["downloads.js", "mode.js", "app.js", "gen1tid-ui.js", "gen2tid-ui.js", "wizard-ui.js"]) {
   const js = readFileSync(join(here, local), "utf8");
   html = html.replace(`<script src="${local}"></script>`, "<script>\n" + js + "\n</script>");
 }
