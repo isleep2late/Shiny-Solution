@@ -431,8 +431,11 @@ without saying why.
 > methodology's protocol and validity conditions verbatim, names the methodology id on every output, states that no
 > hardware sample exists and that the published route IDs need their community scripts, shows the reachability rule
 > below, and calibrates in bins (`isOutlierBins` plus `gen1tid`'s `isDuplicate`; `gen1tid`'s `addSample` throws on
-> a bin-centre offset, checked in `tests/test-webapp.cjs`) under `shinySolution.gen2tid.calibration` per mode. No
-> desktop panel exists for Gen 2 yet.
+> a bin-centre offset, checked in `tests/test-webapp.cjs`) under `shinySolution.gen2tid.calibration` per mode. The
+> desktop app's Gen 2 TID tab (`app/App/Gen2TidPanel.cs` over `Gen2TidSupport.cs`) is its twin: the same resolution,
+> texts, guards and store split (`gen2tid.calibration` per mode), pinned to the web tab's output for 20 target inputs
+> by `tests/gen2tid-panel-vectors.json` (emitted from the tab by `tools/gen-gen2-panel-vectors.cjs`, checked by
+> `app/Tests/Gen2TidPanelChecks.cs`).
 
 Labels as in the derivation folder: **STRUCTURAL** = read in the pret decomp (paths under
 `pokegold/` and `pokecrystal/`), **EMPIRICAL** = measured on pokemon-speedrunning/gambatte-core

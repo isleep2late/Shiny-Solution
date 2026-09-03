@@ -173,7 +173,9 @@ promoted), the desktop app's
 ## Gen 2 Trainer ID / Lucky ID (Gold / Silver / Crystal): the one timed A tap
 
 TARGET mode, human input only, in the web app's **Gen 2 TID** tab (the same page in the Electron app
-and the mobile bundle; no desktop panel yet). The methodology is `<game>/<gbp|gbc|dmg>/hold-start-v1`
+and the mobile bundle) and the desktop app's **Gen 2 TID (G/S/C)** tab (the same steps, texts and
+numbers; its cue is the Gen 1 tab's sample-exact WAV and its samples live in the app's settings under
+`gen2tid.calibration`, per mode). The methodology is `<game>/<gbp|gbc|dmg>/hold-start-v1`
 (Gold and Silver also `dmg/late-start-v1`): clear the save data (Up+B+Select on the title), hold
 START from power-on until the NEW GAME menu box appears, release it as it appears, and tap A once for
 4-8 frames at the cue; on Gold and Silver press nothing else until the roll is over (about 0.35 s).
@@ -220,9 +222,9 @@ and the halted-clock family last one boot.
    is refused unless you tick force; IDs absent from the scope teach nothing, and if they are
    produced in another RTC state of the console the tab says which (a first-boot state, the clock
    rather than your timing). Samples are kept per console and anchor under
-   `shinySolution.gen2tid.calibration` with their methodology id, RTC state and mode, per mode as
-   in the Gen 1 tab (PRACTICE / HUNT has its own store; a sample of the other mode is listed as
-   ignored, never averaged).
+   `shinySolution.gen2tid.calibration` (the desktop app: `gen2tid.calibration` in its settings) with
+   their methodology id, RTC state and mode, per mode as in the Gen 1 tab (PRACTICE / HUNT has its
+   own store; a sample of the other mode is listed as ignored, never averaged).
 6. **Invert.** Any Trainer ID (and Lucky ID) against the console's tables in a chosen scope (the
    two-state prior, every state, the running or the halted family, the chosen state): each
    candidate table and bin, whether it recurs after the first boot, and the scope's ambiguity
