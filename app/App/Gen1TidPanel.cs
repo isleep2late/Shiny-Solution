@@ -519,7 +519,7 @@ public sealed class Gen1TidPanel : UserControl
         int tid;
         try { tid = Gen1Tid.ParseTid(_verifyTid.Text); } catch (ArgumentException e) { _verifyOut.Text = "not a Trainer ID (" + e.Message + ")"; return; }
         double s = F(_verifyS.Text, double.NaN);
-        if (double.IsNaN(s)) { _verifyOut.Text = "give the menu-to-press seconds measured from the video"; return; }
+        if (!double.IsFinite(s)) { _verifyOut.Text = "give the menu-to-press seconds measured from the video"; return; }
         var (_, lines) = Gen1TidText.VerifyLines(_plat, tid, s, _verifyFrom.SelectedIndex == 1, (int)_verifyTol.Value, null);
         Set(_verifyOut, lines);
     }

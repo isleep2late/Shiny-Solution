@@ -136,9 +136,8 @@ public sealed class PhaseCountdown
 {
     readonly Label _display;
     readonly Label _phase;
-    Stopwatch? _watch;
+    volatile Stopwatch? _watch;
     System.Windows.Forms.Timer? _uiTimer;
-    volatile bool _cancelled;
     double _p1, _p2;
     string _label1 = "", _label2 = "";
 
@@ -155,13 +154,15 @@ public sealed class PhaseCountdown
     {
         if (Running) return;
         _p1 = phase1Ms; _p2 = phase2Ms; _label1 = label1; _label2 = label2;
-        _cancelled = false;
         Running = true;
-        _watch = Stopwatch.StartNew();
+        var watch = Stopwatch.StartNew();
+        _watch = watch;
         _uiTimer = new System.Windows.Forms.Timer { Interval = 33 };
         _uiTimer.Tick += (_, _) => Tick();
         _uiTimer.Start();
-        new Thread(BeepWorker) { IsBackground = true }.Start();
+        // The worker keeps its own watch and phases: after Cancel, or Cancel followed by Start, it sees another watch
+        // and stops, so a worker still asleep through a Cancel never beeps on the next run's times.
+        new Thread(() => BeepWorker(watch, phase1Ms, phase2Ms)) { IsBackground = true }.Start();
     }
 
     void Tick()
@@ -180,29 +181,27 @@ public sealed class PhaseCountdown
         }
     }
 
-    void BeepWorker()
+    void BeepWorker(Stopwatch watch, double p1, double p2)
     {
-        if (!SleepUntil(_p1)) return;
+        if (!SleepUntil(watch, p1)) return;
         BeepPlayer.PlayLong();
         for (int s = 5; s >= 1; s--)
         {
-            double at = _p1 + _p2 - s * 1000;
-            if (at <= CurrentMs()) continue;
-            if (!SleepUntil(at)) return;
+            double at = p1 + p2 - s * 1000;
+            if (at <= watch.Elapsed.TotalMilliseconds) continue;
+            if (!SleepUntil(watch, at)) return;
             BeepPlayer.PlayShort();
         }
-        if (SleepUntil(_p1 + _p2) && !_cancelled) BeepPlayer.PlayLong();
+        if (SleepUntil(watch, p1 + p2)) BeepPlayer.PlayLong();
     }
 
-    double CurrentMs() => _watch?.Elapsed.TotalMilliseconds ?? double.MaxValue;
-
-    bool SleepUntil(double at)
+    // false as soon as the run this worker belongs to is cancelled or replaced by another Start
+    bool SleepUntil(Stopwatch watch, double at)
     {
         while (true)
         {
-            var w = _watch;
-            if (_cancelled || w is null) return false;
-            double left = at - w.Elapsed.TotalMilliseconds;
+            if (!ReferenceEquals(_watch, watch)) return false;
+            double left = at - watch.Elapsed.TotalMilliseconds;
             if (left <= 0) return true;
             Thread.Sleep(left > 60 ? 25 : 1);
         }
@@ -210,7 +209,6 @@ public sealed class PhaseCountdown
 
     public void Cancel()
     {
-        _cancelled = true;
         Running = false;
         _uiTimer?.Stop();
         _uiTimer = null;

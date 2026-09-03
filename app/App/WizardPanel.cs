@@ -304,12 +304,17 @@ public sealed class WizardPanel : UserControl
             _searchOut.Text = ""; _card.Text = ""; _procedure.Text = "";
             _targetInfo.Text = "Target: none yet (search, then click a row)";
             LoadData(game.Gen);
-            if (_dataError is not null) { _status.Text = "Gen " + game.Gen + " tables: " + _dataError; }
-            else
+            if (_dataError is null)
             {
-                var d = Wizard.DataFor(game.Gen);
-                _status.Text = "Gen " + game.Gen + " tables loaded: " + d.SpeciesCount + " species, " + Wizard.WildTables(_gameKey).Count + " encounter tables, " + Wizard.StaticEntries(_gameKey).Count + " static / gift entries for " + game.Name + " (docs/DATA.md; embedded in the app, a copy beside ShinySolution.exe is preferred).";
+                // a copy beside the executable that parses but lacks a key fails here, not in the constructor: the status says so
+                try
+                {
+                    var d = Wizard.DataFor(game.Gen);
+                    _status.Text = "Gen " + game.Gen + " tables loaded: " + d.SpeciesCount + " species, " + Wizard.WildTables(_gameKey).Count + " encounter tables, " + Wizard.StaticEntries(_gameKey).Count + " static / gift entries for " + game.Name + " (docs/DATA.md; embedded in the app, a copy beside ShinySolution.exe is preferred).";
+                }
+                catch (Exception e) { _dataError = "the tables loaded but could not be read (" + e.Message + "); a copy beside ShinySolution.exe replaces the embedded one, so check that copy"; }
             }
+            if (_dataError is not null) _status.Text = "Gen " + game.Gen + " tables: " + _dataError;
         }
         finally { _loading = false; }
         if (_dataError is null) RefreshEncounter();
@@ -506,8 +511,8 @@ public sealed class WizardPanel : UserControl
         {
             if (game.Gen == 3)
             {
-                if (!_cal3Touched) _cal3.Value = (decimal)Math.Round(force.Value.Calibration ?? 0, 1);
-                if (!_preTimerTouched) _preTimer.Value = (decimal)(force.Value.PreTimer ?? 5000);
+                if (!_cal3Touched) _cal3.Value = (decimal)Math.Max(-100000, Math.Min(100000, Math.Round(force.Value.Calibration ?? 0, 1)));
+                if (!_preTimerTouched) _preTimer.Value = (decimal)Math.Max(0, Math.Min(600000, force.Value.PreTimer ?? 5000));
             }
             else
             {

@@ -497,7 +497,7 @@ public sealed class Gen2TidPanel : UserControl
         catch (ArgumentException e) { _verifyOut.Text = e.Message; return; }
         if (tid is null) { _verifyOut.Text = "type the Trainer ID in the run"; return; }
         double s = F(_verifyS.Text, double.NaN);
-        if (double.IsNaN(s)) { _verifyOut.Text = "give the seconds from the visible menu box to the press, measured from the video"; return; }
+        if (!double.IsFinite(s)) { _verifyOut.Text = "give the seconds from the visible menu box to the press, measured from the video"; return; }
         var (_, _, lines) = Gen2TidText.VerifyLines(_plat, tid.Value, lid, s);
         Set(_verifyOut, lines);
     }
