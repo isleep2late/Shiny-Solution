@@ -8,9 +8,60 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   export PATH="$HOME/.dotnet:$PATH"
   dotnet run --project ../app/Tests -c Release -- --emit-gen4-vectors gen4-vectors.json
   node test-gen4.cjs gen4-vectors.json
+
+  # Gen 4 seed-to-time / reversal: JS and C# answer the same 300 random inputs (tests/seedtime4-cross.cjs) and
+  # must agree; a tampered answer file is shown to fail so the comparison is known to bite.
+  cross_in=$(mktemp --suffix=.json); cross_out=$(mktemp --suffix=.json)
+  node seedtime4-cross.cjs inputs "$cross_in" 300
+  dotnet run --project ../app/Tests -c Release --no-build -- --seedtime4-cross "$cross_in" "$cross_out"
+  node seedtime4-cross.cjs compare "$cross_in" "$cross_out"
+  node -e '
+const fs = require("fs");
+const a = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+a.ivs[0] = a.ivs[0].length ? a.ivs[0].slice(1) : [1];
+a.mtSecond[3] ^= 1;
+fs.writeFileSync(process.argv[2], JSON.stringify(a));
+' "$cross_out" "$cross_out.bad"
+  if node seedtime4-cross.cjs compare "$cross_in" "$cross_out.bad" > "$cross_out.log" 2>&1; then
+    echo "negative control (tampered C# seedtime4 answers): DID NOT FAIL"
+    rm -f "$cross_in" "$cross_out" "$cross_out.bad" "$cross_out.log"
+    exit 1
+  else
+    echo "negative control (tampered C# seedtime4 answers): FAILED as required ->"
+    grep -E '^FAIL|mismatch' "$cross_out.log" | head -3 | sed 's/^/      /'
+  fi
+  rm -f "$cross_in" "$cross_out" "$cross_out.bad" "$cross_out.log"
 else
-  echo "dotnet not found; skipping gen4 parity vectors"
+  echo "dotnet not found; skipping gen4 parity vectors and the seedtime4 cross-check"
 fi
+
+# Gen 4 seed-to-time and reversal (core/seedtime4.js) against tests/seedtime4-vectors.json: PokeFinder's
+# seed-to-time / ID / LCRNG-reversal test data bit for bit, the design's two gate seeds (7B0448D1 -> frame 0,
+# 7B0459CB -> frame 3) run forward and found by the search, 500 IV and 200 PID round trips (soundness and the
+# generating seed present), roamer routes from the decomp tables, and the advance planner.
+node test-seedtime4.cjs seedtime4-vectors.json
+
+# Negative control: a corrupted vector (one PokeFinder delay, one reversal seed, one coin-flip letter, one
+# roamer route) must FAIL, and is shown failing.
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+v.seedToTimes[0].results[2].delay += 1;
+v.lcrngReverse.ivs[0].expected[1] ^= 1;
+const row = v.calibrate[0].rows[0]; row.sequence = (row.sequence[0] === "H" ? "T" : "H") + row.sequence.slice(1);
+v.roamer[0].expected.skips += 1;
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' seedtime4-vectors.json "$corrupted"
+if node test-seedtime4.cjs "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted seedtime4 vectors): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted seedtime4 vectors): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -5 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
 
 # Gen 1 Trainer ID / Gen 3 Secret ID / press-jitter engine against the vectors emitted by RNG Solution's
 # Python (tests/emit_vectors.py there; the committed copy is gen1tid-vectors.json).

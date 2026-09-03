@@ -26,6 +26,7 @@ app's Help tab.
 | **Gen 3** R/S (E/FRLG experimental) | Fully automatic: the mGBA script reads the live RNG, self-calibrates with a throwaway press + savestate rewind, and presses A on the exact shiny/TID frame: starters, gifts, AND static legendaries; a brute-force hunt covers wild grass | Calibrated power-on timer for dead-battery R/S (every boot seeds 0x5A0); TID manip converges in a few attempts and reveals your SID | verified on Ruby under libmgba (`tests/harness/`) |
 | **Gen 3 Secret ID: Emerald / FireRed / LeafGreen** | | The Trainer ID cannot be chosen (a sub-frame Timer1 count); the Secret ID follows from the typed Trainer ID after k+1 LCRNG advances: one candidate per k, a press cue that pins k to a 27-frame window, pins (a PID seen shiny or not) that narrow it to one | `*/gba/typed-tid-sid-v1`: frame counts emulator-measured on mGBA 0.10.5 by two harnesses; hardware unverified |
 | **Gen 4** D/P/Pt/HG/SS | Assisted: seed searcher + verifiers | Two-phase timer, TID-target search by delay, coin-flip seed matching (DPPt) and Elm-call prediction (HGSS), Method-1 shiny search per seed | decomp-verified in Platinum/HGSS (DP's TID path inferred) |
+| **Gen 4 seed-to-time and reversal** (`core/seedtime4.js` + `SeedTime4.cs`) | | Seed -> every (date, time, delay); the neighbour table with coin flips (DPPt), Elm calls and roamer routes (HGSS); IVs / PID / shiny -> seeds (PKHeX's LCRNG reversal) -> reachable (seed, frame) by the hour-byte filter -> times by delay distance; the advance planner (Chatot, 128-step, Journal, Elm) with each cost's citation; TID -> seeds over every time | PokeFinder seed-to-time / ID / reversal test data bit for bit, the design's two gate seeds, JS/C# cross-check; **no DS session yet** |
 | **Timer models** (EonTimer's Gen 3 / Gen 4 / Gen 5 models, `core/timers.js` + `Timers.cs`) | on branch `rng-solution-phase4-timers`, merging | | checked against EonTimer-generated vectors |
 | **Gen 5** engine (SHA-1 seeding into MT) | on branch `rng-solution-phase8-gen5`, merging | | |
 
@@ -66,6 +67,7 @@ RNG Solution's registry and tables and embedded in every head.
 | `lua/shiny-solution.lua`, `lua/shiny-solution-gb.lua` | The Gen 3 mGBA auto-manip script and the Gen 1/2 hunt bot (also usable standalone). |
 | `core/gen1tid.js` + `app/Core/Gen1Tid.cs` | The Gen 1 Trainer ID engine (cue schedules for the menu / power-on / reset anchors, target sets and verdicts, inversion, calibration with the 60-frame outlier and duplicate guards, the reset metronome, verify, the runner's press-jitter model: P(hit), drift, fusion) and the Gen 3 typed-TID -> SID model, ported from RNG Solution's Python and checked against the vectors it emits (`tests/gen1tid-vectors.json`, about 1,840 cases: integers, strings and error classes exact, floats to 1e-9 relative). Target sets are never defaulted (a verdict needs the game's sets), and every number is checked at the JS boundary. |
 | `core/rng.js` + `core/gen4.js` + `core/gen12.js` + `app/Core/` | The Gen 3 LCRNG / Method 1, Gen 4 seed / MT19937 / timer and Gen 1-2 DV engines, parity-tested between JS and C#. |
+| `core/seedtime4.js` + `app/Core/SeedTime4.cs` | The Gen 4 seed-to-time layer: the inverse of the seed formula, calibrate rows with their verification strings, the PKHeX-semantics IV/PID -> seed reversal (Method 1 and the Method 4 skip), the reachability search with the hour filter, the advance planner and the all-times TID search; vectors in `tests/seedtime4-vectors.json` (`tools/gen-seedtime4-vectors.cjs`). |
 | `docs/FACTS.md` | Every mechanic used, with decompilation citations and the hardware validation record. |
 | `tests/` | The test suites (below). |
 
@@ -80,10 +82,13 @@ RNG Solution's registry and tables and embedded in every head.
   numbers: sd 20 ms -> P(hit) 32 %, the 199.2 / 397.9 ms reset centres, `$4003` at 9.0 s
   inconsistent, the Emerald worked example `$B0AF` -> `$7F16` at k = 5478 kept by a shiny pin
   and dropped by a contradicting one) with a bundle stripped of the tab shown failing; and, when
-  Google Chrome is installed, the tab driven headless through its own handlers.
+  Google Chrome is installed, the tab driven headless through its own handlers. `core/seedtime4.js`
+  vs `tests/seedtime4-vectors.json` (PokeFinder's seed-to-time / ID / reversal data, the design's
+  gate seeds, round trips, decomp roamer tables) with a corrupted vector shown failing, and the
+  JS/C# cross-check on 300 random inputs with a tampered answer file shown failing.
 - `app/run-core-tests.sh`: the C# engine vs the same vectors, plus canonical MT19937 vectors,
-  the Gen 4 seed/timer model, and `Gen1Tid.cs` vs the gen1tid vectors with its own negative
-  control. `dotnet build app/App -c Release -p:EnableWindowsTargeting=true` compiles the
+  the Gen 4 seed/timer model, `Gen1Tid.cs` vs the gen1tid vectors and `SeedTime4.cs` vs the
+  seedtime4 vectors, each with its own negative control. `dotnet build app/App -c Release -p:EnableWindowsTargeting=true` compiles the
   desktop app on Linux.
 - `tests/run-lua-sim.sh` and `tests/lua-sim-gb.py`: the mGBA scripts against stubbed APIs.
 - `tests/harness/`: ground truth against real Pokémon Ruby under libmgba's Python bindings.
@@ -115,7 +120,8 @@ python3 tools/gen-gen1-data.py ../RNG-Solution                      # regenerate
   Gate: a Gen 2 cart on the same consoles.
 - **Dead-battery Ruby/Sapphire** on hardware: `rs/gba/boot-seed-v0` is defined, not implemented;
   the console timer exists and needs its hardware record. Gate: a dead-battery R/S cart.
-- **Gen 4**: one DS session to record the two-phase timer's calibration on hardware.
+- **Gen 4**: one DS session to record the two-phase timer's calibration on hardware, and to land
+  one seed chosen by the seed-to-time layer (its Phase 5 gate).
 - **Gen 5**: the engine and the timer model are on their branches; one DS Lite session validates
   the seeding on hardware.
 - Emerald / FRLG Secret ID frame counts on hardware (expected to transfer exactly: whole-VBlank
