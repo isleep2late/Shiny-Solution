@@ -89,6 +89,20 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# Negative control: generators.js delegates its reversal to seedtime4.js; with the delegate tampered (one seed dropped
+# from each reversal, one hour bumped in each reachability answer) the wrapper-vs-seedtime4 cross-check must FAIL, and
+# is shown failing.
+tampered_out=$(mktemp --suffix=.out)
+if GEN_TEST_NEGATIVE=delegate node test-generators.cjs generators-vectors.json > "$tampered_out" 2>&1; then
+  echo "negative control (tampered seedtime4 delegate): DID NOT FAIL"
+  rm -f "$tampered_out"
+  exit 1
+else
+  echo "negative control (tampered seedtime4 delegate): FAILED as required ->"
+  grep -E '^FAIL|failed' "$tampered_out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$tampered_out"
+
 # Gen 4 seed-to-time and reversal (core/seedtime4.js) against tests/seedtime4-vectors.json: PokeFinder's
 # seed-to-time / ID / LCRNG-reversal test data bit for bit, the design's two gate seeds (7B0448D1 -> frame 0,
 # 7B0459CB -> frame 3) run forward and found by the search, 500 IV and 200 PID round trips (soundness and the

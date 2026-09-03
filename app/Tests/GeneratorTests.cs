@@ -256,6 +256,55 @@ public static class GeneratorTests
             var hits = Generators.Gen4SeedsForTarget(ivs, 0);
             Check("gen4SeedsForTarget finds 7B0448D1 at frame 0", hits.Any(h => h.Seed == 0x7B0448D1 && h.Frame == 0 && h.Hour == 4 && h.DelayPlusYear == 18641), true);
         }
+        {
+            // Generators delegates the reversal to SeedTime4: on 200 random IV sets (100 from Method 1 mons, 100 from
+            // Method 4 mons) plus four edge sets, SeedsForIvWords / SeedsForIvs equal SeedTime4.IvsToSeeds and
+            // Gen4SeedsForTarget equals SeedTime4.ReachableSeeds (maxFrame 0, 5, 100; call counts 2 and 3) field for
+            // field; every origin is also checked against the IV words it must reproduce, independently of both.
+            var sets = new List<(int[] Ivs, uint Seed, string? Method)>();
+            uint x = 0x9E3779B9;
+            for (int i = 0; i < 200; i++)
+            {
+                x = Lcrng.Next(x); uint seed = Lcrng.Next(x) ^ (x >> 7);
+                string method = i % 2 == 1 ? "M4" : "M1";
+                var m = SeedTime4.MonFromFrameSeed(seed, method).Ivs;
+                sets.Add((new[] { m.Hp, m.Atk, m.Def, m.Spa, m.Spd, m.Spe }, seed, method));
+            }
+            foreach (var v in new[] { new[] { 0, 0, 0, 0, 0, 0 }, new[] { 31, 31, 31, 31, 31, 31 }, new[] { 31, 0, 31, 0, 31, 0 }, new[] { 16, 16, 16, 16, 16, 16 } }) sets.Add((v, 0, null));
+            int agree = 0, disagree = 0, recovered = 0; long hitsCompared = 0; bool wordsOk = true;
+            foreach (var (ivs, seed, method) in sets)
+            {
+                int w1 = ivs[0] | (ivs[1] << 5) | (ivs[2] << 10), w2 = ivs[5] | (ivs[3] << 5) | (ivs[4] << 10);
+                var direct = SeedTime4.IvsToSeeds(ivs[0], ivs[1], ivs[2], ivs[3], ivs[4], ivs[5]);
+                var viaWords = Generators.SeedsForIvWords(w1, w2);
+                var viaIvs = Generators.SeedsForIvs(ivs);
+                bool same = viaWords.SequenceEqual(direct) && viaIvs.SequenceEqual(direct);
+                foreach (var r in viaIvs)
+                    if ((int)(Lcrng.Next(r) >> 16 & 0x7FFF) != w1 || (int)(Lcrng.Jump(r, 2) >> 16 & 0x7FFF) != w2) wordsOk = false;
+                if (method != null)
+                {
+                    uint origin = Lcrng.Jump(seed, 2);
+                    var list = method == "M4" ? SeedTime4.IvsToSeedsSkip(ivs[0], ivs[1], ivs[2], ivs[3], ivs[4], ivs[5]) : viaIvs;
+                    if (list.Contains(origin)) recovered++;
+                }
+                foreach (int maxFrame in new[] { 0, 5, 100 })
+                    foreach (int callsBeforeIv1 in new[] { 2, 3 })
+                    {
+                        var wrapper = Generators.Gen4SeedsForTarget(ivs, maxFrame, callsBeforeIv1);
+                        var reference = SeedTime4.ReachableSeeds(direct, callsBeforeIv1, maxFrame).Select(h => (h.Seed, (long)h.Frame, h.Hour, h.Ab, h.Efgh, h.Origin)).ToList();
+                        hitsCompared += reference.Count;
+                        if (!wrapper.SequenceEqual(reference)) same = false;
+                        foreach (var h in wrapper)
+                            if (Lcrng.Jump(h.Seed, (uint)(callsBeforeIv1 + h.Frame)) != h.IvOrigin || h.Hour != (int)((h.Seed >> 16) & 0xFF) || h.Hour > 23 || h.Ab != (int)(h.Seed >> 24) || h.DelayPlusYear != (int)(h.Seed & 0xFFFF)) wordsOk = false;
+                    }
+                if (same) agree++; else { disagree++; Console.Error.WriteLine($"reversal delegate disagrees on IVs {string.Join(",", ivs)}"); }
+            }
+            Check("Generators reversal equals SeedTime4 on 204 IV sets", (agree, disagree), (204, 0));
+            Check("every delegated origin reproduces its IV words and every hit its origin", wordsOk, true);
+            Check("Method 1 sets recover Jump(seed, 2) through the wrapper, Method 4 sets through IvsToSeedsSkip", recovered, 200);
+            Check("reachability hits compared", hitsCompared > 10000, true);
+            Console.WriteLine($"reversal delegate cross-check: 204 IV sets, {hitsCompared} reachability hits compared");
+        }
 
         if (crossOut != null) EmitCross(V, crossOut, tid, sid);
 

@@ -3,16 +3,20 @@
 //
 //   node tests/test-generators.cjs [tests/generators-vectors.json] [tests/generators-cross.json]
 //   GEN_TEST_NEGATIVE=1 node tests/test-generators.cjs   # negative control: one oracle PID corrupted on purpose
+//   GEN_TEST_NEGATIVE=delegate node tests/test-generators.cjs   # negative control: the seedtime4 reversal generators.js
+//                                                              # delegates to is tampered (one seed dropped, one hour bumped)
 "use strict";
 const fs = require("fs");
 const path = require("path");
 const core = require(path.join(__dirname, "..", "core", "rng.js"));
 const gen4 = require(path.join(__dirname, "..", "core", "gen4.js"));
+const ST = require(path.join(__dirname, "..", "core", "seedtime4.js"));
 const G = require(path.join(__dirname, "..", "core", "generators.js"));
 
 const vectorsPath = process.argv[2] || path.join(__dirname, "generators-vectors.json");
 const crossPath = process.argv[3] || path.join(__dirname, "generators-cross.json");
 const negative = process.env.GEN_TEST_NEGATIVE === "1";
+const tamperDelegate = process.env.GEN_TEST_NEGATIVE === "delegate";
 const V = JSON.parse(fs.readFileSync(vectorsPath, "utf8"));
 const TID = V.meta.tid, SID = V.meta.sid, N = V.meta.frameCount;
 
@@ -24,6 +28,14 @@ function check(label, actual, expected) {
 }
 
 if (negative) V.wild3[0].results[0].pid ^= 0x10000; // negative control
+
+// The seedtime4 entries generators.js delegates to, taken before the tampered-delegate control replaces them
+// on the module object (generators.js reaches them through that object; the direct calls below do not).
+const directSeedsForIvWords = ST.seedsForIvWords, directIvsToSeeds = ST.ivsToSeeds, directReachableSeeds = ST.reachableSeeds;
+if (tamperDelegate) {
+  ST.seedsForIvWords = function (first, second) { const r = directSeedsForIvWords(first, second); r.pop(); return r; };
+  ST.reachableSeeds = function (origins, opts) { const r = directReachableSeeds(origins, opts); if (r.length) r[0].hour ^= 1; return r; };
+}
 
 // ---------------------------------------------------------------- oracle comparison
 const FIELDS = {
@@ -319,6 +331,50 @@ check("shiny type square/star/none", [G.shinyType((TID ^ SID) << 16 >>> 0, TID, 
   check("jump(7B0448D1, 3) is the IV1 state 7FFF305A", core.jump(0x7b0448d1, 3), ivState);
   check("hour filter keeps only hour <= 23", hits.every((h) => h.hour <= 23), true);
 }
+{
+  // generators.js delegates the reversal to seedtime4.js: on 200 random IV sets (100 from Method 1 mons, 100 from
+  // Method 4 mons, so the skip variant's sets are covered too) plus four edge sets, seedsForIvWords / seedsForIvs
+  // equal seedtime4.ivsToSeeds and gen4SeedsForTarget equals seedtime4.reachableSeeds (maxFrame 0, 5, 100; the
+  // Method 1 and Method 2 call counts) field for field; every origin is also checked against the IV words it
+  // must reproduce, independently of both modules.
+  const sets = [];
+  let x = 0x9e3779b9;
+  for (let i = 0; i < 200; i++) {
+    x = core.next(x); const seed = (core.next(x) ^ (x >>> 7)) >>> 0;
+    const method = i % 2 ? "M4" : "M1";
+    const mon = ST.monFromFrameSeed(seed, method);
+    sets.push({ ivs: mon.ivs, seed, method });
+  }
+  for (const v of [[0, 0, 0, 0, 0, 0], [31, 31, 31, 31, 31, 31], [31, 0, 31, 0, 31, 0], [16, 16, 16, 16, 16, 16]]) sets.push({ ivs: { hp: v[0], atk: v[1], def: v[2], spa: v[3], spd: v[4], spe: v[5] } });
+  let agree = 0, disagree = 0, hitsCompared = 0, recovered = 0, wordsOk = true;
+  const mapped = (h) => ({ seed: h.seed, frame: h.frame, hour: h.hour, ab: h.ab, delayPlusYear: h.efgh, ivOrigin: h.origin });
+  for (const t of sets) {
+    const ivs = t.ivs;
+    const w1 = ivs.hp | (ivs.atk << 5) | (ivs.def << 10), w2 = ivs.spe | (ivs.spa << 5) | (ivs.spd << 10);
+    const direct = directIvsToSeeds(ivs.hp, ivs.atk, ivs.def, ivs.spa, ivs.spd, ivs.spe);
+    const viaWords = G.seedsForIvWords(w1, w2), viaIvs = G.seedsForIvs(ivs);
+    let same = JSON.stringify(viaWords) === JSON.stringify(direct) && JSON.stringify(viaIvs) === JSON.stringify(direct);
+    for (const r of viaIvs) if (((core.next(r) >>> 16) & 0x7fff) !== w1 || ((core.jump(r, 2) >>> 16) & 0x7fff) !== w2) wordsOk = false;
+    if (t.seed !== undefined) {
+      const origin = core.jump(t.seed, 2);
+      const list = t.method === "M4" ? ST.ivsToSeedsSkip(ivs.hp, ivs.atk, ivs.def, ivs.spa, ivs.spd, ivs.spe) : viaIvs;
+      if (list.indexOf(origin) >= 0) recovered++;
+    }
+    for (const maxFrame of [0, 5, 100]) for (const callsBeforeIv1 of [2, 3]) {
+      const wrapper = G.gen4SeedsForTarget(ivs, { maxFrame, callsBeforeIv1 });
+      const ref = directReachableSeeds(direct, { maxFrame, callsBefore: callsBeforeIv1 }).map(mapped);
+      hitsCompared += ref.length;
+      if (JSON.stringify(wrapper) !== JSON.stringify(ref)) same = false;
+      for (const h of wrapper) if (core.jump(h.seed, callsBeforeIv1 + h.frame) !== h.ivOrigin || h.hour !== ((h.seed >>> 16) & 0xff) || h.hour > 23 || h.ab !== h.seed >>> 24 || h.delayPlusYear !== (h.seed & 0xffff)) wordsOk = false;
+    }
+    if (same) agree++; else { disagree++; console.error("reversal delegate disagrees on IVs", JSON.stringify(ivs)); }
+  }
+  check("generators.js reversal equals seedtime4.js on 204 IV sets", { agree, disagree }, { agree: 204, disagree: 0 });
+  check("every delegated origin reproduces its IV words and every hit its origin", wordsOk, true);
+  check("Method 1 sets recover jump(seed, 2) through the wrapper, Method 4 sets through ivsToSeedsSkip", recovered, 200);
+  check("reachability hits compared", hitsCompared > 10000, true);
+  console.log(`reversal delegate cross-check: 204 IV sets, ${hitsCompared} reachability hits compared`);
+}
 
 // ---------------------------------------------------------------- JS <-> C# cross-check
 if (fs.existsSync(crossPath)) {
@@ -348,7 +404,7 @@ if (fs.existsSync(crossPath)) {
 }
 
 if (failures) {
-  console.error(`${failures} of ${checks} generator checks failed${negative ? " (negative control: expected)" : ""}`);
+  console.error(`${failures} of ${checks} generator checks failed${negative || tamperDelegate ? " (negative control: expected)" : ""}`);
   process.exit(1);
 }
 console.log(`generator checks OK (${checks} assertions, ${vectorCases} PokeFinder vector cases)`);

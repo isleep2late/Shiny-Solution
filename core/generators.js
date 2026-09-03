@@ -9,11 +9,11 @@
 // encounter slots are {species: <record>, minLevel, maxLevel, form}.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) {
-    module.exports = factory(require("./rng.js"), require("./gen4.js"));
+    module.exports = factory(require("./rng.js"), require("./gen4.js"), require("./seedtime4.js"));
   } else {
-    root.ShinyGenerators = factory(root.ShinyCore, root.ShinyGen4);
+    root.ShinyGenerators = factory(root.ShinyCore, root.ShinyGen4, root.ShinySeedTime4);
   }
-})(typeof self !== "undefined" ? self : this, function (core, gen4) {
+})(typeof self !== "undefined" ? self : this, function (core, gen4, seedtime4) {
   "use strict";
 
   var MULT = 0x41c64e6d;
@@ -1186,31 +1186,14 @@
     return d - callsBefore - 1;
   }
 
-  // PKHeX LCRNGReversal.GetSeedsIVs (Legality/RNG/Algorithms/LCRNGReversal.cs:65-104): every state R
-  // such that hi15(next(R)) = IV1 word and hi15(next(next(R))) = IV2 word (R is the PID-high state).
-  var RV_LAG0 = 0x67d3, RV_LAG1 = 0xc907, RV_LOWER = 0x3443, RV_UPPER = 0xc34e;
+  // The Gen 4 LCRNG reversal and the reachability search live in core/seedtime4.js (PKHeX
+  // LCRNGReversal.GetSeedsIVs, the hour-byte back-step); the three entries below keep this module's
+  // names, argument forms and result shapes and delegate to it.
+  // seedsForIvWords takes the 15-bit IV words (hp | atk << 5 | def << 10, spe | spa << 5 | spd << 10);
+  // seedtime4.seedsForIvWords takes them shifted to the high half. Result: every state R with
+  // hi15(next(R)) = w1 and hi15(next(next(R))) = w2 (the PID-high state of a Method 1 mon), twins included.
   function seedsForIvWords(w1, w2) {
-    var first = u32((w1 & 0x7fff) << 16);
-    var second = u32((w2 & 0x7fff) << 16);
-    var tmp = u32(Math.imul(u32(second - Math.imul(MULT, first)) >>> 16, RV_LAG1));
-    var lo = u32(Math.imul(u32(tmp + RV_LOWER) >>> 15, RV_LAG0));
-    var mi = u32(lo + RV_LAG0);
-    var up = u32(Math.imul(u32(tmp + RV_UPPER) >>> 15, RV_LAG0));
-    var out = [];
-    function add(low) {
-      low = low % RV_LAG1;
-      do {
-        var seed = u32(first | low);
-        if ((next(seed) & 0x7fff0000) >>> 0 === second) {
-          seed = prev(seed);
-          out.push(seed);
-          out.push(u32(seed ^ 0x80000000));
-        }
-        low += RV_LAG1;
-      } while (low < 0x10000);
-    }
-    add(lo); add(mi); if (mi !== up) add(up);
-    return out;
+    return seedtime4.seedsForIvWords(u32((w1 & 0x7fff) << 16), u32((w2 & 0x7fff) << 16));
   }
   function seedsForIvs(ivs) {
     var w1 = ivs.hp | (ivs.atk << 5) | (ivs.def << 10);
@@ -1218,28 +1201,21 @@
     return seedsForIvWords(w1, w2);
   }
 
-  // Gen 4 reachability-first search: back-step each IV-origin state to the seed of frame N and keep
-  // the seeds whose hour byte is a valid clock hour (0..23). Seed layout: core/gen4.js seed().
+  // Gen 4 reachability-first search: seedtime4.reachableSeeds over the IV origins (back-step each origin
+  // to the seed of frame 0..maxFrame, keep the seeds whose hour byte is a clock hour 0..23), with this
+  // module's field names (delayPlusYear = the seed's low half, ivOrigin = the origin state).
   function gen4SeedsForTarget(ivs, o) {
     var opt = o || {};
-    var maxFrame = opt.maxFrame === undefined ? 100 : opt.maxFrame;
-    var callsBefore = opt.callsBeforeIv1 === undefined ? 2 : opt.callsBeforeIv1; // Method 1: PID lo, PID hi
-    var origins = seedsForIvs(ivs);
-    var hits = [];
-    for (var i = 0; i < origins.length; i++) {
-      var s = origins[i];
-      // origins are the PID-high states (next(R) is the IV1 word): frame 0's seed is callsBefore steps back
-      for (var b = 0; b < callsBefore; b++) s = prev(s);
-      for (var frame = 0; frame <= maxFrame; frame++) {
-        var hour = (s >>> 16) & 0xff;
-        if (hour <= 23) {
-          hits.push({ seed: s, frame: frame, hour: hour, ab: s >>> 24, delayPlusYear: s & 0xffff, ivOrigin: origins[i] });
-        }
-        s = prev(s);
-      }
+    var hits = seedtime4.reachableSeeds(seedsForIvs(ivs), {
+      maxFrame: opt.maxFrame === undefined ? 100 : opt.maxFrame,
+      callsBefore: opt.callsBeforeIv1 === undefined ? 2 : opt.callsBeforeIv1 // Method 1: PID lo, PID hi
+    });
+    var out = [];
+    for (var i = 0; i < hits.length; i++) {
+      var h = hits[i];
+      out.push({ seed: h.seed, frame: h.frame, hour: h.hour, ab: h.ab, delayPlusYear: h.efgh, ivOrigin: h.origin });
     }
-    hits.sort(function (a, b) { return a.frame - b.frame || a.seed - b.seed; });
-    return hits;
+    return out;
   }
 
   return {

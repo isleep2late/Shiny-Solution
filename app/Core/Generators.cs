@@ -1018,51 +1018,16 @@ public static class Generators
         return LcrngDistance(seed, ivState) - callsBefore - 1;
     }
 
-    // PKHeX LCRNGReversal.GetSeedsIVs (LCRNGReversal.cs:65-104)
-    const uint RvLag0 = 0x67D3, RvLag1 = 0xC907, RvLower = 0x3443, RvUpper = 0xC34E;
-    public static List<uint> SeedsForIvWords(int w1, int w2)
-    {
-        uint first = (uint)(w1 & 0x7FFF) << 16;
-        uint second = (uint)(w2 & 0x7FFF) << 16;
-        uint tmp = ((second - Lcrng.Mult * first) >> 16) * RvLag1;
-        uint lo = ((tmp + RvLower) >> 15) * RvLag0;
-        uint mi = lo + RvLag0;
-        uint up = ((tmp + RvUpper) >> 15) * RvLag0;
-        var result = new List<uint>();
-        void Add(uint low)
-        {
-            low %= RvLag1;
-            do
-            {
-                uint seed = first | low;
-                if ((Lcrng.Next(seed) & 0x7FFF0000) == second)
-                {
-                    seed = Prev(seed);
-                    result.Add(seed);
-                    result.Add(seed ^ 0x80000000);
-                }
-            } while ((low += RvLag1) < 0x10000);
-        }
-        Add(lo); Add(mi); if (mi != up) Add(up);
-        return result;
-    }
+    // The Gen 4 LCRNG reversal and the reachability search live in SeedTime4 (PKHeX LCRNGReversal.GetSeedsIVs,
+    // the hour-byte back-step); the three entries below keep this class's names, argument forms and result
+    // shapes and delegate to it. SeedsForIvWords takes the 15-bit IV words (hp | atk << 5 | def << 10,
+    // spe | spa << 5 | spd << 10); SeedTime4.SeedsForIvWords takes them shifted to the high half.
+    public static List<uint> SeedsForIvWords(int w1, int w2) => SeedTime4.SeedsForIvWords((uint)(w1 & 0x7FFF) << 16, (uint)(w2 & 0x7FFF) << 16);
     public static List<uint> SeedsForIvs(int[] ivs) => SeedsForIvWords(ivs[0] | (ivs[1] << 5) | (ivs[2] << 10), ivs[5] | (ivs[3] << 5) | (ivs[4] << 10));
 
+    // SeedTime4.ReachableSeeds over the IV origins with this class's field names (DelayPlusYear = the seed's
+    // low half, IvOrigin = the origin state); maxFrame is bounded by ReachableSeeds (0..10,000,000).
     public static List<(uint Seed, long Frame, int Hour, int Ab, int DelayPlusYear, uint IvOrigin)> Gen4SeedsForTarget(int[] ivs, long maxFrame = 100, int callsBeforeIv1 = 2)
-    {
-        var hits = new List<(uint, long, int, int, int, uint)>();
-        foreach (uint origin in SeedsForIvs(ivs))
-        {
-            uint s = origin;
-            for (int b = 0; b < callsBeforeIv1; b++) s = Prev(s);
-            for (long frame = 0; frame <= maxFrame; frame++)
-            {
-                int hour = (int)((s >> 16) & 0xFF);
-                if (hour <= 23) hits.Add((s, frame, hour, (int)(s >> 24), (int)(s & 0xFFFF), origin));
-                s = Prev(s);
-            }
-        }
-        hits.Sort((a, b) => a.Item2 != b.Item2 ? a.Item2.CompareTo(b.Item2) : a.Item1.CompareTo(b.Item1));
-        return hits;
-    }
+        => SeedTime4.ReachableSeeds(SeedsForIvs(ivs), callsBeforeIv1, checked((int)maxFrame))
+            .Select(h => (h.Seed, (long)h.Frame, h.Hour, h.Ab, h.Efgh, h.Origin)).ToList();
 }

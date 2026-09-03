@@ -706,8 +706,9 @@ remainder no listed tool covers.
   `Test/RNG/lcrngreverse.json` cases (6 IV, 2 PID) reproduce through `prev()`.
 - Counts: with 30 of 32 bits fixed an IV set has 4 seeds on average; the flawless set has 6 Method 1
   states and 4 Method 4 states (the design's numbers, RNG_GUIDE_DESIGN.md:781-782, reproduced).
-- The reversal is duplicated in `core/generators.js` (`seedsForIvWords`,
-  `gen4SeedsForTarget`); the two are to be merged onto this module.
+- `core/generators.js` (`seedsForIvWords`, `seedsForIvs`, `gen4SeedsForTarget`) and
+  `app/Core/Generators.cs` keep their names and result shapes and delegate to this module's
+  `seedsForIvWords` / `reachableSeeds`; the generator checks compare the two on 204 IV sets.
 
 ### The reachability search
 
@@ -1723,11 +1724,17 @@ a readout must show the set of the method in use (each set is pinned by a test).
 - `seedsForIvs(ivs)`: PKHeX `LCRNGReversal.GetSeedsIVs` (lattice bounds Lag0 0x67D3, Lag1
   0xC907, Lower 0x3443, Upper 0xC34E; `LCRNGReversal.cs:65-104`), returning every state whose
   next two outputs carry the 15-bit IV words (the PID-high state of a Method 1 mon), both
-  bit-31 variants included. Checked on 300 random seeds in JS and C#.
-- `gen4SeedsForTarget(ivs, {maxFrame})`: back-steps each origin `callsBeforeIv1` (2) + N times
-  and keeps seeds whose hour byte `(seed >> 16) & 0xFF` is 0..23 (about 9.4 % of back-steps);
-  it reproduces the design doc's example (state 7FFF305A is frame 0 from seed 7B0448D1: hour 4,
-  low half 18641 = delay + year - 2000).
+  bit-31 variants included. Checked on 300 random seeds in JS and C#. The computation is
+  `core/seedtime4.js` / `SeedTime4.cs` `seedsForIvWords` (see "Gen 4 seed-to-time"); the
+  generators entry shifts its 15-bit words to the high half and delegates.
+- `gen4SeedsForTarget(ivs, {maxFrame})`: `seedtime4.reachableSeeds` over the IV origins (back-step
+  each origin `callsBeforeIv1` (2) + N times, keep seeds whose hour byte `(seed >> 16) & 0xFF` is
+  0..23, about 9.4 % of back-steps) with the fields `delayPlusYear` (the seed's low half) and
+  `ivOrigin`; it reproduces the design doc's example (state 7FFF305A is frame 0 from seed
+  7B0448D1: hour 4, low half 18641 = delay + year - 2000). The generator checks compare both
+  entries with the seedtime4 module on 204 IV sets (200 from Method 1 and Method 4 mons, four
+  edge sets; maxFrame 0, 5, 100; call counts 2 and 3) and verify every origin and hit
+  independently; the JS suite shows the comparison failing on a tampered delegate.
 
 ## Disagreement log (decomp vs PokeFinder; the decomp wins, each pinned by a test)
 

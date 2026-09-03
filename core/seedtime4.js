@@ -17,8 +17,8 @@
 //     (back-step with the hour byte <= 23 filter), then the times for each candidate by delay distance.
 //   - planAdvances: the advance planner with each tool's cost and citation.
 //
-// core/generators.js carries a copy of the IV reversal (seedsForIvWords) and a simpler back-step
-// (gen4SeedsForTarget); the two are to be deduplicated onto this module.
+// core/generators.js (seedsForIvWords, seedsForIvs, gen4SeedsForTarget) delegates to this module's
+// seedsForIvWords and reachableSeeds; it is loaded after this file.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory(require("./rng.js"), require("./gen4.js"));
   else root.ShinySeedTime4 = factory(root.ShinyCore, root.ShinyGen4);
