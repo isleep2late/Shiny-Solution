@@ -6,7 +6,8 @@
 // every tab. Every calibration record and every logged attempt carries the mode it was made in,
 // and each mode has its own calibration store (storeKey), so a practice-derived correction is
 // never in force in RUN mode; a record of the other mode that does turn up in a store is left out
-// and said so (splitByMode), the way samples under another methodology are.
+// and said so (splitByMode), the way samples under another methodology are. The same split and the
+// same store keys cover the Gen 1 TID tab's reset adjustments and Secret ID pins.
 //
 // Tools that read a capture live only in webapp/hunt/ (never in this page, the static site or the
 // mobile bundle: build-mobile-bundle.mjs and electron/build.sh refuse that directory without
@@ -29,6 +30,14 @@
     return m;
   }
   function label(m) { return checkMode(m) === PRACTICE ? "PRACTICE / HUNT" : "RUN"; }
+  // The label of a stored record's mode, for notes about records that are left out: tolerant of a
+  // value this head does not know (a typo, an empty string, a mode a later hunt head writes), which
+  // is named as unknown rather than thrown on, so one bad record never breaks a tab. Such a record
+  // is in force in neither mode (splitByMode keeps only exact matches).
+  function describeMode(record) {
+    var m = effectiveMode(record);
+    return isMode(m) ? label(m) : JSON.stringify(m) + " (unknown mode)";
+  }
 
   function get() {
     if (MEMORY_ONLY) return mem || RUN;
@@ -89,7 +98,7 @@
 
   var api = {
     RUN: RUN, PRACTICE: PRACTICE, KEY: KEY, BANNER: BANNER, MEMORY_ONLY: MEMORY_ONLY,
-    isMode: isMode, checkMode: checkMode, label: label, get: get, set: set, isPractice: isPractice, subscribe: subscribe,
+    isMode: isMode, checkMode: checkMode, label: label, describeMode: describeMode, get: get, set: set, isPractice: isPractice, subscribe: subscribe,
     effectiveMode: effectiveMode, splitByMode: splitByMode, storeKey: storeKey, mount: mount
   };
   root.ShinyMode = api;

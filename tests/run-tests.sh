@@ -141,6 +141,21 @@ if bash "$tree/electron/build.sh" --stage-only > "$tree/electron.log" 2>&1; then
 else
   echo "refusal (electron stage, sentinel pasted into app.js): refused as required -> $(grep -m1 refusing "$tree/electron.log")"
 fi
+# ... and a hunt file that carries no sentinel line at all, its text pasted into gen1tid-ui.js: both builders compare the
+# whole text of every file under webapp/hunt/ with the staged files, so the marker is not what the leak check rests on.
+cp ../webapp/app.js "$tree/webapp/app.js"
+printf '// a hunt file without the sentinel line, for the leak check\nwindow.SHINY_HUNT_WATCHER = function () { return "reads the capture frame by frame"; };\n' > "$tree/webapp/hunt/watcher.js"
+cat "$tree/webapp/hunt/watcher.js" >> "$tree/webapp/gen1tid-ui.js"
+if node "$tree/webapp/build-mobile-bundle.mjs" "$tree/out.ts" > "$tree/mobile.log" 2>&1; then
+  echo "refusal (mobile bundle, a hunt file without the sentinel pasted into gen1tid-ui.js): DID NOT REFUSE"; exit 1
+else
+  echo "refusal (mobile bundle, a hunt file without the sentinel pasted into gen1tid-ui.js): refused as required -> $(grep -m1 refusing "$tree/mobile.log")"
+fi
+if bash "$tree/electron/build.sh" --stage-only > "$tree/electron.log" 2>&1; then
+  echo "refusal (electron stage, a hunt file without the sentinel pasted into gen1tid-ui.js): DID NOT REFUSE"; exit 1
+else
+  echo "refusal (electron stage, a hunt file without the sentinel pasted into gen1tid-ui.js): refused as required -> $(grep -m1 refusing "$tree/electron.log")"
+fi
 rm -rf "$tree"
 bash ../electron/build.sh --stage-only > /dev/null
 if [ -e ../electron/webapp/hunt ] || grep -rqF -- "$sentinel" ../electron/webapp; then
@@ -167,7 +182,8 @@ fi
 rm -f "$bundle" "$bundle.cut" "$bundle.out"
 
 # The tab in a real browser (headless Chrome, when installed): its self-test drives the DOM through the tab's own
-# handlers (targets, protocol, an outcome recorded and persisted, Blue / DMG, the metronome, the Secret ID listing).
+# handlers (targets, protocol, an outcome recorded and persisted, Blue / DMG, the metronome, the Secret ID listing,
+# the mode switch with the reset adjustment and the pins, records of the other mode planted in the RUN stores).
 if command -v google-chrome >/dev/null 2>&1; then
   bash ../webapp/sync-core.sh
   # One browser profile for three loads: a probe page seeds the origin's localStorage with a visitor's stand-in
@@ -237,7 +253,24 @@ const checks = [
   ["the banner is hidden again", r.bannerHiddenAgain === true],
   ["back in RUN the practice sample is not in force (233.5 again)", r.correctionBackInRun === "233.5" && r.correctionInRunBefore === "233.5"],
   ["the run store still holds only its own sample", !!(r.stored && r.stored["gse/menu"] && r.stored["gse/menu"].samples.length === 1 && r.stored["gse/menu"].samples[0].mode === "run")],
-  ["the self-test never wrote the mode to the origin", !!r.realStorage && r.realStorage["shinySolution.mode"] === null && r.realStorage["shinySolution.gen1tid.calibration.practice"] === null]
+  // the remembered reset adjustment and the Secret ID pins follow the mode too
+  ["the reset adjustment saved in PRACTICE / HUNT lands in the practice store, stamped", !!(r.practiceResetStored && r.practiceResetStored.gse && r.practiceResetStored.gse.frames === 2 && r.practiceResetStored.gse.mode === "practice")],
+  ["... and its note names the practice store", /PRACTICE \/ HUNT mode.s store/.test(r.practiceResetNote || "")],
+  ["the RUN reset store is untouched by it", r.runResetUnchangedByPractice === true],
+  ["the pin made in PRACTICE / HUNT lands in the practice store, stamped", r.practicePinKeyPresent === true],
+  ["... and its note names the practice store", /PRACTICE \/ HUNT mode.s store/.test(r.practicePinOut || "")],
+  ["the RUN pin store is untouched by it", r.runPinsUnchangedByPractice === true],
+  ["back in RUN the reset adjustment field shows the RUN value (0)", r.resetAdjustBackInRun === "0"],
+  ["back in RUN the listing does not carry the practice pin", r.runListingHasPracticePin === false],
+  // records of the other mode planted in the RUN stores, and one whose mode the page does not know
+  ["a practice sample planted in the RUN store is named in the note", r.runNoteAboutPractice === true],
+  ["a sample of a mode the page does not know is named as unknown, not thrown on", r.runNoteAboutUnknown === true],
+  ["neither planted sample is in force (233.5 still)", r.correctionWithPlanted === "233.5"],
+  ["recording an outcome with the planted samples present still works", /You hit offset 362, aimed 358: 4 frames late/.test(r.recordWithPlanted || "") && r.samplesInForceWithPlanted === 2],
+  ["a practice reset adjustment planted in the RUN store is ignored and said so", r.resetPlantedIgnored === true],
+  ["a practice pin planted in the RUN store is ignored and said so", r.pinPlantedIgnored === true],
+  ["the self-test never wrote the mode or a practice store to the origin", !!r.realStorage && r.realStorage["shinySolution.mode"] === null && r.realStorage["shinySolution.gen1tid.calibration.practice"] === null &&
+    r.realStorage["shinySolution.gen1tid.resetAdjust.practice"] === null && r.realStorage["shinySolution.gen1tid.sidPins.practice"] === null && r.realStorage["shinySolution.gen1tid.resetAdjust"] === null]
 ];
 let bad = 0;
 for (const [label, ok] of checks) if (!ok) { bad++; console.error("FAIL browser: " + label); }

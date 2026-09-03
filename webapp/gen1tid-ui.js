@@ -16,8 +16,8 @@
   if (!MODE) throw new Error("webapp/mode.js (ShinyMode) must load before gen1tid-ui.js");
   var STORE_KEY_CAL = "shinySolution.gen1tid.calibration";      // RUN mode: {"<platform>/<anchor>": {"samples": [...]}} (RNG Solution's config.json shape)
   // PRACTICE / HUNT mode keeps its own store, STORE_KEY_CAL + ".practice" (calStoreKey): a mode never reads the other's.
-  var STORE_KEY_PINS = "shinySolution.gen1tid.sidPins";         // {"<methodology>/<tid>": [{pid, shiny, note, when}]}
-  var STORE_KEY_RESET = "shinySolution.gen1tid.resetAdjust";    // {"<platform>": frames}
+  var STORE_KEY_PINS = "shinySolution.gen1tid.sidPins";         // {"<methodology>/<tid>": [{pid, shiny, note, when, mode}]}; PRACTICE / HUNT: + ".practice" (pinStoreKey)
+  var STORE_KEY_RESET = "shinySolution.gen1tid.resetAdjust";    // {"<platform>": {frames, mode, when}} (a bare number: a RUN record from before modes); PRACTICE / HUNT: + ".practice" (resetStoreKey)
   var METHODOLOGY_SENTENCE = "Predictions are valid only under this methodology.";
   var RULES_LINE = "Run mode uses only your own input: you press the anchor button and type the Trainer ID you saw. Nothing reads the screen, the emulator or the console.";
   var ANY_PERCENT = "Any% save corruption";
@@ -333,7 +333,7 @@
     }
     if (ign.mode.length) {
       var modes = {};
-      ign.mode.forEach(function (x) { modes[MODE.label(MODE.effectiveMode(x))] = true; });
+      ign.mode.forEach(function (x) { modes[MODE.describeMode(x)] = true; });   // a mode this head does not know is named, never thrown on
       lines.push("NOTE: " + plural(ign.mode.length, "stored sample") + " for " + plat.key + "/" + anchor + " ignored: recorded in " +
         Object.keys(modes).sort().join(", ") + " mode, not " + MODE.label(mode) + ". Samples are never mixed across modes: a practice-derived correction is never in force in a run.");
     }
@@ -471,7 +471,34 @@
   }
 
   // ---- the save-corruption reset metronome (rngsolution/cli.py cmd_reset) --------------------
-  function loadResetAdjust() { return loadJson(STORE_KEY_RESET, {}); }
+  // The remembered adjustment per console follows the mode like the calibration samples: each
+  // mode has its own store (resetStoreKey), every record says which mode it was made in, and a
+  // record of the other mode that turns up in a store is not applied and said so.
+  function resetStoreKey(mode) { return MODE.storeKey(STORE_KEY_RESET, mode); }
+  function loadResetAdjust(mode) { return loadJson(resetStoreKey(mode), {}); }
+  function saveResetAdjust(adj, mode) { saveJson(resetStoreKey(mode), adj); }
+  // the stored record for one console, normalised: a bare number is a RUN record from before modes existed
+  function resetAdjustEntry(adj, platformKey) {
+    var e = adj[platformKey];
+    if (isNil(e)) return null;
+    if (typeof e === "number") return { frames: e };
+    return e && typeof e === "object" && typeof e.frames === "number" ? e : null;
+  }
+  // {frames: the adjustment in force (0 when none), ignored: the stored record of another mode, or null}
+  function resetAdjustFor(adj, platformKey, mode) {
+    MODE.checkMode(mode);
+    var e = resetAdjustEntry(adj, platformKey);
+    if (!e) return { frames: 0, ignored: null };
+    return MODE.effectiveMode(e) === mode ? { frames: e.frames, ignored: null } : { frames: 0, ignored: e };
+  }
+  function setResetAdjust(adj, platformKey, frames, mode) {
+    adj[platformKey] = { frames: frames, mode: MODE.checkMode(mode), when: nowStamp() };
+    return adj[platformKey];
+  }
+  function resetAdjustIgnoredLine(entry, platformKey, mode) {
+    return "NOTE: the remembered adjustment for " + platformKey + " (" + f(entry.frames, 2, true) + " frames) ignored: recorded in " + MODE.describeMode(entry) +
+      " mode, not " + MODE.label(mode) + ". Adjustments are never mixed across modes: a practice-derived value is never in force in a run.";
+  }
   function resetPlan(plat, preset, adjustFrames, fadeFrames, intervalOverride, pairs, cadence) {
     var ri = G.resetInterval(plat.resetModel, preset, isNil(fadeFrames) ? null : fadeFrames, adjustFrames || 0);
     var interval = isNil(intervalOverride) ? ri.centreMs : intervalOverride;
@@ -596,23 +623,46 @@
       "  Constants: OK->seed " + model.ok_to_seed + " frames, per-stage ready times and last press->roll " + model.text_speed[speed].last_press_to_sid + " frames, " + (model.status || "EMPIRICAL (libmgba)") + ".");
     return lines;
   }
+  // Pins follow the mode like the calibration samples: each mode has its own store (pinStoreKey),
+  // every pin says which mode it was made in, and a pin of the other mode that turns up in a store
+  // never filters the listing and is said so.
   function pinKey(methodologyId, tid) { return methodologyId + "/" + tid; }
-  function loadPins() { return loadJson(STORE_KEY_PINS, {}); }
-  function pinsFor(pins, methodologyId, tid) { return (pins[pinKey(methodologyId, tid)] || []).slice(); }
-  function addPin(pins, methodologyId, tid, pid, shiny, note) {
-    var key = pinKey(methodologyId, tid), list = pinsFor(pins, methodologyId, tid);
+  function pinStoreKey(mode) { return MODE.storeKey(STORE_KEY_PINS, mode); }
+  function loadPins(mode) { return loadJson(pinStoreKey(mode), {}); }
+  function savePins(pins, mode) { saveJson(pinStoreKey(mode), pins); }
+  function allPins(pins, methodologyId, tid) { return (pins[pinKey(methodologyId, tid)] || []).slice(); }
+  // the pins made in this mode (the ones the listing uses)
+  function pinsFor(pins, methodologyId, tid, mode) { return MODE.splitByMode(allPins(pins, methodologyId, tid), mode).kept; }
+  // the pins of another mode in the same store: never used, named in the listing
+  function ignoredPins(pins, methodologyId, tid, mode) { return MODE.splitByMode(allPins(pins, methodologyId, tid), mode).rest; }
+  function addPin(pins, methodologyId, tid, pid, shiny, note, mode) {
+    MODE.checkMode(mode);                      // the pin must say which mode it was made in
+    var key = pinKey(methodologyId, tid), all = allPins(pins, methodologyId, tid), list = pinsFor(pins, methodologyId, tid, mode);
     for (var i = 0; i < list.length; i++) {
       if (list[i].pid === pid && list[i].shiny !== shiny) throw new Error("PID " + hex8(pid) + " is already pinned as " + (list[i].shiny ? "shiny" : "not shiny"));
       if (list[i].pid === pid) return list;
     }
-    list.push({ pid: pid, shiny: !!shiny, note: note || "", when: nowStamp() });
-    pins[key] = list;
-    return list;
+    var pin = { pid: pid, shiny: !!shiny, note: note || "", when: nowStamp(), mode: mode };
+    all.push(pin);
+    pins[key] = all;
+    return list.concat([pin]);
   }
-  function pinLines(list, m, tid) {
-    if (!list.length) return ["Pins: none stored for " + m.id + " / Trainer ID " + tid + " (add one with a PID you can see is shiny or not)"];
-    var lines = ["Pins stored for " + m.id + " / Trainer ID " + tid + ":"];
+  // removes this mode's pins for the ID; pins of the other mode in the store stay where they are
+  function clearPins(pins, methodologyId, tid, mode) {
+    var key = pinKey(methodologyId, tid), split = MODE.splitByMode(allPins(pins, methodologyId, tid), mode);
+    if (split.rest.length) pins[key] = split.rest; else delete pins[key];
+    return { removed: split.kept, kept: split.rest };
+  }
+  function pinLines(list, m, tid, mode, ignored) {
+    var lines = !list.length ? ["Pins: none stored for " + m.id + " / Trainer ID " + tid + " in " + MODE.label(mode) + " mode (add one with a PID you can see is shiny or not)"]
+      : ["Pins stored for " + m.id + " / Trainer ID " + tid + " (" + MODE.label(mode) + " mode's store):"];
     list.forEach(function (p) { lines.push("  PID " + hex8(p.pid) + "  " + (p.shiny ? "SHINY" : "not shiny") + (p.note ? "  " + p.note : "") + (p.when ? "  [" + p.when + "]" : "")); });
+    if (ignored && ignored.length) {
+      var modes = {};
+      ignored.forEach(function (p) { modes[MODE.describeMode(p)] = true; });
+      lines.push("  NOTE: " + plural(ignored.length, "stored pin") + " for " + m.id + " / Trainer ID " + tid + " ignored: recorded in " + Object.keys(modes).sort().join(", ") +
+        " mode, not " + MODE.label(mode) + ". Pins are never mixed across modes.");
+    }
     return lines;
   }
   // The listing: candidates for k in [kMin, kMax], filtered by the pins and the one-off PIDs.
@@ -668,9 +718,11 @@
     ignoredSamples: ignoredSamples, correctionInForce: correctionInForce, ignoredSampleLines: ignoredSampleLines, recordOutcome: recordOutcome,
     dropLastSample: dropLastSample, clearSamples: clearSamples, sampleLine: sampleLine,
     hitSummary: hitSummary, statsLines: statsLines, pRangeText: pRangeText,
-    loadResetAdjust: loadResetAdjust, resetPlan: resetPlan, verifyLines: verifyLines,
+    resetStoreKey: resetStoreKey, loadResetAdjust: loadResetAdjust, saveResetAdjust: saveResetAdjust, resetAdjustFor: resetAdjustFor, setResetAdjust: setResetAdjust,
+    resetAdjustIgnoredLine: resetAdjustIgnoredLine, resetPlan: resetPlan, verifyLines: verifyLines,
     sidMethodologyFor: sidMethodologyFor, sidMethodologyLines: sidMethodologyLines, sidModelFor: sidModelFor, sidDefaultKRange: sidDefaultKRange,
-    sidCue: sidCue, sidCueProtocolLines: sidCueProtocolLines, loadPins: loadPins, pinsFor: pinsFor, addPin: addPin, pinLines: pinLines, sidListing: sidListing,
+    sidCue: sidCue, sidCueProtocolLines: sidCueProtocolLines, pinStoreKey: pinStoreKey, loadPins: loadPins, savePins: savePins, allPins: allPins, pinsFor: pinsFor,
+    ignoredPins: ignoredPins, addPin: addPin, clearPins: clearPins, pinLines: pinLines, sidListing: sidListing,
     _storage: { get: storageGet, set: storageSet }
   };
   root.ShinyGen1TidUi = api;
@@ -780,13 +832,17 @@
   var st = { plat: null, offset: null, anchor: G.ANCHOR_MENU, sched: null, correction: null, attempt: null, sidCue: null };
   var mode = MODE.get();
   var cal = loadCalibration(mode);
-  var pins = loadPins();
+  var pins = loadPins(mode);
   MODE.subscribe(function (m) {
-    // the other mode's store, never merged: the correction, the stats and the notes are re-read from it
+    // the other mode's stores, never merged: the correction, the stats, the notes, the remembered reset
+    // adjustment and the Secret ID pins are re-read from them
     mode = m;
     cal = loadCalibration(m);
+    pins = loadPins(m);
     $("g1-correction")._manual = false;
-    if (st.plat) { refreshAnchor(); refreshStats(); }
+    $("g1-reset-adjust")._touched = false;
+    if (st.plat) { refreshAnchor(); refreshStats(); refreshReset(); }
+    if ($("sid-tid").value.trim()) sidRun();
   });
 
   function currentTargetSetKeys() {
@@ -915,12 +971,12 @@
   }
   function refreshReset() {
     var plat = st.plat;
-    var adj = loadResetAdjust();
-    if (!$("g1-reset-adjust")._touched) $("g1-reset-adjust").value = adj[plat.key] || 0;
+    var ra = resetAdjustFor(loadResetAdjust(mode), plat.key, mode);
+    if (!$("g1-reset-adjust")._touched) $("g1-reset-adjust").value = ra.frames;
     var iv = $("g1-reset-interval").value === "" ? null : numOr("g1-reset-interval", null);
     try {
       st.reset = resetPlan(plat, $("g1-reset-preset").value, numOr("g1-reset-adjust", 0), null, iv, Math.max(1, Math.round(numOr("g1-reset-pairs", plat.defaults.reset_pairs))), numOr("g1-reset-cadence", plat.defaults.reset_cadence_s));
-      setText("g1-reset-text", st.reset.lines);
+      setText("g1-reset-text", st.reset.lines.concat(ra.ignored ? ["", resetAdjustIgnoredLine(ra.ignored, plat.key, mode)] : []));
       $("g1-reset-start").disabled = false;
     } catch (e) {
       st.reset = null;
@@ -989,8 +1045,8 @@
       out.push(inp.gameName + ": Secret ID from a typed Trainer ID", "  [TARGET] The Trainer ID is human input: read it off the Trainer Card and type it. Nothing reads the game.");
       out.push("  input path: " + (model.name || "the one measured path") + "; text speed " + inp.speed +
         (inp.game !== "emerald" && inp.speed !== "mid" ? " (carried over from an existing save: a fresh FireRed / LeafGreen save is MID)" : "") + "; " + inp.nameLength + "-letter player name");
-      var pinList = $("sid-nopins").checked ? [] : pinsFor(pins, inp.m.id, tid);
-      out = out.concat(pinLines(pinList, inp.m, tid));
+      var pinList = $("sid-nopins").checked ? [] : pinsFor(pins, inp.m.id, tid, mode);
+      out = out.concat(pinLines(pinList, inp.m, tid, mode, $("sid-nopins").checked ? [] : ignoredPins(pins, inp.m.id, tid, mode)));
       var kMin = $("sid-kmin").value === "" ? null : Math.round(numOr("sid-kmin", 0));
       var kMax = $("sid-kmax").value === "" ? null : Math.round(numOr("sid-kmax", 0));
       var cued = st.sidCue && sidCueMatches(st.sidCue, inp) ? st.sidCue : null;
@@ -1016,9 +1072,10 @@
       var inp = sidInputs();
       var tid = G.parseTid($("sid-tid").value);
       var pid = G.parsePid($("sid-pin-pid").value);
-      addPin(pins, inp.m.id, tid, pid, shiny, $("sid-pin-note").value);
-      saveJson(STORE_KEY_PINS, pins);
-      setText("sid-pin-out", "pinned PID " + hex8(pid) + " as " + (shiny ? "SHINY" : "not shiny") + " for " + inp.m.id + " / Trainer ID " + tid + " (pins are kept per methodology and per Trainer ID; never shared)");
+      addPin(pins, inp.m.id, tid, pid, shiny, $("sid-pin-note").value, mode);
+      savePins(pins, mode);
+      setText("sid-pin-out", "pinned PID " + hex8(pid) + " as " + (shiny ? "SHINY" : "not shiny") + " for " + inp.m.id + " / Trainer ID " + tid +
+        " (" + MODE.label(mode) + " mode's store; pins are kept per methodology, per Trainer ID and per mode, never shared)");
       sidRun();
     } catch (e) { setText("sid-pin-out", "pin refused: " + e.message); }
   }
@@ -1026,10 +1083,10 @@
     try {
       var inp = sidInputs();
       var tid = G.parseTid($("sid-tid").value);
-      var n = pinsFor(pins, inp.m.id, tid).length;
-      delete pins[inp.m.id + "/" + tid];
-      saveJson(STORE_KEY_PINS, pins);
-      setText("sid-pin-out", "cleared " + plural(n, "pin") + " for " + inp.m.id + " / Trainer ID " + tid);
+      var r = clearPins(pins, inp.m.id, tid, mode);
+      savePins(pins, mode);
+      setText("sid-pin-out", "cleared " + plural(r.removed.length, "pin") + " for " + inp.m.id + " / Trainer ID " + tid + " (" + MODE.label(mode) + " mode)" +
+        (r.kept.length ? "; " + plural(r.kept.length, "pin") + " of the other mode kept, untouched" : ""));
       sidRun();
     } catch (e) { setText("sid-pin-out", e.message); }
   }
@@ -1104,10 +1161,11 @@
     $(id).addEventListener("change", function () { if (id === "g1-reset-adjust") $(id)._touched = true; refreshReset(); });
   });
   $("g1-reset-save-adjust").addEventListener("click", function () {
-    var adj = loadResetAdjust();
-    adj[st.plat.key] = numOr("g1-reset-adjust", 0);
-    saveJson(STORE_KEY_RESET, adj);
-    setText("g1-reset-note", "Saved " + f(adj[st.plat.key], 2, true) + " frames as the default adjustment for " + st.plat.key + ".");
+    var adj = loadResetAdjust(mode);
+    var saved = setResetAdjust(adj, st.plat.key, numOr("g1-reset-adjust", 0), mode);
+    saveResetAdjust(adj, mode);
+    setText("g1-reset-note", "Saved " + f(saved.frames, 2, true) + " frames as the default adjustment for " + st.plat.key + " (" + MODE.label(mode) + " mode's store; recorded with the mode, never in force in the other).");
+    refreshReset();
   });
   $("g1-reset-start").addEventListener("click", function () {
     if (!st.reset || player.running) return;
@@ -1227,14 +1285,61 @@
       report.practiceStored = JSON.parse(storageGet(calStoreKey(MODE.PRACTICE)) || "{}");
       report.runStoreUnchangedByPractice = storageGet(STORE_KEY_CAL) === runStoreBefore;
       report.correctionInPractice = $("g1-correction").value;
+      // the remembered reset adjustment and the Secret ID pins follow the mode too: saved while PRACTICE / HUNT
+      // is on, they land in the practice stores, stamped, and the RUN stores stay untouched
+      var runResetBefore = storageGet(STORE_KEY_RESET), runPinsBefore = storageGet(STORE_KEY_PINS);
+      $("g1-reset-adjust").value = "2"; $("g1-reset-adjust").dispatchEvent(new Event("change"));
+      $("g1-reset-save-adjust").click();
+      report.practiceResetNote = $("g1-reset-note").textContent;
+      report.practiceResetStored = JSON.parse(storageGet(resetStoreKey(MODE.PRACTICE)) || "{}");
+      report.runResetUnchangedByPractice = storageGet(STORE_KEY_RESET) === runResetBefore;
+      var sidKey = pinKey(sidInputs().m.id, 9572);
+      $("sid-pin-pid").value = "12345678"; $("sid-pin-note").value = "practice pin";
+      sidPin(false);
+      report.practicePinOut = $("sid-pin-out").textContent;
+      report.practicePinsStored = JSON.parse(storageGet(pinStoreKey(MODE.PRACTICE)) || "{}");
+      report.practicePinKeyPresent = !!(report.practicePinsStored[sidKey] && report.practicePinsStored[sidKey].length === 1 && report.practicePinsStored[sidKey][0].mode === "practice");
+      report.runPinsUnchangedByPractice = storageGet(STORE_KEY_PINS) === runPinsBefore;
       $("mode-practice").checked = false; $("mode-practice").dispatchEvent(new Event("change"));
       report.modeBack = MODE.get();
       report.bannerHiddenAgain = $("mode-banner").hidden === true;
       report.correctionBackInRun = $("g1-correction").value;
-      report.runNoteAboutPractice = $("g1-correction-note").textContent.indexOf("PRACTICE") !== -1;
+      report.resetAdjustBackInRun = $("g1-reset-adjust").value;
+      report.runListingHasPracticePin = $("sid-out").textContent.indexOf("12345678") !== -1;
+      // records of the other mode planted in the RUN stores (a hand edit, or a hunt tool writing to the wrong key):
+      // never in force, named in the notes, and one whose mode this head does not know breaks nothing
+      var calSnapshot = JSON.stringify(cal);
+      var practiceSample = report.practiceStored["gse/menu"].samples[0];
+      cal["gse/menu"].samples.push(practiceSample);
+      refreshAnchor();
+      report.runNoteAboutPractice = $("g1-correction-note").textContent.indexOf("recorded in PRACTICE / HUNT mode, not RUN") !== -1;
+      cal["gse/menu"].samples.push(Object.assign({}, practiceSample, { mode: "hunt", attempt: "h1" }));
+      refreshAnchor();
+      report.runNoteAboutUnknown = $("g1-correction-note").textContent.indexOf("\"hunt\" (unknown mode), PRACTICE / HUNT mode, not RUN") !== -1;
+      report.correctionWithPlanted = $("g1-correction").value;
+      $("g1-got").value = String(st.plat.table[362]);
+      record();
+      report.recordWithPlanted = $("g1-outcome").textContent.split("\n")[1];
+      report.samplesInForceWithPlanted = samplesFor(cal, "gse", "menu", st.plat.methodologyId, MODE.RUN).length;
+      cal = JSON.parse(calSnapshot);
+      storageSet(STORE_KEY_CAL, calSnapshot);
+      storageSet(STORE_KEY_RESET, JSON.stringify({ gse: { frames: 2, mode: "practice", when: "planted" } }));
+      $("g1-reset-adjust")._touched = false;
+      refreshReset();
+      report.resetPlantedIgnored = $("g1-reset-text").textContent.indexOf("recorded in PRACTICE / HUNT mode, not RUN") !== -1 && $("g1-reset-adjust").value === "0";
+      storageSet(STORE_KEY_RESET, runResetBefore);
+      var planted = {};
+      planted[sidKey] = [{ pid: 0x12345678, shiny: false, note: "", when: "planted", mode: "practice" }];
+      storageSet(STORE_KEY_PINS, JSON.stringify(planted));
+      pins = loadPins(MODE.RUN);
+      sidRun();
+      report.pinPlantedIgnored = $("sid-out").textContent.indexOf("1 stored pin for") !== -1 && $("sid-out").textContent.indexOf("recorded in PRACTICE / HUNT mode, not RUN") !== -1;
+      storageSet(STORE_KEY_PINS, runPinsBefore);
+      pins = loadPins(MODE.RUN);
+      refreshAnchor(); refreshStats(); refreshReset();
       // nothing the self-test did reached the real localStorage
       var real = {};
-      try { [STORE_KEY_CAL, calStoreKey(MODE.PRACTICE), STORE_KEY_PINS, STORE_KEY_RESET, MODE.KEY].forEach(function (k) { real[k] = root.localStorage ? root.localStorage.getItem(k) : null; }); } catch (e) { real.error = String(e); }
+      try { [STORE_KEY_CAL, calStoreKey(MODE.PRACTICE), STORE_KEY_PINS, pinStoreKey(MODE.PRACTICE), STORE_KEY_RESET, resetStoreKey(MODE.PRACTICE), MODE.KEY].forEach(function (k) { real[k] = root.localStorage ? root.localStorage.getItem(k) : null; }); } catch (e) { real.error = String(e); }
       report.realStorage = real;
       var el = document.createElement("pre");
       el.id = "g1-selftest";

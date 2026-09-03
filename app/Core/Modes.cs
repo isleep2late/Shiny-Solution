@@ -4,7 +4,8 @@ namespace ShinySolution.Core;
 // app's copy is webapp/mode.js). RUN is the default; PRACTICE / HUNT is turned on explicitly.
 // Every calibration record carries the mode it was made in, each mode keeps its own store key,
 // and a record of the other mode that turns up in a store is left out (SplitByMode), so a
-// practice-derived correction is never in force in RUN mode.
+// practice-derived correction is never in force in RUN mode. The same split and the same store
+// keys cover the Gen 1 TID panel's reset adjustments and Secret ID pins.
 public static class Modes
 {
     public const string Run = "run";
@@ -15,6 +16,15 @@ public static class Modes
     public static string Check(string? m)
         => IsMode(m) ? m! : throw new ArgumentException($"mode must be \"run\" or \"practice\", not {(m is null ? "null" : "\"" + m + "\"")}");
     public static string Label(string? m) => Check(m) == Practice ? "PRACTICE / HUNT" : "RUN";
+    // The label of a stored record's mode, for notes about records that are left out: tolerant of a
+    // value this head does not know (a typo, an empty string, a mode a later hunt head writes), which
+    // is named as unknown rather than thrown on, so one bad record never breaks a panel. Such a record
+    // is in force in neither mode (SplitByMode keeps only exact matches).
+    public static string Describe(string? stored)
+    {
+        var m = Effective(stored);
+        return IsMode(m) ? Label(m) : "\"" + m + "\" (unknown mode)";
+    }
 
     // The mode a stored record was made in. A record without one was written before modes existed,
     // by a head that had no capture-reading tool at all, so it is a RUN record; a practice-derived

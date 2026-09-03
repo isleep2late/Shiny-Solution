@@ -4,8 +4,9 @@ namespace ShinySolution.App;
 
 // The desktop app's side of the RUN / PRACTICE-HUNT wall: one persisted setting ("mode" in
 // settings.json; absent means RUN), the banner MainForm shows above every tab while PRACTICE /
-// HUNT is on, and Scoped(), which every calibration setting goes through so that the two modes
-// never share a store (RUN keys are unchanged; PRACTICE / HUNT keys end in ".practice").
+// HUNT is on, and Scoped(), which every calibration setting, the Gen 1 TID panel's remembered reset
+// adjustments and its Secret ID pins go through so that the two modes never share a store (RUN keys
+// are unchanged; PRACTICE / HUNT keys end in ".practice").
 public static class AppMode
 {
     public const string SettingKey = "mode";

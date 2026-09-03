@@ -199,13 +199,13 @@ assert("sid listing has 21 candidates", list.kept.length === 21);
 assert("sid listing has the worked example", list.kept.some((c) => c.k === 5478 && c.sid === 0x7F16));
 const shinyPid = (((0xB0AF ^ 0x7F16) << 16) | 0) >>> 0;
 const pins = {};
-U.addPin(pins, em.id, 45231, shinyPid, true, "control");
-const pinned = U.sidListing(em, "Pokemon Emerald", 45231, 1, "mid", null, 5470, 5490, U.pinsFor(pins, em.id, 45231), [], [], null, null);
+U.addPin(pins, em.id, 45231, shinyPid, true, "control", RUN);
+const pinned = U.sidListing(em, "Pokemon Emerald", 45231, 1, "mid", null, 5470, 5490, U.pinsFor(pins, em.id, 45231, RUN), [], [], null, null);
 assert("a shiny pin keeps the true k", pinned.kept.length === 1 && pinned.single && pinned.single.k === 5478);
 const contra = U.sidListing(em, "Pokemon Emerald", 45231, 1, "mid", null, 5470, 5490, [{ pid: shinyPid, shiny: false }], [], [], null, null);
 assert("a contradicting pin drops the true k", !contra.kept.some((c) => c.k === 5478));
 let threw = false;
-try { U.addPin(pins, em.id, 45231, shinyPid, false, ""); } catch (e) { threw = true; }
+try { U.addPin(pins, em.id, 45231, shinyPid, false, "", RUN); } catch (e) { threw = true; }
 assert("a pin cannot be flipped", threw);
 assert("emerald default k range", JSON.stringify(U.sidDefaultKRange(U.sidModelFor(em, "mid", null), 1, "mid")) === "[1645,2845]");
 const fr = U.sidMethodologyFor(SIDDATA, "firered");

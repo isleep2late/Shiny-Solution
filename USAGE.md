@@ -147,7 +147,8 @@ promoted), the desktop app's
    calibrate or hunt: a banner stays on every tab, the tab reads and writes the practice store
    (a separate key; a practice-derived correction is never in force in RUN, and a practice
    sample that turns up in the RUN store is listed as ignored), and the correction, P(hit) and
-   drift you see are the practice ones until you switch back.
+   drift you see are the practice ones until you switch back. The reset adjustment you remember
+   (step 6) and the Secret ID pins (below) are kept the same way: per mode, stamped, never mixed.
 6. **Save-corruption reset.** The metronome beats RESET then A (GSE, Game Boy Player: 199.2 ms
    on the route path, 149.6 ms over a practice save) or A then power off (handhelds, DMG:
    397.9 ms). Calibrate from outcomes (does CONTINUE give the 255-Pokémon party?), never from

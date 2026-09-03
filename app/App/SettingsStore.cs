@@ -4,8 +4,9 @@ namespace ShinySolution.App;
 
 // Per-user settings in %APPDATA%\ShinySolution\settings.json: numbers (the timers' calibrations),
 // since the Gen 1 Trainer ID panel whole objects (its calibration samples, pins and reset adjusts), and
-// the mode string (AppMode). Older files hold only numbers and still load. Calibration keys go through
-// AppMode.Scoped: RUN keys are the ones that always existed, PRACTICE / HUNT keys end in ".practice".
+// the mode string (AppMode). Older files hold only numbers and still load. Calibration, pin and
+// reset-adjust keys go through AppMode.Scoped: RUN keys are the ones that always existed, PRACTICE /
+// HUNT keys end in ".practice".
 public static class SettingsStore
 {
     static readonly string Path = System.IO.Path.Combine(

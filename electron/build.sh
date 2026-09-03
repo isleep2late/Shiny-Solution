@@ -3,7 +3,8 @@
 #   bash build.sh [--with-hunt] [--stage-only]
 # The wall: webapp/hunt/ (capture-watching code, PRACTICE / HUNT only) is never staged unless
 # --with-hunt is passed explicitly; without it, a page that references a script under hunt/ is
-# refused, and a stage that turns out to carry the hunt sentinel is refused too. --stage-only
+# refused, and a stage that turns out to carry the text of any file under hunt/ is refused too
+# (the same whole-file comparison build-mobile-bundle.mjs makes; the sentinel is not what it rests on). --stage-only
 # stops after staging (tests/run-tests.sh uses it to check both ways; the build-desktop workflow
 # uses it before electron-builder). The published builds are made without --with-hunt.
 set -euo pipefail
@@ -36,11 +37,21 @@ if [ "$with_hunt" = 1 ]; then
   cp -r "$src/hunt" webapp/hunt
   echo "--with-hunt: webapp/hunt/ staged (a PRACTICE / HUNT build, not for publishing)"
 else
-  sentinel=$(sed -n 's/.*SHINY_HUNT_SENTINEL = "\([^"]*\)".*/\1/p' "$src/hunt/sentinel.js")
-  [ -n "$sentinel" ] || refuse "no sentinel string in $src/hunt/sentinel.js (the leak check needs it)"
-  if grep -rqF -- "$sentinel" webapp/; then
-    refuse "the staged files carry the hunt sentinel ($(grep -rlF -- "$sentinel" webapp/ | tr '\n' ' ')) without --with-hunt"
-  fi
+  # nothing from webapp/hunt/ may be in the stage, whatever path it took: the text of every file under it
+  # (20+ bytes once trimmed, as in build-mobile-bundle.mjs) is looked for in every staged file
+  command -v node >/dev/null 2>&1 || refuse "node is needed for the webapp/hunt/ leak check"
+  leak=$(node -e '
+const fs = require("fs"), path = require("path");
+const [huntDir, stage] = process.argv.slice(1);
+function files(dir) { let out = []; for (const name of fs.readdirSync(dir).sort()) { const p = path.join(dir, name); out = fs.statSync(p).isDirectory() ? out.concat(files(p)) : out.concat([p]); } return out; }
+const staged = files(stage).map((p) => [p, fs.readFileSync(p, "utf8")]);
+for (const h of files(huntDir)) {
+  const text = fs.readFileSync(h, "utf8").trim();
+  if (text.length < 20) continue;
+  for (const [p, s] of staged) if (s.includes(text)) { console.log("webapp/" + path.relative(path.dirname(huntDir), h) + " in " + p); process.exit(0); }
+}
+' "$src/hunt" webapp)
+  [ -z "$leak" ] || refuse "the staged files carry the text of a webapp/hunt/ file ($leak) without --with-hunt"
 fi
 if [ "$stage_only" = 1 ]; then
   echo "staged into electron/webapp (--stage-only)"

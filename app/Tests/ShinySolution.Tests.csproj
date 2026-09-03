@@ -8,4 +8,9 @@
   <ItemGroup>
     <ProjectReference Include="../Core/ShinySolution.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- the Gen 1 TID panel's pure part (Gen1TidText: calibration records, the reset adjustment and the pins over the
+         RUN / PRACTICE-HUNT mode), so ModeWallChecks tests the composition the panel performs, not a re-derivation -->
+    <Compile Include="../App/Gen1TidSupport.cs" Link="Gen1TidSupport.cs" />
+  </ItemGroup>
 </Project>
