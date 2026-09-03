@@ -1,9 +1,11 @@
 // The service worker (webapp/sw.js) driven in a node vm sandbox with a fake CacheStorage, fetch and clients:
 // install precaches the app shell (every script index.html loads, the stylesheet, the manifest, the icons), activate
 // deletes the caches of other builds and claims the clients, and, with the network gone, a fetch for a shell file, a
-// navigation (any page URL under the scope) and a data file opened once before are all answered from the caches; the
-// data route is cache-first (a second online request never reaches the network), a data file never opened is not
-// served offline, and cross-origin requests are left alone. The build stamp in sw.js must be the one in index.html
+// navigation to the scope root or to index.html and a data file opened once before are all answered from the caches; a
+// navigation to another path under the scope goes to the network online and is redirected to index.html offline (the
+// shell's relative URLs resolve only beside it); the precache asks with cache mode reload; the data route is
+// cache-first (a second online request never reaches the network), a data file never opened is not served offline,
+// and cross-origin requests are left alone. The build stamp in sw.js must be the one in index.html
 // and the precache list must name every file the page loads, each present under webapp/.
 // The build stamp must also be what the shipped sources hash to now (sync-core.sh's recipe recomputed here).
 // usage: node test-sw.cjs [sw.js] [index.html]      (tests/run-tests.sh also runs it on a copy of sw.js with the
@@ -24,11 +26,14 @@ function assert(label, cond, detail) {
 }
 
 // ---- the fakes ---------------------------------------------------------------------------------
-const network = { online: true, log: [], files: {} };
+const network = { online: true, log: [], modes: [], files: {} };
 function toRequest(x) { return typeof x === "string" ? new Request(new URL(x, BASE + "sw.js").href) : x; }
+// the worker's Request resolves a relative URL against the script's own, as the browser's does
+class SwRequest extends Request { constructor(input, init) { super(typeof input === "string" ? new URL(input, BASE + "sw.js").href : input, init); } }
 function fakeFetch(input) {
   const req = toRequest(input);
   network.log.push(req.url);
+  network.modes.push(req.cache);
   if (!network.online) return Promise.reject(new TypeError("Failed to fetch (offline)"));
   const p = new URL(req.url).pathname;
   const body = network.files[p];
@@ -64,7 +69,7 @@ const self = {
   skipWaiting() { skipped++; return Promise.resolve(); },
   clients: { claim() { claimed++; return Promise.resolve(); } }
 };
-const sandbox = { self, caches, fetch: fakeFetch, URL, Request, Response, Promise, console };
+const sandbox = { self, caches, fetch: fakeFetch, URL, Request: SwRequest, Response, Promise, console };
 sandbox.self.caches = caches;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync(swPath, "utf8"), sandbox, { filename: swPath });
@@ -137,6 +142,7 @@ network.files["/app/data/wizard-gen4.js"] = "window.ShinyWizardData4 = {};";
   assert("install opens the shell cache of this build", !!shellCache, [...store.keys()]);
   for (const f of shell) assert("install precaches " + f, !!shellCache && shellCache.urls().includes(BASE + f));
   assert("install fetched only the shell", network.log.every((u) => shell.some((f) => u === BASE + f)) && network.log.length === shell.length, network.log);
+  assert("install precaches with cache mode reload (never the browser's HTTP-cache copy of an old file)", network.modes.length === shell.length && network.modes.every((m) => m === "reload"), network.modes);
   assert("install skips waiting", skipped === 1);
 
   await lifecycle("activate");
@@ -154,6 +160,9 @@ network.files["/app/data/wizard-gen4.js"] = "window.ShinyWizardData4 = {};";
   network.log.length = 0;
   r = await fetchEvent(BASE + "data/wizard-gen3.js", "no-cors");
   assert("data file (second use, online) is cache-first: the network is not asked", r.handled && r.text === "window.ShinyWizardData3 = {};" && network.log.length === 0, network.log);
+  network.log.length = 0;
+  r = await fetchEvent(BASE + "some/other/page", "navigate");
+  assert("online: a navigation to another path under the scope goes to the network (the server answers; here 404), not to the cached shell", r.handled && r.response && r.response.status === 404 && network.log.length === 1 && network.log[0] === BASE + "some/other/page", r.error ? String(r.error) : (r.response && r.response.status));
 
   // the server is gone
   network.online = false;
@@ -172,13 +181,15 @@ network.files["/app/data/wizard-gen4.js"] = "window.ShinyWizardData4 = {};";
   assert("offline: a navigation with a query is the cached shell", r.handled && r.text === "shell:index.html");
   r = await fetchEvent(BASE, "navigate");
   assert("offline: a navigation to the directory is the cached shell (the fallback)", r.handled && r.text === "shell:index.html");
-  r = await fetchEvent(BASE + "some/other/page", "navigate");
-  assert("offline: a navigation to another path under the scope is the cached shell (the fallback)", r.handled && r.text === "shell:index.html");
   r = await fetchEvent(BASE + "data/wizard-gen3.js", "no-cors");
   assert("offline: the tables opened once are served from the data cache", r.handled && r.text === "window.ShinyWizardData3 = {};", r.error && String(r.error));
   r = await fetchEvent(BASE + "data/wizard-gen4.js", "no-cors");
   assert("offline: tables never opened are not served (the fetch fails, the tab reports it)", r.handled && !!r.error, r.text);
   assert("offline: only the never-opened tables were asked of the network", JSON.stringify(network.log) === JSON.stringify([BASE + "data/wizard-gen4.js"]), network.log);
+  network.log.length = 0;
+  r = await fetchEvent(BASE + "some/other/page", "navigate");
+  assert("offline: a navigation to another path under the scope is redirected to index.html (the shell's relative URLs resolve only beside it), not served the shell in place", r.handled && r.response && r.response.status === 302 && r.response.headers.get("location") === BASE + "index.html", r.error ? String(r.error) : (r.response && r.response.status));
+  assert("offline: that navigation was tried on the network first", JSON.stringify(network.log) === JSON.stringify([BASE + "some/other/page"]), network.log);
   r = await fetchEvent(BASE + "app.js?v=2", "no-cors");
   assert("offline: a shell file asked with a query is served ignoring the search", r.handled && r.text === "shell:app.js");
 
