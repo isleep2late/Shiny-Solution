@@ -118,6 +118,41 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# Gen 2 Trainer ID / Lucky ID engine (core/gen2tid.js over core/data/gen2-tid.json) against tests/gen2tid-vectors.json, emitted by
+# tests/gen2_reference.py from the derivation folder's CSVs read directly. When that folder is present the vectors are re-emitted
+# and must be byte-identical to the committed file; the generated data must also be byte-reproducible.
+GEN2_SRC="${GEN2_TID_SRC:-$HOME/Desktop/Red-WR-Practice/gen2-tid}"
+if [ -f "$GEN2_SRC/gold-gbp.csv" ]; then
+  python3 gen2_reference.py "$GEN2_SRC" 2>/dev/null | cmp - gen2tid-vectors.json && echo "gen2 vectors re-emitted from the CSVs: byte-identical"
+  # regenerated into a temp file (the generator's optional output path), never over the committed file
+  regen=$(mktemp --suffix=.json)
+  python3 ../tools/gen-gen2-data.py "$GEN2_SRC" "$regen" > /dev/null
+  cmp "$regen" ../core/data/gen2-tid.json && echo "gen2-tid.json regenerated from the CSVs: byte-identical to the committed file"
+  rm -f "$regen"
+else
+  echo "gen2 derivation folder not found; checking the committed vectors only"
+fi
+node test-gen2tid.cjs gen2tid-vectors.json
+
+# Negative control: a corrupted vector (one lookup TID bumped by 1, one schedule's A time moved by 1e-6 s) must FAIL, and is shown failing.
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+v.lookups[5].tid += 1;
+v.schedules.find((s) => "result" in s).result.tA += 1e-6;
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' gen2tid-vectors.json "$corrupted"
+if node test-gen2tid.cjs "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted gen2tid vectors): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted gen2tid vectors): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # The webapp's Gen 1 Trainer ID tab: the mobile bundle must carry the tab, the engine and the embedded data, and the
 # tab's pure module must agree with the engine and RNG Solution's numbers (tests/test-webapp.cjs, which builds the bundle).
 bundle=$(mktemp --suffix=.ts)
@@ -216,6 +251,25 @@ if [ -e ../electron/webapp/hunt ] || grep -rqF -- "$sentinel" ../electron/webapp
   echo "FAIL: the plain electron stage carries webapp/hunt/"; exit 1
 fi
 echo "the plain electron stage: no hunt/ directory, no sentinel; mode.js staged: $([ -f ../electron/webapp/mode.js ] && echo yes || { echo no; exit 1; })"
+
+# Negative control: a bundle whose gen2tid.js UMD line is renamed (the engine no longer registers as ShinyGen2Tid) must FAIL,
+# and is shown failing, so the carry of core/gen2tid.js into the bundle is a checked fact.
+node -e '
+const fs = require("fs");
+const ts = fs.readFileSync(process.argv[1], "utf8");
+const needle = "root.ShinyGen2Tid = factory(root.ShinyGen1Tid)";
+if (!ts.includes(needle)) { console.error("negative control setup: the gen2tid.js UMD line was not found in the bundle"); process.exit(1); }
+fs.writeFileSync(process.argv[2], ts.split(needle).join("root.ShinyGen2Gone = factory(root.ShinyGen1Tid)"));
+' "$bundle" "$bundle.g2"
+if node test-webapp.cjs "$bundle.g2" > "$bundle.out" 2>&1; then
+  echo "negative control (bundle with gen2tid.js renamed): DID NOT FAIL"
+  rm -f "$bundle" "$bundle.g2" "$bundle.out"
+  exit 1
+else
+  echo "negative control (bundle with gen2tid.js renamed): FAILED as required ->"
+  grep -E '^FAIL|failure' "$bundle.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$bundle.g2" "$bundle.out"
 
 # Negative control: a bundle without the tab's button (the string deleted) must FAIL, and is shown failing.
 node -e '

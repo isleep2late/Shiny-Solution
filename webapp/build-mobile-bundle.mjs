@@ -45,14 +45,14 @@ if (huntRefs.length && !withHunt) refuse("index.html references " + huntRefs.joi
 const css = readFileSync(join(here, "app.css"), "utf8") +
   "\nbody { padding: 10px; } button { min-height: 40px; } input, select { min-height: 38px; font-size: 16px; }\n";
 html = html.replace('<link rel="stylesheet" href="app.css">', "<style>\n" + css + "\n</style>");
-for (const name of ["rng.js", "gen4.js", "gen12.js", "gen1tid.js", "timers.js", "gen5.js", "generators.js"]) {
+for (const name of ["rng.js", "gen4.js", "gen12.js", "gen1tid.js", "timers.js", "gen5.js", "generators.js", "gen2tid.js"]) {
   const js = readFileSync(join(here, "..", "core", name), "utf8");
   html = html.replace(`<script src="${name}"></script>`, "<script>\n" + js + "\n</script>");
 }
 // core/data/*.json inlined as the same globals webapp/sync-core.sh writes into gen1-data.js
 // ("</" is escaped so no JSON string can end the script element).
 const inlineJson = (name) => readFileSync(join(here, "..", "core", "data", name), "utf8").trim().replace(/<\//g, "<\\/");
-const dataJs = "window.ShinyGen1Data = " + inlineJson("gen1-tid.json") + ";\nwindow.ShinyGen3SidData = " + inlineJson("gen3-sid.json") + ";\n";
+const dataJs = "window.ShinyGen1Data = " + inlineJson("gen1-tid.json") + ";\nwindow.ShinyGen3SidData = " + inlineJson("gen3-sid.json") + ";\nwindow.ShinyGen2TidData = " + inlineJson("gen2-tid.json") + ";\n";
 html = html.replace('<script src="gen1-data.js"></script>', "<script>\n" + dataJs + "</script>");
 for (const local of ["downloads.js", "mode.js", "app.js", "gen1tid-ui.js"]) {
   const js = readFileSync(join(here, local), "utf8");

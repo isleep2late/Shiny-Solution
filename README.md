@@ -22,6 +22,7 @@ app's Help tab.
 | **Gen 1 Trainer ID: Red** | GSE / gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact (the table was derived on that core) | The one timed A press on NEW GAME under a named hold-START methodology, cued from the menu, the power switch or RESET; typed-TID calibration with P(hit) and drift; route-valid targets (the `$40xx` sled, PSR sets); the save-corruption RESET/A metronome; moderator verify | `red/gba/hold-start-v1`: GBA HD hardware-validated 5 of 5; GBA / GBA SP same silicon, not separately sampled; GameCube Game Boy Player UNVALIDATED. `red/dmg/hold-start-v1`: original Game Boy hardware-validated 5 of 6 |
 | **Gen 1 Trainer ID: Blue** | same | same | `blue/gba/hold-start-v1`, `blue/dmg/hold-start-v1`: emulator-derived (every offset re-derived from three further cold boots, byte-identical); **no hardware sample yet** |
 | **Gen 1 Trainer ID: Yellow** | same | same; no route-valid target (the PSR route's 6415 / 64EA are not produced by the shipped methodology) | `yellow/gba/hold-start-v1`, `yellow/dmg/hold-start-v1`: emulator-derived; **no hardware sample yet** |
+| **Gen 2 Trainer ID / Lucky ID: Gold, Silver, Crystal** | GSE / gambatte-speedrun in GBP mode: emulator-exact (the 162 tables were derived on that core, RTC day 0 = GSE's fresh clock) | Hold START from power-on (or, on a DMG, during the copyright text), release it at the NEW GAME menu, one 4-8-frame A tap: the target is a 4-frame poll bin, not a frame (599 bins per table); TID + Lucky ID (+ Crystal's Secret ID) per bin; Gold/Silver tables per platform (GBP, GBC, DMG hold-start, DMG late-start) and per MBC3 RTC state (10 running-clock brackets, 8 distinct halted); typed-(TID, LID) inversion with the two-state prior; cues from the menu, the power switch or GSE's reset; `core/gen2tid.js` + `Gen2Tid.cs` only, no head yet | `gold|silver|crystal/<gbp|gbc|dmg>/hold-start-v1`, `gold|silver/dmg/late-start-v1`: **emulator-derived, community-script cross-validated on GBP, no hardware sample**. The published route targets (09705, 55785, Gold NSC D900, LID 01001, Crystal 26FB+186F) come from multi-step community scripts and are NOT produced by the single-tap tables in the day-0 state (recorded as `community-script` sets; the Gold and Silver 09705 scripts and the Gold 6F49/03E9 script reproduce in the harness, the 55785, NSC D900 and Crystal 26FB/186F scripts are not reproduced) |
 | **Gen 1/2** R/B/Y/G/S/C shiny DVs | Automatic hunt bot: no seedable RNG exists, so the bot retries a savestate with shifted timing until the roll is shiny (Gen 2 rule) or matches your DV pattern: encounters, gifts/starters, and TIDs | Not practical (hardware divider RNG) | |
 | **Gen 3** R/S (E/FRLG experimental) | Fully automatic: the mGBA script reads the live RNG, self-calibrates with a throwaway press + savestate rewind, and presses A on the exact shiny/TID frame: starters, gifts, AND static legendaries; a brute-force hunt covers wild grass | Calibrated power-on timer for dead-battery R/S (every boot seeds 0x5A0); TID manip converges in a few attempts and reveals your SID | verified on Ruby under libmgba (`tests/harness/`) |
 | **Gen 3 Secret ID: Emerald / FireRed / LeafGreen** | | The Trainer ID cannot be chosen (a sub-frame Timer1 count); the Secret ID follows from the typed Trainer ID after k+1 LCRNG advances: one candidate per k, a press cue that pins k to a 27-frame window, pins (a PID seen shiny or not) that narrow it to one | `*/gba/typed-tid-sid-v1`: frame counts emulator-measured on mGBA 0.10.5 by two harnesses; hardware unverified |
@@ -112,6 +113,7 @@ RNG Solution's registry and tables and embedded in every head.
 | [RNG Solution](https://github.com/isleep2late/RNG-Solution) | The terminal front end: the same TARGET flow, the press trainer, dual-anchor fusion, `stats`, `verify`, `reset`, `sid`, and the practice-only PREDICT mode. It reads this repository's `core/data` in place of its own registry and CSVs with `--data-dir <Shiny Solution checkout>` (or `SHINY_SOLUTION_DATA`), so every head runs over one file. |
 | `lua/shiny-solution.lua`, `lua/shiny-solution-gb.lua` | The Gen 3 mGBA auto-manip script and the Gen 1/2 hunt bot (also usable standalone). |
 | `core/gen1tid.js` + `app/Core/Gen1Tid.cs` | The Gen 1 Trainer ID engine (cue schedules for the menu / power-on / reset anchors, target sets and verdicts, inversion, calibration with the 60-frame outlier and duplicate guards, the reset metronome, verify, the runner's press-jitter model: P(hit), drift, fusion) and the Gen 3 typed-TID -> SID model, ported from RNG Solution's Python and checked against the vectors it emits (`tests/gen1tid-vectors.json`, about 1,840 cases: integers, strings and error classes exact, floats to 1e-9 relative). Target sets are never defaulted (a verdict needs the game's sets), and every number is checked at the JS boundary. |
+| `core/gen2tid.js` + `app/Core/Gen2Tid.cs` | The Gen 2 Trainer ID / Lucky ID engine over `core/data/gen2-tid.json` (generated by `tools/gen-gen2-data.py` from the derivation folder's 162 CSVs, README.md and REVIEW.md, sha1s kept): the 4-frame bin function, bin -> offsets, lookups across every platform and RTC state, the typed-TID / typed-(TID, LID) inversion with the two-state prior and the README's ambiguity statistics, the target sets with their measured single-press hits, cue schedules (menu / power-on / GSE reset), bin-based calibration whose samples the Gen 1 mean and duplicate helpers take as they are (the outlier guard is the bin one), and verify; checked in JS and C# against `tests/gen2tid-vectors.json`, emitted by `tests/gen2_reference.py` from the CSVs read directly (3,863 cases). |
 | `core/generators.js` + `app/Core/Generators.cs` | The Gen 3/4 encounter engines: Method 1/2/4 statics, wild Method H (RS, FRLG, Emerald leads), J and K (DPPt/HGSS leads, Safari, Bug Contest, headbutt, honey trees, Poke Radar), Gen 3 and Gen 4 eggs, per-stat/Hidden Power filters, exact rarity counts, LCRNG distance and the Gen 4 IV-to-seed back-step. Every call cited in `docs/FACTS.md` ("Generators"), checked bit-for-bit against PokeFinder's own test vectors. |
 | `core/data/{species,encounters,statics}-gen{3,4}.json` | The Gen 3/4 species tables, wild encounter tables and static/gift catalogue generated from the pret decompilations by `tools/gen-guide-data.py` (`docs/DATA.md`): the records the generator engines take as input. Not carried into the webapp heads yet (the wizard phase adds them; `docs/DATA.md` has the TODO). |
 | `core/rng.js` + `core/gen4.js` + `core/gen12.js` + `app/Core/` | The Gen 3 LCRNG / Method 1, Gen 4 seed / MT19937 / timer and Gen 1-2 DV engines, parity-tested between JS and C#. |
@@ -131,7 +133,9 @@ RNG Solution's registry and tables and embedded in every head.
   the JS engine vs an algorithmically independent Python reference; the
   JS Gen 4 / Gen 1-2 ports vs vectors emitted by the C# engine; `core/gen1tid.js` vs
   `tests/gen1tid-vectors.json` (emitted by RNG Solution's Python) with a corrupted vector shown
-  failing; the webapp smoke test (`tests/test-webapp.cjs`: the mobile bundle carries the Gen 1
+  failing; `core/gen2tid.js` vs `tests/gen2tid-vectors.json` (emitted by `tests/gen2_reference.py`
+  from the Gen 2 derivation CSVs; when that folder is present the vectors and `gen2-tid.json` are
+  re-emitted and must be byte-identical) with a corrupted vector shown failing; the webapp smoke test (`tests/test-webapp.cjs`: the mobile bundle carries the Gen 1
   TID tab, the engine and the embedded data verbatim, and the tab's pure module reproduces the
   engine's schedules, sample-exact render onsets, the calibration guards, RNG Solution's control
   numbers: sd 20 ms -> P(hit) 32 %, the 199.2 / 397.9 ms reset centres, `$4003` at 9.0 s
@@ -156,8 +160,9 @@ RNG Solution's registry and tables and embedded in every head.
   (`DATA_TEST_NEGATIVE=1` is its negative control); regeneration, the citation re-read and the PokeFinder diff
   are `tools/gen-guide-data.py` (`docs/DATA.md`).
 - `app/run-core-tests.sh`: the C# engine vs the same vectors, plus canonical MT19937 vectors,
-  the Gen 4 seed/timer model, the generator vectors, `Gen1Tid.cs` vs the gen1tid vectors with
-  its own negative control, and the wall over the mode-wall fixture with the restamped copy shown failing:
+  the Gen 4 seed/timer model, the generator vectors, `Gen1Tid.cs` vs the gen1tid vectors and
+  `Gen2Tid.cs` vs the gen2tid vectors, each with its own negative control, and the wall over the
+  mode-wall fixture with the restamped copy shown failing:
   `Modes.cs` and the Gen 1 TID panel's pure part (`Gen1TidSupport.cs`, compiled into the test
   project: the ignore notes, an unknown-mode record kept out without breaking the panel, the reset
   adjustment and the pins by mode). `dotnet build app/App -c Release -p:EnableWindowsTargeting=true`
@@ -180,6 +185,8 @@ bash electron/build.sh                                              # Linux AppI
 python3 tools/gen-gen1-data.py ../RNG-Solution                      # regenerate core/data from the registry
 python3 tools/gen-guide-data.py                                     # regenerate core/data/{species,encounters,statics}-gen{3,4}.json from ~/AI/pret
 node tools/build-timer-vectors.js <eontimer-dist>                   # regenerate tests/timer-vectors.json (the header has the EonTimer build recipe)
+python3 tools/gen-gen2-data.py ~/Desktop/Red-WR-Practice/gen2-tid    # regenerate core/data/gen2-tid.json from the Gen 2 CSVs
+python3 tests/gen2_reference.py ~/Desktop/Red-WR-Practice/gen2-tid > tests/gen2tid-vectors.json   # re-emit the Gen 2 vectors
 ```
 
 ## Roadmap, with the hardware that gates each step
@@ -190,8 +197,13 @@ node tools/build-timer-vectors.js <eontimer-dist>                   # regenerate
   Yellow carts on a GBA HD and a DMG.
 - **GameCube Game Boy Player transfer test** of the hold-window table (one calibration attempt
   settles it) and the RESET fade constant from outcomes. Gate: a GameCube with the Game Boy Player.
-- **Gen 2** (Gold/Silver/Crystal): a Trainer ID methodology of its own; nothing is tabulated.
-  Gate: a Gen 2 cart on the same consoles.
+- **Gen 2** (Gold/Silver/Crystal): the ten single-tap methodologies are tabulated (every platform
+  and RTC state) and the engine is ported and vector-checked, but no head shows them yet and no
+  hardware sample exists; the published route targets need the community multi-step scripts (the
+  Gold and Silver 09705 scripts and the Gold 6F49/03E9 script are reproduced in the harness; the
+  55785, NSC D900 and Crystal 26FB/186F scripts are not), none of which is tabulated as a
+  methodology. Gate: a Gen 2 cart on a GBP / GBC / DMG for three in-table (TID, LID) samples, then
+  the webapp tab and the desktop panel.
 - **Dead-battery Ruby/Sapphire** on hardware: `rs/gba/boot-seed-v0` is defined, not implemented;
   the console timer exists and needs its hardware record. Gate: a dead-battery R/S cart.
 - **Gen 4**: one DS session to record the two-phase timer's calibration on hardware.

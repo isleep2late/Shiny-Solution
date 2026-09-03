@@ -40,9 +40,13 @@ assert("bundle embeds gen1tid.js", html.includes("root.ShinyGen1Tid = factory(ro
 assert("bundle embeds timers.js", html.includes("root.ShinyTimers = factory(root.ShinyCore, root.ShinyGen4)"));
 assert("bundle embeds gen5.js", html.includes("root.ShinyGen5 = factory(root.ShinyGen4)"));
 assert("bundle embeds generators.js", html.includes("root.ShinyGenerators = factory(root.ShinyCore, root.ShinyGen4)"));
+assert("bundle embeds gen2tid.js", html.includes("root.ShinyGen2Tid = factory(root.ShinyGen1Tid)"));
 assert("bundle embeds the tab module", html.includes("root.ShinyGen1TidUi = api"));
 assert("bundle embeds the Gen 1 data as a global", html.includes("window.ShinyGen1Data = {"));
 assert("bundle embeds the Gen 3 SID data as a global", html.includes("window.ShinyGen3SidData = {"));
+assert("bundle embeds the Gen 2 TID data as a global", html.includes("window.ShinyGen2TidData = {"));
+const GEN2DATA = JSON.parse(fs.readFileSync(path.join(root, "core", "data", "gen2-tid.json"), "utf8"));
+for (const id of Object.keys(GEN2DATA.methodologies)) assert("bundle embeds Gen 2 methodology " + id, html.includes('"' + id + '"'));
 for (const id of Object.keys(DATA.methodologies)) assert("bundle embeds methodology " + id, html.includes('"' + id + '"'));
 for (const id of Object.keys(SIDDATA.methodologies)) assert("bundle embeds SID methodology " + id, html.includes('"' + id + '"'));
 const redTable = DATA.methodologies["red/gba/hold-start-v1"].table_data.tids_hex;

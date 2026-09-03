@@ -31,8 +31,8 @@ rm -rf webapp
 mkdir -p webapp/data
 bash "$src/sync-core.sh"
 cp "$src/index.html" "$src/app.css" "$src/mode.js" "$src/app.js" "$src/downloads.js" "$src/gen1tid-ui.js" \
-   "$src/rng.js" "$src/gen4.js" "$src/gen12.js" "$src/gen1tid.js" "$src/timers.js" "$src/gen5.js" "$src/generators.js" "$src/gen1-data.js" webapp/
-cp "$src/data/gen1-tid.json" "$src/data/gen3-sid.json" webapp/data/
+   "$src/rng.js" "$src/gen4.js" "$src/gen12.js" "$src/gen1tid.js" "$src/timers.js" "$src/gen5.js" "$src/generators.js" "$src/gen2tid.js" "$src/gen1-data.js" webapp/
+cp "$src/data/gen1-tid.json" "$src/data/gen3-sid.json" "$src/data/gen2-tid.json" webapp/data/
 if [ "$with_hunt" = 1 ]; then
   cp -r "$src/hunt" webapp/hunt
   echo "--with-hunt: webapp/hunt/ staged (a PRACTICE / HUNT build, not for publishing)"
