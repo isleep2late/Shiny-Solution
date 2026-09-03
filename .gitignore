@@ -26,3 +26,4 @@ electron/node_modules/
 electron/dist/
 electron/webapp/
 publish/
+tests/generators-cross.json

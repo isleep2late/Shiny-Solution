@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 python3 reference.py > vectors.json
 node test.cjs vectors.json
+node test-data.cjs
 if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   export DOTNET_ROOT="$HOME/.dotnet"
   export PATH="$HOME/.dotnet:$PATH"
@@ -14,10 +15,13 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   dotnet run --project ../app/Tests -c Release -- --gen5 gen5-vectors.json
   dotnet run --project ../app/Tests -c Release -- --emit-gen5-random gen5-random.json
   node test-gen5.cjs gen5-vectors.json gen5-random.json
+  dotnet run --project ../app/Tests -c Release -- --generators generators-vectors.json generators-cross.json
+  node test-generators.cjs generators-vectors.json generators-cross.json
 else
-  echo "dotnet not found; skipping gen4 parity vectors, the JS/C# timer cross-check and the C# gen5 checks"
+  echo "dotnet not found; skipping gen4 parity vectors, the JS/C# timer cross-check, the C# gen5 checks and the JS/C# generator cross-check"
   node test-timers.cjs timer-vectors.json
   node test-gen5.cjs gen5-vectors.json gen5-random.json
+  node test-generators.cjs generators-vectors.json
 fi
 
 # Negative control: a corrupted Gen 5 vector (one TID row bumped by 1, one LCRNG64 step moved by 1) must FAIL, and is

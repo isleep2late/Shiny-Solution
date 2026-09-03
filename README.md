@@ -65,6 +65,7 @@ RNG Solution's registry and tables and embedded in every head.
 | [RNG Solution](https://github.com/isleep2late/RNG-Solution) | The terminal front end: the same TARGET flow, the press trainer, dual-anchor fusion, `stats`, `verify`, `reset`, `sid`, and the practice-only PREDICT mode. It reads this repository's `core/data` in place of its own registry and CSVs with `--data-dir <Shiny Solution checkout>` (or `SHINY_SOLUTION_DATA`), so every head runs over one file. |
 | `lua/shiny-solution.lua`, `lua/shiny-solution-gb.lua` | The Gen 3 mGBA auto-manip script and the Gen 1/2 hunt bot (also usable standalone). |
 | `core/gen1tid.js` + `app/Core/Gen1Tid.cs` | The Gen 1 Trainer ID engine (cue schedules for the menu / power-on / reset anchors, target sets and verdicts, inversion, calibration with the 60-frame outlier and duplicate guards, the reset metronome, verify, the runner's press-jitter model: P(hit), drift, fusion) and the Gen 3 typed-TID -> SID model, ported from RNG Solution's Python and checked against the vectors it emits (`tests/gen1tid-vectors.json`, about 1,840 cases: integers, strings and error classes exact, floats to 1e-9 relative). Target sets are never defaulted (a verdict needs the game's sets), and every number is checked at the JS boundary. |
+| `core/generators.js` + `app/Core/Generators.cs` | The Gen 3/4 encounter engines: Method 1/2/4 statics, wild Method H (RS, FRLG, Emerald leads), J and K (DPPt/HGSS leads, Safari, Bug Contest, headbutt, honey trees, Poke Radar), Gen 3 and Gen 4 eggs, per-stat/Hidden Power filters, exact rarity counts, LCRNG distance and the Gen 4 IV-to-seed back-step. Every call cited in `docs/FACTS.md` ("Generators"), checked bit-for-bit against PokeFinder's own test vectors. |
 | `core/rng.js` + `core/gen4.js` + `core/gen12.js` + `app/Core/` | The Gen 3 LCRNG / Method 1, Gen 4 seed / MT19937 / timer and Gen 1-2 DV engines, parity-tested between JS and C#. |
 | `core/gen5.js` + `app/Core/Gen5.cs` | The Gen 5 engine: the SHA-1 boot seed, LCRNG64, the boot advances, TID/SID rows and the profile searcher (Timer0/VCount/VFrame/GxStat from typed IVs or save needles), a port of PokeFinder's code (Admiral-Fish) credited in the file headers and in `docs/FACTS.md`, bit-for-bit parity-tested between JS and C#. Engine only: no tab yet. |
 | `core/timers.js` + `app/Core/Timers.cs` | EonTimer's timer models (Gen 3 frame, Gen 4 delay, Gen 5 second / C-Gear / Entralink / Entralink+, custom phases) ported function-for-function, parity-tested between JS and C#; the shipped timers still run `gen4.js` (the gap is recorded in `docs/FACTS.md`). |
@@ -91,9 +92,13 @@ RNG Solution's registry and tables and embedded in every head.
   (PokeFinder's own test vectors, the RNGWriteups worked seed 0xb082b4a755192171, and
   independent oracles; provenance per vector, builder `tests/build-gen5-vectors.py`), plus
   200 random inputs answered by C# (`--emit-gen5-random`) and re-checked in JS.
+- `tests/test-generators.cjs` and `app/Tests --generators` (in both runners): both generator engines vs
+  PokeFinder's test suite (`tests/generators-vectors.json`, 85 cases / 1833 results), the
+  decomp-vs-PokeFinder pins, the rarity and reversal math, and a 300-case JS/C# cross-check;
+  `tools/check-generator-citations.py` re-reads every cited decomp line.
 - `app/run-core-tests.sh`: the C# engine vs the same vectors, plus canonical MT19937 vectors,
-  the Gen 4 seed/timer model, and `Gen1Tid.cs` vs the gen1tid vectors with its own negative
-  control. `dotnet build app/App -c Release -p:EnableWindowsTargeting=true` compiles the
+  the Gen 4 seed/timer model, the generator vectors, and `Gen1Tid.cs` vs the gen1tid vectors with
+  its own negative control. `dotnet build app/App -c Release -p:EnableWindowsTargeting=true` compiles the
   desktop app on Linux.
 - `tests/run-lua-sim.sh` and `tests/lua-sim-gb.py`: the mGBA scripts against stubbed APIs.
 - `tests/harness/`: ground truth against real Pokémon Ruby under libmgba's Python bindings.
