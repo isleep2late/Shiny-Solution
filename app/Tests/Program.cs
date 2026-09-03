@@ -16,7 +16,7 @@ void Check<T>(string label, T actual, T expected)
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root>");
+    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> | --check-timer-vectors <timer-vectors.json> | --emit-timer-parity <out.json> [count] [seed]");
     return 2;
 }
 
@@ -57,6 +57,17 @@ if (args[0] == "--emit-gen4-vectors")
         .Select(r => new { r.Second, r.Delay, r.SeedValue, r.Tid, r.Sid }).ToList();
     File.WriteAllText(args[1], JsonSerializer.Serialize(new { seedCases, tidSids, flips, elm, timers, search }));
     Console.WriteLine($"gen4 vectors written to {args[1]}");
+    return 0;
+}
+
+if (args[0] == "--check-timer-vectors")
+{
+    return TimerChecks.CheckVectors(args[1]);
+}
+
+if (args[0] == "--emit-timer-parity")
+{
+    TimerChecks.EmitParity(args[1], args.Length > 2 ? int.Parse(args[2]) : 200, args.Length > 3 ? uint.Parse(args[3]) : 20260903u);
     return 0;
 }
 

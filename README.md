@@ -125,5 +125,6 @@ python3 tools/gen-gen1-data.py ../RNG-Solution                      # regenerate
 ## License
 
 GPL-3.0. The implementations are original, written against the pret decompilations; the
-Gen 4 timing model follows EonTimer's MIT-licensed source, and seed-inversion edge cases
-were cross-checked against PokeFinder (GPL-3.0), whose license this project shares.
+Gen 4 timing model follows EonTimer's MIT-licensed source (notice reproduced in
+`THIRD_PARTY_NOTICES.md`), and seed-inversion edge cases were cross-checked against
+PokeFinder (GPL-3.0), whose license this project shares.

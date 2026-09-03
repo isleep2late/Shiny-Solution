@@ -8,8 +8,12 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   export PATH="$HOME/.dotnet:$PATH"
   dotnet run --project ../app/Tests -c Release -- --emit-gen4-vectors gen4-vectors.json
   node test-gen4.cjs gen4-vectors.json
+  dotnet run --project ../app/Tests -c Release -- --check-timer-vectors timer-vectors.json
+  dotnet run --project ../app/Tests -c Release -- --emit-timer-parity timer-parity.json 200
+  node test-timers.cjs timer-vectors.json timer-parity.json
 else
-  echo "dotnet not found; skipping gen4 parity vectors"
+  echo "dotnet not found; skipping gen4 parity vectors and the JS/C# timer cross-check"
+  node test-timers.cjs timer-vectors.json
 fi
 
 # Gen 1 Trainer ID / Gen 3 Secret ID / press-jitter engine against the vectors emitted by RNG Solution's

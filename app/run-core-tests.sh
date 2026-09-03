@@ -5,6 +5,7 @@ export DOTNET_ROOT="$HOME/.dotnet"
 export PATH="$HOME/.dotnet:$PATH"
 python3 tests/reference.py > tests/vectors.json
 dotnet run --project app/Tests -c Release -- tests/vectors.json
+dotnet run --project app/Tests -c Release -- --check-timer-vectors tests/timer-vectors.json
 
 # Gen1Tid.cs (Gen 1 Trainer ID cue model, reset metronome, verify, Gen 3 typed-TID -> SID, press jitter)
 # against the same vectors the JS suite checks (tests/gen1tid-vectors.json, emitted by RNG Solution's Python).
