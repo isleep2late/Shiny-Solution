@@ -2150,27 +2150,6 @@
   {
    "catchable": true,
    "category": "legendary",
-   "constant": "SPECIES_SUICUNE",
-   "creation": "WildBattle species, level, shiny -> SetupAndStartWildBattle -> FieldSystem_GenerateSingleWildPokemon -> generateWildNonShinyAndAddToParty: the wild generator (Method K)",
-   "form": null,
-   "games": ["heartgold", "soulsilver"],
-   "held_item": null,
-   "id": "hgss/legend/suicune",
-   "level": 40,
-   "level_verified_against_decomp": true,
-   "location": "Route 25 (Bill's house)",
-   "name": "SUICUNE",
-   "notes": null,
-   "provenance": "decomp",
-   "shiny": null,
-   "sources": [
-    {"file": "files/fielddata/script/scr_seq/scr_seq_0216_R25.s", "line": 559, "repo": "pokeheartgold", "text": "WildBattle SPECIES_SUICUNE, 40, 0"}
-   ],
-   "species": 245
-  },
-  {
-   "catchable": true,
-   "category": "legendary",
    "constant": "SPECIES_RAYQUAZA",
    "creation": "WildBattle species, level, shiny -> SetupAndStartWildBattle -> FieldSystem_GenerateSingleWildPokemon -> generateWildNonShinyAndAddToParty: the wild generator (Method K)",
    "form": null,
@@ -2188,6 +2167,51 @@
     {"file": "files/fielddata/script/scr_seq/scr_seq_0135_D52R0103.s", "line": 81, "repo": "pokeheartgold", "text": "WildBattle SPECIES_RAYQUAZA, 50, 0"}
    ],
    "species": 384
+  },
+  {
+   "catchable": true,
+   "category": "legendary",
+   "constant": "SPECIES_SUICUNE",
+   "creation": "WildBattle species, level, shiny -> SetupAndStartWildBattle -> FieldSystem_GenerateSingleWildPokemon -> generateWildNonShinyAndAddToParty: the wild generator (Method K)",
+   "form": null,
+   "games": ["heartgold", "soulsilver"],
+   "held_item": null,
+   "id": "hgss/legend/suicune",
+   "level": 40,
+   "level_verified_against_decomp": true,
+   "location": "Route 25 (Bill's house); Burned Tower B1F script also carries a L40 battle",
+   "name": "SUICUNE",
+   "notes": null,
+   "provenance": "decomp",
+   "shiny": null,
+   "sources": [
+    {"file": "files/fielddata/script/scr_seq/scr_seq_0216_R25.s", "line": 559, "repo": "pokeheartgold", "text": "WildBattle SPECIES_SUICUNE, 40, 0"},
+    {"file": "files/fielddata/script/scr_seq/scr_seq_0024_D18R0102.s", "line": 247, "repo": "pokeheartgold", "text": "WildBattle SPECIES_SUICUNE, 40, 0"}
+   ],
+   "species": 245
+  },
+  {
+   "catchable": true,
+   "category": "gift",
+   "constant": "SPECIES_PICHU",
+   "creation": "GiveSpikyEarPichu -> ScrCmd_GiveSpikyEarPichu -> CreateMon(mon, SPECIES_PICHU, 30, 32, TRUE, personality, OT_ID_PRESET, trainer id) with personality = ChangePersonalityToNatureGenderAndAbility(trainer id, 0xac, NATURE_NAUGHTY, MON_FEMALE, 0, 0): the PID is fixed (never shiny, Naughty, female), only the IVs are rolled",
+   "form": "spiky-eared",
+   "games": ["heartgold", "soulsilver"],
+   "held_item": null,
+   "id": "hgss/gift/pichu-spiky-eared",
+   "level": 30,
+   "level_verified_against_decomp": true,
+   "location": "Ilex Forest shrine (Spiky-eared Pichu event)",
+   "name": "PICHU",
+   "notes": "fixed personality: not RNG-manipulable and never shiny; listed so the wizard can say so instead of offering it",
+   "provenance": "decomp",
+   "shiny": "never",
+   "sources": [
+    {"file": "files/fielddata/script/scr_seq/scr_seq_0092_D36R0101.s", "line": 1910, "repo": "pokeheartgold", "text": "GiveSpikyEarPichu"},
+    {"file": "src/field/scrcmd_pokemon_misc.c", "line": 1120, "repo": "pokeheartgold", "text": "u32 unkA = ChangePersonalityToNatureGenderAndAbility(trId, 0xac, NATURE_NAUGHTY, MON_FEMALE, 0, 0);"},
+    {"file": "src/field/scrcmd_pokemon_misc.c", "line": 1121, "repo": "pokeheartgold", "text": "CreateMon(mon, SPECIES_PICHU, 30, 0x20, 1, unkA, 1, trId);"}
+   ],
+   "species": 172
   },
   {
    "catchable": true,
@@ -2510,7 +2534,7 @@
    {"file": "src/scrcmd_c.c", "line": 3439, "repo": "pokeheartgold", "text": "Save_CreateRoamerByID(ctx->fieldSystem->saveData, roamerNo);"},
    {"file": "src/field_roamer.c", "line": 174, "repo": "pokeheartgold", "text": "void Save_CreateRoamerByID(SaveData *saveData, u8 idx) {"}
   ],
-  "entry_count": 116,
+  "entry_count": 117,
   "generation": 4,
   "generator": "tools/gen-guide-data.py",
   "seed_catalogue": "PokeFinder Core/Resources/EncounterTables/Gen4/encounters.json; Platinum and HGSS levels re-verified against the cited script lines; Diamond/Pearl entries carry PokeFinder provenance because pokediamond ships field scripts only as binary scr_seq_release/*.bin",

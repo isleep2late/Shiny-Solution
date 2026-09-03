@@ -5,7 +5,10 @@ from the pret decompilations under ~/AI/pret.  Python 3, standard library only.
     python3 tools/gen-guide-data.py                    # regenerate core/data/*.json
     python3 tools/gen-guide-data.py --check            # regenerate in memory, diff against core/data/
     python3 tools/gen-guide-data.py --pokefinder /tmp/PokeFinder/Core/Resources/EncounterTables
-                                                       # ... and diff against PokeFinder's generator output
+                                                       # --check, plus a diff against PokeFinder's generator output
+                                                       # and its hard-coded Gen 4 tables; exit 1 on any mismatch
+                                                       # that is not in KNOWN_DELIBERATE (add --write to also write)
+    python3 tools/gen-guide-data.py --relocate         # report citations whose line moved instead of aborting
 
 Outputs (all deterministic: sorted keys, no timestamps):
     core/data/species-gen3.json     core/data/species-gen4.json
@@ -14,7 +17,7 @@ Outputs (all deterministic: sorted keys, no timestamps):
 
 docs/DATA.md documents every field and its provenance.  Every static/gift entry carries
 `sources`; the generator re-reads each cited decomp line and refuses to run if the cited
-text (species and level) is no longer there.
+text (species and level) is not on exactly that line (--relocate prints the corrected numbers).
 """
 import argparse
 import csv
@@ -22,6 +25,7 @@ import io
 import json
 import os
 import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -434,6 +438,33 @@ def parse_unown_slots():
     return out
 
 
+def gen3_feebas(repo, by_const, maps):
+    """Route 119 Feebas: a fixed {20, 25, SPECIES_FEEBAS} slot used instead of the fishing table when the
+    player fishes on one of the six Feebas tiles (50 % of bites there)."""
+    r119 = [m for m in maps if m["map"] == "MAP_ROUTE119"]
+    assert len(r119) == 1, r119
+    if repo == "pokeemerald":
+        src = [("pokeemerald", "src/wild_encounter.c", 67, "static const struct WildPokemon sWildFeebas = {20, 25, SPECIES_FEEBAS};"),
+               ("pokeemerald", "src/wild_encounter.c", 137, "if (Random() % 100 > 49)"),
+               ("pokeemerald", "src/wild_encounter.c", 784, "if (CheckFeebas() == TRUE)"),
+               ("pokeemerald", "src/wild_encounter.c", 786, "u8 level = ChooseWildMonLevel(&sWildFeebas);"),
+               ("pokeemerald", "src/wild_encounter.c", 788, "species = sWildFeebas.species;")]
+    else:
+        src = [("pokeruby", "src/wild_encounter.c", 23, "const struct WildPokemon gWildFeebasRoute119Data = {20, 25, SPECIES_FEEBAS};"),
+               ("pokeruby", "src/wild_encounter.c", 98, "if (Random() % 100 > 49)"),
+               ("pokeruby", "src/wild_encounter.c", 602, "if (CheckFeebas() == TRUE)"),
+               ("pokeruby", "src/wild_encounter.c", 604, "u8 level = ChooseWildMonLevel(&gWildFeebasRoute119Data);"),
+               ("pokeruby", "src/wild_encounter.c", 606, "species = gWildFeebasRoute119Data.species;")]
+    sp = by_const["SPECIES_FEEBAS"]
+    return {"species": sp["dex"], "constant": "SPECIES_FEEBAS", "min_level": 20, "max_level": 25,
+            "map": "MAP_ROUTE119", "index": r119[0]["index"], "any_rod": True,
+            "note": "FishingWildEncounter: when CheckFeebas() passes (Route 119, the rod tile is one of the six Feebas "
+                    "tiles drawn from the Dewford trend seed, and Random() % 100 <= 49) the fishing table is bypassed and "
+                    "CreateWildMon(SPECIES_FEEBAS, ChooseWildMonLevel({20, 25})) runs for every rod; the 50 % roll is one "
+                    "extra Random() call before the level roll",
+            "sources": [cite(*c) for c in src]}
+
+
 def build_encounters_gen3(species3):
     by_const = {s["constant"]: s for s in species3["species"]}
     unown = parse_unown_slots()
@@ -475,6 +506,8 @@ def build_encounters_gen3(species3):
         games[game] = {"source": "%s/src/data/wild_encounters.json (gWildMonHeaders%s)" % (
             repo, ", base_label containing '%s'" % marker if marker else ""),
             "commit": git_sha(repo), "map_count": len(maps), "maps": maps}
+        if game in ("ruby", "sapphire", "emerald"):
+            games[game]["feebas"] = gen3_feebas(repo, by_const, maps)
     meta = {
         "generation": 3,
         "generator": GENERATOR,
@@ -556,9 +589,8 @@ def build_platinum(species4):
             "map_category": d.get("map_category"),
         }
         tables.append(prune_empty(rec, ("grass", "surf", "old_rod", "good_rod", "super_rod"), ("swarm", "day", "night", "radar")))
-    extra = {}
-    for name in ("encounters_honey_tree", "encounters_great_marsh_lookout"):
-        extra[strip_prefix(name, "encounters_")] = rj(pt, "res/field/encounters/%s.json" % name)
+    table_by_map = {m: idx for idx, name in enumerate(order) for m in headers.get(name, [])}
+    extra = platinum_extras(sid, species_list, tables, table_by_map)
     return {
         "source": "pokeplatinum/res/field/encounters/*.json in encounters.order (= pl_enc_data.narc index); "
                   "maps from pokeplatinum/include/data/map_headers.h wildEncountersArchiveID",
@@ -566,6 +598,171 @@ def build_platinum(species4):
         "struct": "pokeplatinum/include/overlay006/wild_encounters.h:8-47 (WildEncounters)",
         "table_count": len(tables), "tables": tables, "extra": extra,
     }
+
+
+ENCDATA_EX_ORDER = "pokeplatinum/res/field/encounters/encdata_ex.order"
+HONEY_GROUP_RATES = {"normal_tree": {"no_encounter": 10, "common": 70, "uncommon": 20, "rare": 0},
+                     "munchlax_tree": {"no_encounter": 9, "common": 20, "uncommon": 70, "rare": 1}}
+HONEY_SLOT_RATES = [40, 20, 20, 10, 5, 5]
+
+
+def parse_pt_unown_tables():
+    """wild_encounters.c: the eight UnownFormsGroup rows (unown_table 1..8 in the encounter JSON -> row id-1)."""
+    src = rd("pokeplatinum", "src/overlay006/wild_encounters.c")
+    forms = parse_defines(rd("pokeplatinum", "include/constants/forms.h"), "UNOWN_FORM_")
+    arrays = {n: [forms[f] for f in re.findall(r"UNOWN_FORM_\w+", body)]
+              for n, body in re.findall(r"static const u8 (Unown\w+)\[\] = \{(.*?)\};", src, re.S)}
+    i = src.index("WildEncounters_UnownTables[] = {")
+    rows = re.findall(r"\{\s*(0x[0-9A-Fa-f]+|\d+)\s*,\s*(Unown\w+)\s*\}", src[i:src.index("};", i)])
+    out = []
+    for k, (count, name) in enumerate(rows):
+        ids = arrays[name]
+        assert len(ids) == int(count, 0), (name, count, len(ids))
+        out.append({"unown_table": k + 1, "array": name, "form_count": len(ids), "form_ids": ids,
+                    "letters": [UNOWN_LETTERS[x] for x in ids]})
+    assert len(out) == 8, len(out)
+    return out
+
+
+def parse_c_id_list(repo, rel, marker, prefix):
+    src = rd(repo, rel)
+    i = src.index(marker)
+    return re.findall(r"\b(%s\w+)\b" % prefix, src[i:src.index("};", i)])
+
+
+def species_rec(sid_or_const, species_list, sid):
+    if isinstance(sid_or_const, int):
+        return {"species": sid_or_const, "constant": species_list[sid_or_const]}
+    return {"species": sid[sid_or_const], "constant": sid_or_const}
+
+
+def platinum_extras(sid, species_list, tables, table_by_map):
+    pt = "pokeplatinum"
+    enc = "res/field/encounters/"
+    order = rd(pt, enc + "encdata_ex.order").split()
+    assert len(order) == 12, order
+    wec = "src/overlay006/wild_encounters.c"
+    honey = rj(pt, enc + "encounters_honey_tree.json")
+    hosts = parse_c_id_list(pt, "src/overlay005/honey_tree.c", "sHoneyTreeMapIds[NUM_HONEY_TREES] = {", "MAP_HEADER_")
+    assert len(hosts) == 21, hosts
+    honey.update({
+        "encdata_ex_members": {"common": order.index("encounters_honey_tree_common.bin"),
+                               "uncommon": order.index("encounters_honey_tree_uncommon.bin"),
+                               "rare": order.index("encounters_honey_tree_rare.bin")},
+        "unused_pearl_members": [5, 6, 7],
+        "hosts": [{"map": m, "table_index": table_by_map.get(m)} for m in hosts],
+        "min_level": 5, "max_level": 15,
+        "group_rates": HONEY_GROUP_RATES, "slot_rates": HONEY_SLOT_RATES,
+        "note": "honey tree encounters do not use the map's wild table: HoneyTree_GetSpecies reads encdata_ex member "
+                "2/3/4 (group A/B/C = common/uncommon/rare) at the slot rolled when the tree was slathered; the level is "
+                "5 + LCRNG_RandMod(11) rolled at battle time (Hustle/Vital Spirit/Pressure: RandMod(2) != 0 forces 15). "
+                "Two hosts (Eterna Forest outside, Floaroma Meadow) have no wild table (wildEncountersArchiveID = "
+                "ENCOUNTERS_NONE); PokeFinder numbers them 8 and 183",
+        "sources": [cite(*c) for c in [
+            (pt, "src/overlay005/honey_tree.c", 41, "static const int sHoneyTreeMapIds[NUM_HONEY_TREES] = {"),
+            (pt, "src/overlay005/honey_tree.c", 66, "static const int sEncounterTableIndexes_DPt[] = {"),
+            (pt, "src/overlay005/honey_tree.c", 73, "static const int sEncounterTableIndexes_P_Unused[] = {"),
+            (pt, "src/overlay005/honey_tree.c", 212, "static void GetTreeEncounterGroup(const BOOL isMunchlaxTree, u8 *group)"),
+            (pt, "src/overlay005/honey_tree.c", 238, "static void GetTreeEncounterSlot(u8 *slot)"),
+            (pt, "src/overlay005/honey_tree.c", 456, "sEncounterTableIndexes_DPt[tree->encounterTableIndex]"),
+            (pt, "src/overlay005/honey_tree.c", 461, "species = narcData[tree->encounterSlot];"),
+            (pt, wec, 1196, "void CreateWildMon_HoneyTree(FieldSystem *fieldSystem, FieldBattleDTO *battleParams)"),
+            (pt, wec, 1208, "u8 levelVariance = 15 - 5 + 1;"),
+            (pt, wec, 1210, "u8 level = 5 + LCRNG_RandMod(levelVariance);"),
+            (pt, "include/field/field_system.h", 44, "#define NUM_HONEY_TREES 21")]],
+    })
+    marsh = rj(pt, enc + "encounters_great_marsh_lookout.json")
+    marsh.update({
+        "encdata_ex_members": {"after_national_dex": order.index("encounters_great_marsh_lookout_natdex.bin"),
+                               "before_national_dex": order.index("encounters_great_marsh_lookout_local.bin"),
+                               "binocular_coords": order.index("encounters_great_marsh_lookout_coords.bin")},
+        "replaces_grass_slots": [6, 7],
+        "note": "Great Marsh areas 1-6 (tables 23-28): the daily lookout species for the area (5 bits of the DAILY_MARSH "
+                "value per area, index % 32 into member 9 with the National Dex, member 10 without) replaces grass slots 6 "
+                "and 7 unless a partner is present",
+        "sources": [cite(*c) for c in [
+            (pt, "src/overlay006/great_marsh_daily_encounters.c", 11, "void ReplaceGreatMarshDailyEncounters(const int dailyMon, const BOOL nationalDexObtained, const int mapId, int *encounterSlot1, int *encounterSlot2)"),
+            (pt, "src/overlay006/great_marsh_daily_encounters.c", 19, "encDataGroup = 9;"),
+            (pt, "src/overlay006/great_marsh_daily_encounters.c", 21, "encDataGroup = 10;"),
+            (pt, "src/overlay006/great_marsh_daily_encounters.c", 25, "encounterIndex = ((dailyMon >> (5 * areaNum)) & 0x1f);"),
+            (pt, wec, 1393, "&encTable[6].species, &encTable[7].species")]],
+    })
+    trophy_json = rj(pt, enc + "encounters_trophy_garden.json")
+    trophy_idx = [t["index"] for t in tables if t["table"] == "encounters_trophy_garden"]
+    assert len(trophy_idx) == 1
+    trophy = {
+        "pool": [species_rec(c, species_list, sid) for c in trophy_json["daily_encounters"]],
+        "table": "encounters_trophy_garden", "table_index": trophy_idx[0], "replaces_grass_slots": [6, 7],
+        "requires_national_dex": True, "encdata_ex_member": order.index("encounters_trophy_garden_dailies.bin"),
+        "note": "Mr. Backlot's daily Pokemon: two pool indices are kept in the save (SpecialEncounter_GetTrophyGardenMons); "
+                "with the National Dex they replace grass slots 6 and 7 of the Trophy Garden table. A new index is "
+                "LCRNG_RandMod(16) re-rolled until it differs from both current ones",
+        "sources": [cite(*c) for c in [
+            (pt, "src/overlay006/trophy_garden_daily_encounters.c", 14, "void TrophyGarden_AddNewMon(SaveData *saveData)"),
+            (pt, "src/overlay006/trophy_garden_daily_encounters.c", 19, "NARC_INDEX_ARC__ENCDATA_EX, 8, HEAP_ID_FIELD1"),
+            (pt, "src/overlay006/trophy_garden_daily_encounters.c", 36, "newMonIndex = LCRNG_RandMod(NUM_TROPHY_GARDEN_SPECIAL_MONS);"),
+            (pt, wec, 209, "static void WildEncounters_ReplaceTrophyGardenEncounters(FieldSystem *fieldSystem, const BOOL nationalDexObtained, int *trophySlot1, int *trophySlot2)"),
+            (pt, wec, 216, "NARC_INDEX_ARC__ENCDATA_EX, 8, HEAP_ID_FIELD1"),
+            (pt, wec, 336, "WildEncounters_ReplaceTrophyGardenEncounters(fieldSystem, nationalDexObtained, &encounterTable[6].species, &encounterTable[7].species);"),
+            (pt, "include/special_encounter.h", 13, "#define NUM_TROPHY_GARDEN_SPECIAL_MONS 16"),
+            (pt, "src/map_header.c", 201, "return headerID == MAP_HEADER_TROPHY_GARDEN;")]],
+    }
+    assert len(trophy["pool"]) == 16
+    coronet = rj(pt, enc + "encounters_mt_coronet_b1f.json")["elusive_rod_encounter"]
+    coronet_idx = [t["index"] for t in tables if t["table"] == "encounters_mt_coronet_b1f"]
+    assert len(coronet_idx) == 1
+    feebas = {
+        "species": sid[coronet["species"]], "constant": coronet["species"], "min_level": 10, "max_level": 20,
+        "table": "encounters_mt_coronet_b1f", "table_index": coronet_idx[0], "map": "MAP_HEADER_MT_CORONET_B1F",
+        "map_dimensions": coronet["map_dimensions"], "tile_count": len(coronet["tiles"]), "tiles": coronet["tiles"],
+        "encdata_ex_members": {"species": order.index("encounters_mt_coronet_b1f_species.bin"),
+                               "tiles": order.index("encounters_mt_coronet_b1f_tiles.bin")},
+        "all_rods": True,
+        "note": "fishing while facing one of the four daily Feebas tiles (drawn from the tile list) replaces all five "
+                "slots of the rod table with Feebas L10-20, so the slot roll cannot miss; the level range is hard-coded "
+                "in LoadFeebasLevelRange",
+        "sources": [cite(*c) for c in [
+            (pt, wec, 407, "if (MapHeader_HasFeebasTiles(fieldSystem->location->mapId) && PlayerAvatar_IsFacingFeebasTile(fieldSystem)) {"),
+            (pt, wec, 411, "LoadFeebasLevelRange(&maxLevel, &minLevel); // 10-20"),
+            (pt, wec, 412, "LoadFeebasFromNARC(&species);"),
+            (pt, "src/overlay006/feebas_fishing.c", 55, "NARC_INDEX_ARC__ENCDATA_EX, 1, HEAP_ID_FIELD1"),
+            (pt, "src/overlay006/feebas_fishing.c", 99, "void LoadFeebasLevelRange(u8 *maxLevel, u8 *minLevel)"),
+            (pt, "src/overlay006/feebas_fishing.c", 101, "(*maxLevel) = 20;"),
+            (pt, "src/overlay006/feebas_fishing.c", 102, "(*minLevel) = 10;"),
+            (pt, "src/overlay006/feebas_fishing.c", 108, "NARC_INDEX_ARC__ENCDATA_EX, 0, HEAP_ID_FIELD1"),
+            (pt, "src/map_header.c", 196, "return headerID == MAP_HEADER_MT_CORONET_B1F;")]],
+    }
+    unown = {
+        "tables": parse_pt_unown_tables(),
+        "note": "a table's unown_table value 1..8 selects row value-1 of WildEncounters_UnownTables (0 = no Unown); the "
+                "form is forms[LCRNG_Next() % form_count], one extra RNG call after the PID. Row 1 (20 forms) is the "
+                "Solaceon dead-end rooms, rows 2-7 the single-letter main rooms in table order F, R, I, N, E, D (the decomp "
+                "comment says F-R-I-E-N-D), row 8 (! and ?) the Maniac Tunnel room",
+        "sources": [cite(*c) for c in [
+            (pt, wec, 116, "static const u8 UnownMostForms[] = {"),
+            (pt, wec, 170, "static const UnownFormsGroup WildEncounters_UnownTables[] = {"),
+            (pt, wec, 1489, "form = WildEncounters_UnownTables[encounterFieldParams->unownTableID].forms[LCRNG_Next() % availableUnownForms];"),
+            (pt, wec, 1541, "encounterFieldParams->unownTableID = encounterData->unownTableID - 1;"),
+            (pt, "include/constants/forms.h", 21, "#define UNOWN_FORM_A     0")]],
+    }
+    swarm_maps = parse_c_id_list(pt, "src/overlay006/swarm.c", "sSwarmMapIdTable[NUM_SWARMS] = {", "MAP_HEADER_")
+    assert len(swarm_maps) == 22, swarm_maps
+    swarm = {
+        "hosts": [{"map": m, "table_index": table_by_map[m]} for m in swarm_maps],
+        "replaces_grass_slots": [0, 1],
+        "note": "the active swarm (DAILY_SWARM % 22 picks the host map) replaces grass slots 0 and 1 of that map's table "
+                "with the table's swarm[0]/swarm[1] species",
+        "sources": [cite(*c) for c in [
+            (pt, "src/overlay006/swarm.c", 12, "static const u32 sSwarmMapIdTable[NUM_SWARMS] = {"),
+            (pt, "src/overlay006/swarm.c", 37, "u32 Swarm_GetMapId(const u32 swarm)"),
+            (pt, "include/overlay006/swarm.h", 4, "#define NUM_SWARMS 22"),
+            (pt, wec, 195, "static void WildEncounters_ReplaceSwarmEncounters(FieldSystem *fieldSystem, const WildEncounters *encounterData, int *radarSlot1, int *radarSlot2)"),
+            (pt, wec, 202, "if (fieldSystem->location->mapId == Swarm_GetMapId(swarmId)) {"),
+            (pt, wec, 335, "WildEncounters_ReplaceSwarmEncounters(fieldSystem, encounterData, &encounterTable[0].species, &encounterTable[1].species);")]],
+    }
+    return {"honey_tree": honey, "great_marsh_lookout": marsh, "trophy_garden_daily": trophy, "feebas": feebas,
+            "unown_tables": unown, "swarm_hosts": swarm,
+            "encdata_ex_order": order, "encdata_ex_source": ENCDATA_EX_ORDER}
 
 
 def prune_empty(rec, slot_keys, list_keys):
@@ -652,9 +849,30 @@ def build_hgss(species4):
                     "max_level": int(row["lvlmax"]), "rate": int(row["rate"]), "score": int(row["score"])})
     safari = rj(hg, "files/arc/safari_enc.json")["encounters"]
     headbutt = [t for t in rj(hg, "files/arc/headbutt.json")["tables"] if t["CommonMons"] or t["RareMons"] or t["SecretMons"]]
+    lut = rd(hg, "src/unk_02097F6C.c")
+    i = lut.index("sSwarmMapLUT[SWARM_MAP_COUNT][2] = {")
+    rows = re.findall(r"\{\s*(MAP_\w+)\s*,\s*(\d)\s*\}", lut[i:lut.index("};", i)])
+    assert len(rows) == 20, rows
+    bank_of_map = {x["map"]: b for b, xs in by_bank.items() for x in xs}
+    kinds = {"0": "land", "1": "surf", "2": "fish"}
+    swarm_hosts = {
+        "hosts": [{"map": m, "kind": kinds[k], "table_index": bank_of_map[m],
+                   "table": encs[bank_of_map[m]]["map"]} for m, k in rows],
+        "note": "Roamers_GetRand(2) % 20 picks the host row; kind 0 replaces land slots 0 and 1 with landSwarm, "
+                "1 replaces the surf slot with surfSwarm, 2 replaces rod slots (old: 2; good: 0,2,3; super: all) with "
+                "fishSwarm. table_index is the gs_enc_data member, shared by both versions",
+        "sources": [cite(*c) for c in [
+            (hg, "src/unk_02097F6C.c", 13, "#define SWARM_MAP_COUNT 20"),
+            (hg, "src/unk_02097F6C.c", 16, "static const u16 sSwarmMapLUT[SWARM_MAP_COUNT][2] = {"),
+            (hg, "src/unk_02097F6C.c", 49, "void GetSwarmInfoFromRand(u32 rand, u16 *mapno, u16 *species) {"),
+            (hg, "src/field/encounter_check.c", 167, "sub_02097F6C(Roamers_GetRand(roamerSave, 2), fieldSystem->location->mapId, 0)"),
+            (hg, "src/field/encounter_check.c", 175, "sub_02097F6C(Roamers_GetRand(roamerSave, 2), fieldSystem->location->mapId, 1)"),
+            (hg, "src/field/encounter_check.c", 182, "sub_02097F6C(Roamers_GetRand(roamerSave, 2), fieldSystem->location->mapId, 2)")]],
+    }
     shared = {"bug_contest": {"source": "pokeheartgold/files/data/mushi/mushi_encount.csv", "slots": bug},
               "safari_zone": {"source": "pokeheartgold/files/arc/safari_enc.json (raw; species constants)", "areas": safari},
-              "headbutt": {"source": "pokeheartgold/files/arc/headbutt.json (raw; only non-empty maps)", "tables": headbutt}}
+              "headbutt": {"source": "pokeheartgold/files/arc/headbutt.json (raw; only non-empty maps)", "tables": headbutt},
+              "swarm_hosts": swarm_hosts}
     return versions, shared
 
 
@@ -746,8 +964,72 @@ def build_dp(species4):
             "provenance": "EMPIRICAL (ROM dump carried by the decomp) rather than decomp source; identical in kind "
                           "to PokeFinder's d_enc_data.narc/p_enc_data.narc",
             "table_count": len(tables), "tables": tables,
+            "extra": dp_extras(game, species_list, tables),
         }
     return games
+
+
+def dp_extras(game, species_list, tables):
+    """pokediamond/files/arc/encdata_ex/narc_0000..0011.bin: the same 12-member archive Platinum builds from
+    res/field/encounters/encdata_ex.order.  pokediamond has no decompiled reader for it (arm9/src/filesystem.c:119
+    only names the archive), so the layouts come from Platinum's converters and readers and the records are EMPIRICAL."""
+    base = os.path.join(PRET, "pokediamond", "files/arc/encdata_ex")
+    members = []
+    for i in range(12):
+        with open(os.path.join(base, "narc_%04d.bin" % i), "rb") as f:
+            members.append(f.read())
+    assert [len(m) for m in members] == [4, 1068, 24, 24, 24, 24, 24, 24, 64, 128, 128, 144], [len(m) for m in members]
+
+    def u32s(b):
+        return list(struct.unpack("<%dI" % (len(b) // 4), b))
+
+    def consts(b):
+        return [species_list[x] for x in u32s(b)]
+
+    prov = ("EMPIRICAL: pokediamond/files/arc/encdata_ex/narc_NNNN.bin (ROM dump carried by the decomp); member layout "
+            "from pokeplatinum/tools/jsoncnv/encdata_ex_{elusive_rod,honey_trees,trophy_garden,great_marsh}.py and the "
+            "Platinum readers cited on games.platinum.extra; pokediamond has no decompiled overlay code for these")
+    # honey: Diamond reads members 2-4, Pearl 5-7 (pokeplatinum/src/overlay005/honey_tree.c:452-458 keeps the same
+    # split; PokeFinder Gen4/dp.py:92-93 too)
+    h = (2, 3, 4) if game == "diamond" else (5, 6, 7)
+    honey = {"common": consts(members[h[0]]), "uncommon": consts(members[h[1]]), "rare": consts(members[h[2]]),
+             "encdata_ex_members": {"common": h[0], "uncommon": h[1], "rare": h[2]},
+             "min_level": 5, "max_level": 15, "group_rates": HONEY_GROUP_RATES, "slot_rates": HONEY_SLOT_RATES,
+             "level_provenance": "Platinum code (games.platinum.extra.honey_tree.sources); PokeFinder packs 5-15 for "
+                                 "D/P too (Gen4/pack.py:149-150)",
+             "provenance": prov}
+    n = struct.unpack_from("<I", members[1], 0)[0]
+    dims = list(struct.unpack_from("<%dI" % n, members[1], 4))
+    tiles = list(struct.unpack_from("<%dH" % ((len(members[1]) - 4 - 4 * n) // 2), members[1], 4 + 4 * n))
+    coronet = [t for t in tables if "MAP_MOUNT_CORONET_B1F" in t["maps"]]
+    assert len(coronet) == 1, coronet
+    fb = u32s(members[0])[0]
+    feebas = {"species": fb, "constant": species_list[fb], "min_level": 10, "max_level": 20,
+              "table": coronet[0]["table"], "table_index": coronet[0]["index"], "map": "MAP_MOUNT_CORONET_B1F",
+              "map_dimensions": dims, "tile_count": len(tiles), "tiles": tiles,
+              "encdata_ex_members": {"species": 0, "tiles": 1}, "all_rods": True,
+              "level_provenance": "Platinum code (games.platinum.extra.feebas.sources); PokeFinder inserts Feebas 10-20 "
+                                  "for every DPPt game (Core/Gen4/Encounters4.cpp:540-541)",
+              "provenance": prov}
+    trophy_t = [t for t in tables if any("TROPHY_GARDEN" in m for m in t["maps"])]
+    assert len(trophy_t) == 1, trophy_t
+    trophy = {"pool": [species_rec(x, species_list, None) for x in u32s(members[8])],
+              "table": trophy_t[0]["table"], "table_index": trophy_t[0]["index"], "replaces_grass_slots": [6, 7],
+              "requires_national_dex": True, "encdata_ex_member": 8, "provenance": prov}
+    assert len(trophy["pool"]) == 16
+    coords = struct.unpack("<%dH" % (len(members[11]) // 2), members[11])
+    marsh = {"after_national_dex": consts(members[9]), "before_national_dex": consts(members[10]),
+             "binocular_coords": [{"x": coords[i], "y": coords[i + 1]} for i in range(0, len(coords), 2)],
+             "encdata_ex_members": {"after_national_dex": 9, "before_national_dex": 10, "binocular_coords": 11},
+             "replaces_grass_slots": [6, 7], "provenance": prov}
+    assert len(marsh["after_national_dex"]) == 32 and len(marsh["before_national_dex"]) == 32 and len(marsh["binocular_coords"]) == 36
+    return {"honey_tree": honey, "feebas": feebas, "trophy_garden_daily": trophy, "great_marsh_lookout": marsh,
+            "not_derivable": {"swarm_hosts": "no swarm map table in pokediamond's decompiled C (Platinum: overlay006/swarm.c); "
+                                             "every D/P table still carries its swarm[2] species",
+                              "unown_tables": "no decompiled wild_encounters overlay in pokediamond; the D/P tables carry "
+                                              "the same unown_table ids 1..8 as Platinum (PokeFinder applies one table to "
+                                              "all of DPPt, Core/Gen4/EncounterArea4.cpp:23-30,93-112)",
+                              "honey_tree_hosts": "no decompiled honey_tree.c in pokediamond"}}
 
 
 def build_encounters_gen4(species4):
@@ -826,6 +1108,9 @@ G4_HG_SHINY = ("WildBattle ..., shiny=1 -> FieldSystem_GenerateSingleWildPokemon
                "generateWildShinyAndAddToParty: forced shiny")
 G4_HG_TRAP = "RocketTrapBattle -> SetupAndStartWildBattle(canFlee=FALSE, shiny=FALSE): Method K"
 G4_HG_EGG = "GiveEgg -> SetEggStats(mon, species, 1, ...): level-1 egg"
+G4_HG_PICHU = ("GiveSpikyEarPichu -> ScrCmd_GiveSpikyEarPichu -> CreateMon(mon, SPECIES_PICHU, 30, 32, TRUE, personality, "
+               "OT_ID_PRESET, trainer id) with personality = ChangePersonalityToNatureGenderAndAbility(trainer id, 0xac, "
+               "NATURE_NAUGHTY, MON_FEMALE, 0, 0): the PID is fixed (never shiny, Naughty, female), only the IVs are rolled")
 G4_HG_ROAMER = "CreateMon(mon, species, level, 32, FALSE, 0, OT_ID_PRESET, TID) when the roamer is created: Method 1"
 G4_DP_PF = ("not derivable from pokediamond (field scripts exist only as binary scr_seq_release/*.bin); level and "
             "location carried from PokeFinder Gen4/encounters.json")
@@ -862,7 +1147,7 @@ GEN4_HANDLERS = [
     ("pokeplatinum", "src/scrcmd_party.c", 29, "BOOL ScrCmd_GivePokemon(ScriptContext *ctx)"),
     ("pokeplatinum", "src/scrcmd_party.c", 40, "Pokemon_GiveMonFromScript(HEAP_ID_FIELD2, fieldSystem->saveData, species, level, heldItem, metLocation, metTerrain)"),
     ("pokeplatinum", "src/unk_02054884.c", 44, "Pokemon_InitWith(mon, species, level, INIT_IVS_RANDOM, FALSE, 0, OTID_NOT_SET, 0)"),
-    ("pokeplatinum", "src/scrcmd_party.c", 95, "Egg_CreateEgg(egg, species, 1, trainer, 3, specialMetLoc)"),
+    ("pokeplatinum", "src/scrcmd_party.c", 97, "Egg_CreateEgg(egg, species, 1, trainer, 3, specialMetLoc)"),
     ("pokeplatinum", "src/overlay005/daycare.c", 675, "Pokemon_InitWith(egg, species, 1, INIT_IVS_RANDOM, FALSE, 0, OTID_NOT_SET, 0)"),
     ("pokeplatinum", "src/roaming_pokemon.c", 291, "Pokemon_InitWith(roamerMonData, species, level, INIT_IVS_RANDOM, FALSE, 0, OTID_SET, TrainerInfo_ID_LowHalf(trainer))"),
     ("pokeheartgold", "src/scrcmd_c.c", 2575, "BOOL ScrCmd_WildBattle(ScriptContext *ctx)"),
@@ -886,20 +1171,30 @@ GEN4_HANDLERS = [
 ]
 
 _LINE_CACHE = {}
+RELOCATE = None  # --relocate: list collecting (repo, rel, cited line, actual line, text) instead of aborting
 
 
 def cite(repo, rel, line, must_contain):
-    """Return a source record after checking that `must_contain` is on the cited line (+-3 lines)."""
+    """Return a source record after checking that `must_contain` is on exactly the cited line.
+
+    No tolerance: a pret update that moves a line makes the generator abort, so the script literals and
+    the JSON can never disagree.  With --relocate the text is searched for within +-40 lines and the
+    corrected number is reported (and the run still exits 1)."""
     key = (repo, rel)
     if key not in _LINE_CACHE:
         _LINE_CACHE[key] = rd(repo, rel).split("\n")
     lines = _LINE_CACHE[key]
     norm = lambda s: re.sub(r"\s+", " ", s).strip()
-    for delta in (0, -1, 1, -2, 2, -3, 3):
-        n = line + delta
-        if 1 <= n <= len(lines) and norm(must_contain) in norm(lines[n - 1]):
-            return {"repo": repo, "file": rel, "line": n, "text": norm(lines[n - 1])}
-    raise SystemExit("citation check failed: %s/%s:%d does not contain %r (line is %r)" % (
+    want = norm(must_contain)
+    if 1 <= line <= len(lines) and want in norm(lines[line - 1]):
+        return {"repo": repo, "file": rel, "line": line, "text": norm(lines[line - 1])}
+    if RELOCATE is not None:
+        for delta in sorted(range(-40, 41), key=abs):
+            n = line + delta
+            if delta and 1 <= n <= len(lines) and want in norm(lines[n - 1]):
+                RELOCATE.append((repo, rel, line, n, must_contain))
+                return {"repo": repo, "file": rel, "line": n, "text": norm(lines[n - 1])}
+    raise SystemExit("citation check failed: %s/%s:%d does not contain %r (line is %r); run --relocate" % (
         repo, rel, line, must_contain, lines[line - 1].strip() if line <= len(lines) else "<eof>"))
 
 
@@ -1126,7 +1421,7 @@ def gen4_static_entries():
     for i, sp in enumerate(("TURTWIG", "CHIMCHAR", "PIPLUP")):
         add("pt/starter/" + sp.lower(), "starter", PT, "SPECIES_" + sp, 5, "Route 201 / Lake Verity (Rowan's briefcase)", G4_PT_GIFT, [
             ("pokeplatinum", pts("route_201"), 286, "GivePokemon VAR_0x8000, 5, ITEM_NONE, VAR_RESULT"),
-            ("pokeplatinum", "src/choose_starter/choose_starter_app.c", 51 + i, "#define STARTER_OPTION_%d    SPECIES_%s" % (i, sp))])
+            ("pokeplatinum", "src/choose_starter/choose_starter_app.c", 50 + i, "#define STARTER_OPTION_%d    SPECIES_%s" % (i, sp))])
     for sp in ("OMANYTE", "KABUTO", "AERODACTYL", "LILEEP", "ANORITH", "CRANIDOS", "SHIELDON"):
         add("pt/fossil/" + sp.lower(), "fossil", PT, "SPECIES_" + sp, 20, "Oreburgh City, Mining Museum", G4_PT_GIFT,
             [("pokeplatinum", pts("mining_museum"), 228, "GivePokemon VAR_REVIVED_POKEMON_SPECIES, 20, ITEM_NONE, VAR_RESULT")],
@@ -1172,9 +1467,9 @@ def gen4_static_entries():
         [("pokeplatinum", pts("flower_paradise"), 46, "StartFatefulEncounter SPECIES_SHAYMIN, 30")])
     add("pt/event/arceus", "event", PT, "SPECIES_ARCEUS", 80, "Hall of Origin (Azure Flute)", G4_PT_LEGEND,
         [("pokeplatinum", pts("hall_of_origin"), 46, "StartLegendaryBattle SPECIES_ARCEUS, 80")])
-    for id_, games, sp, level, line in (("dppt/roamer/mesprit", DPPT, "MESPRIT", 50, 255), ("dppt/roamer/cresselia", DPPT, "CRESSELIA", 50, 259),
-                                        ("pt/roamer/articuno", PT, "ARTICUNO", 60, 275), ("pt/roamer/zapdos", PT, "ZAPDOS", 60, 271),
-                                        ("pt/roamer/moltres", PT, "MOLTRES", 60, 267)):
+    for id_, games, sp, level, line in (("dppt/roamer/mesprit", DPPT, "MESPRIT", 50, 256), ("dppt/roamer/cresselia", DPPT, "CRESSELIA", 50, 260),
+                                        ("pt/roamer/articuno", PT, "ARTICUNO", 60, 276), ("pt/roamer/zapdos", PT, "ZAPDOS", 60, 272),
+                                        ("pt/roamer/moltres", PT, "MOLTRES", 60, 268)):
         add(id_, "roamer", games, "SPECIES_" + sp, level, "roaming Sinnoh", G4_PT_ROAMER, [
             ("pokeplatinum", "src/roaming_pokemon.c", line, "species = SPECIES_" + sp),
             ("pokeplatinum", "src/roaming_pokemon.c", line + 1, "level = %d" % level),
@@ -1263,10 +1558,18 @@ def gen4_static_entries():
                                     ("ZAPDOS", 50, "0191_R10", 180, "Route 10 (Power Plant)"),
                                     ("MOLTRES", 50, "0106_D41R0105", 29, "Mt. Silver Cave"),
                                     ("MEWTWO", 70, "0011_D03R0103", 29, "Cerulean Cave B1F"),
-                                    ("SUICUNE", 40, "0216_R25", 559, "Route 25 (Bill's house)"),
                                     ("RAYQUAZA", 50, "0135_D52R0103", 81, "Embedded Tower")):
         add("hgss/legend/" + sp.lower(), "legendary", HGSS, "SPECIES_" + sp, level, loc, G4_HG_WILD,
             [("pokeheartgold", hgs(f), line, "WildBattle SPECIES_%s, %d, 0" % (sp, level))])
+    add("hgss/legend/suicune", "legendary", HGSS, "SPECIES_SUICUNE", 40, "Route 25 (Bill's house); Burned Tower B1F script also carries a L40 battle",
+        G4_HG_WILD, [("pokeheartgold", hgs("0216_R25"), 559, "WildBattle SPECIES_SUICUNE, 40, 0"),
+                     ("pokeheartgold", hgs("0024_D18R0102"), 247, "WildBattle SPECIES_SUICUNE, 40, 0")])
+    add("hgss/gift/pichu-spiky-eared", "gift", HGSS, "SPECIES_PICHU", 30, "Ilex Forest shrine (Spiky-eared Pichu event)", G4_HG_PICHU, [
+        ("pokeheartgold", hgs("0092_D36R0101"), 1910, "GiveSpikyEarPichu"),
+        ("pokeheartgold", "src/field/scrcmd_pokemon_misc.c", 1120, "ChangePersonalityToNatureGenderAndAbility(trId, 0xac, NATURE_NAUGHTY, MON_FEMALE, 0, 0)"),
+        ("pokeheartgold", "src/field/scrcmd_pokemon_misc.c", 1121, "CreateMon(mon, SPECIES_PICHU, 30, 0x20, 1, unkA, 1, trId);")],
+        shiny="never", form="spiky-eared",
+        notes="fixed personality: not RNG-manipulable and never shiny; listed so the wizard can say so instead of offering it")
     add("hg/legend/kyogre", "legendary", HG, "SPECIES_KYOGRE", 50, "Embedded Tower", G4_HG_WILD,
         [("pokeheartgold", hgs("0134_D52R0102"), 70, "WildBattle SPECIES_KYOGRE, 50, 0")])
     add("ss/legend/groudon", "legendary", SS, "SPECIES_GROUDON", 50, "Embedded Tower", G4_HG_WILD,
@@ -1339,15 +1642,134 @@ def pf_games(v):
     return out
 
 
-def run_pokefinder(src):
-    tmp = tempfile.mkdtemp(prefix="pf-tables-")
+# Entries of ours that PokeFinder's catalogue does not carry, on purpose (see docs/DATA.md "Static catalogue vs PokeFinder")
+KNOWN_DELIBERATE = {
+    "e/event/pichu-egg": "Mystery Gift Surfing Pichu egg (pokeemerald data/scripts/gift_pichu.inc)",
+    "frlg/static/marowak-ghost": "uncatchable ghost Marowak, catchable: false",
+    "pt/event/arceus": "Hall of Origin Arceus L80 (scripts_hall_of_origin.s:46); PokeFinder's catalogue does not list it",
+    "hgss/gift/pichu-spiky-eared": "fixed-PID gift, shiny: never; listed so the wizard can refuse it with a reason",
+}
+
+
+def run_pokefinder(src, tmp):
+    """Run PokeFinder's EncounterTableGenerator into tmp (never into the clone): the wild tables plus its honey,
+    bug-contest and headbutt packers."""
     code = ("import sys; sys.path.insert(0, %r)\n"
             "from Gen3 import emerald, rs, frlg\nfrom Gen4 import pt, hgss, dp\n"
             "emerald.encounters(%r, False); rs.encounters(%r, False); frlg.encounters(%r, False)\n"
-            "pt.encounters(%r); hgss.encounters(%r, False); dp.encounters(%r, False)\n") % ((src,) + (tmp,) * 6)
+            "pt.encounters(%r); hgss.encounters(%r, False); dp.encounters(%r, False)\n"
+            "pt.honey(%r); dp.honey(%r); hgss.bug(%r); hgss.headbutt(%r)\n") % ((src,) + (tmp,) * 10)
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     subprocess.check_call([sys.executable, "-c", code], env=env, cwd=tmp)
-    return tmp
+
+
+def cpp_array(src, name):
+    """Values of `constexpr std::array<T, N> name = { ... };` in PokeFinder's C++ (zero padding dropped)."""
+    m = re.search(r"std::array<\w+,\s*\d+>\s+%s\s*=\s*\{([^}]*)\}" % re.escape(name), src)
+    if not m:
+        raise SystemExit("PokeFinder C++ array %s not found" % name)
+    return [int(x) for x in re.findall(r"\d+", m.group(1))]
+
+
+def compare_honey(game, ours, path, report):
+    """PokeFinder *_honey.bin: per host location 2 + 18 * (species u16, max u8, min u8) (Gen4/pack.py:130-152)."""
+    with open(path, "rb") as f:
+        data = f.read()
+    recs = [data[o:o + 74] for o in range(0, len(data), 74)]
+    locs = [r[0] for r in recs]
+    lists = {tuple(struct.unpack_from("<H", r, 2 + 4 * i)[0] for i in range(18)) for r in recs}
+    levels = {(r[2 + 4 * i + 3], r[2 + 4 * i + 2]) for r in recs for i in range(18)}
+    if len(lists) != 1:
+        report.append("%s honey: PokeFinder records disagree with each other" % game)
+    sid = SPECIES4_ID
+    mine = tuple(sid[c] for c in ours["common"] + ours["uncommon"] + ours["rare"])
+    if mine not in lists:
+        report.append("%s honey: PokeFinder %s vs ours %s" % (game, sorted(lists)[0], mine))
+    if levels != {(ours["min_level"], ours["max_level"])}:
+        report.append("%s honey levels: PokeFinder %s vs ours %d-%d" % (game, sorted(levels), ours["min_level"], ours["max_level"]))
+    if "hosts" in ours:
+        mine_locs = {h["table_index"] for h in ours["hosts"] if h["table_index"] is not None}
+        # PokeFinder numbers the two host maps without a wild table (Eterna Forest outside, Floaroma Meadow) 8 and 183
+        if set(locs) - {8, 183} != mine_locs or len(locs) != len(ours["hosts"]):
+            report.append("%s honey hosts: PokeFinder %s vs ours %s" % (game, sorted(locs), sorted(mine_locs)))
+    return len(recs)
+
+
+def compare_pool(game, label, ours_ids, pf_ids, report, as_set=False):
+    a, b = (set(ours_ids), set(pf_ids)) if as_set else (sorted(ours_ids), sorted(pf_ids))
+    if a != b:
+        report.append("%s %s: PokeFinder %s vs ours %s" % (game, label, sorted(b), sorted(a)))
+
+
+def compare_bug(ours, path, report):
+    """PokeFinder hgss_bug.bin: 4 areas x (location, pad, 10 x (species u16, max u8, min u8)) (Gen4/pack.py:259-292)."""
+    with open(path, "rb") as f:
+        data = f.read()
+    slots = []
+    for a in range(4):
+        rec = data[a * 42:(a + 1) * 42]
+        for i in range(10):
+            sp, mx, mn = struct.unpack_from("<HBB", rec, 2 + 4 * i)
+            slots.append((sp, mn, mx))
+    mine = [(s["species"], s["min_level"], s["max_level"]) for s in ours["slots"]]
+    if slots != mine:
+        report.append("hgss bug contest: PokeFinder %s vs ours %s" % (slots, mine))
+    return 4
+
+
+def compare_headbutt(game, ours, path, report):
+    """PokeFinder {hg,ss}_headbutt.bin: 74-byte records (location, special flag, 12 tree slots, 6 special slots),
+    one per non-empty headbutt.json table in order, the duplicate Route 16 table (position 58) skipped."""
+    with open(path, "rb") as f:
+        data = f.read()
+    recs = [data[o:o + 74] for o in range(0, len(data), 74)]
+    tables = [t for i, t in enumerate(ours["tables"]) if i != 58]
+    if len(recs) != len(tables):
+        report.append("%s headbutt: PokeFinder %d records vs ours %d" % (game, len(recs), len(tables)))
+        return len(recs)
+    ver = "gold" if game == "heartgold" else "silver"
+    sid = SPECIES4_ID
+
+    def mons(lst):
+        return [(sid[m["species"][ver] if isinstance(m["species"], dict) else m["species"]], m["minLevel"], m["maxLevel"]) for m in lst]
+
+    for k, (rec, t) in enumerate(zip(recs, tables)):
+        pf = [struct.unpack_from("<HBB", rec, 2 + 4 * i) for i in range(18)]
+        pf = [(sp, mn, mx) for sp, mx, mn in pf]
+        mine = mons(t["CommonMons"]) + mons(t["RareMons"]) + (mons(t["SecretMons"]) if t["SecretTrees"] else [(0, 0, 0)] * 6)
+        if pf != mine or bool(rec[1]) != bool(t["SecretTrees"]):
+            report.append("%s headbutt %s (record %d, loc %d): PokeFinder %s special=%d vs ours %s special=%d" % (
+                game, t["Map"], k, rec[0], pf, rec[1], mine, bool(t["SecretTrees"])))
+    return len(recs)
+
+
+def compare_unown(ours, cpp, report):
+    """PokeFinder EncounterArea4::unownForm: constexpr unown0..7 arrays and a location -> array switch."""
+    arrays = {int(k): cpp_array(cpp, "unown%s" % k) for k in range(8)}
+    cases = {int(loc): int(k) for loc, k in re.findall(r"case (\d+):\s*return unown(\d)\[", cpp)}
+    mine = {t["unown_table"]: t["form_ids"] for t in ours["tables"]}
+    for row, forms in mine.items():
+        if arrays[row - 1] != forms:
+            report.append("unown table %d: PokeFinder %s vs ours %s" % (row, arrays[row - 1], forms))
+    return cases
+
+
+def compare_unown_locations(game, tables, cases, report):
+    by_index = {t["index"]: t.get("unown_table", 0) for t in tables}
+    for loc, k in cases.items():
+        if by_index.get(loc) != k + 1:
+            report.append("%s table %d: PokeFinder unown%d vs ours unown_table %s" % (game, loc, k, by_index.get(loc)))
+
+
+def compare_feebas(game, ours, cpp, report):
+    loc = re.search(r"feebasLocation\(Game version\) const\s*\{.*?return location == (\d+);", cpp, re.S)
+    slot = re.search(r"Slot\(349, (\d+), (\d+), &info\[349\]\)", cpp)
+    if not loc or not slot:
+        raise SystemExit("PokeFinder Feebas handling not found in Encounters4.cpp / EncounterArea4.cpp")
+    pf = (int(loc.group(1)), 349, int(slot.group(1)), int(slot.group(2)))
+    mine = (ours["table_index"], ours["species"], ours["min_level"], ours["max_level"])
+    if pf != mine:
+        report.append("%s feebas: PokeFinder (loc %d, %d, L%d-%d) vs ours (loc %d, %d, L%d-%d)" % ((game,) + pf + mine))
 
 
 def compare_gen3(game, mine, path, report):
@@ -1519,7 +1941,7 @@ def compare_hgss(game, mine, path, report):
     return n
 
 
-def compare_statics(gen, mine, pf_json, report):
+def compare_statics(gen, mine, pf_json, report, deliberate):
     pf = json.load(open(pf_json, encoding="utf-8"))
     ours = mine["entries"]
     matched = set()
@@ -1538,8 +1960,12 @@ def compare_statics(gen, mine, pf_json, report):
                 matched.add(h["id"])
     for o in ours:
         if o["id"] not in matched:
-            report.append("gen%d statics: %s (%s L%d, %s) is not in PokeFinder's catalogue" % (
-                gen, o["id"], o["name"], o["level"], "/".join(o["games"])))
+            line = "gen%d statics: %s (%s L%d, %s) is not in PokeFinder's catalogue" % (
+                gen, o["id"], o["name"], o["level"], "/".join(o["games"]))
+            if o["id"] in KNOWN_DELIBERATE:
+                deliberate.append(line + " (deliberate: %s)" % KNOWN_DELIBERATE[o["id"]])
+            else:
+                report.append(line)
 
 
 # ----------------------------------------------------------------------------- main
@@ -1550,12 +1976,22 @@ def main():
     ap.add_argument("--pret", default=PRET, help="directory holding the pret clones (default ~/AI/pret)")
     ap.add_argument("--out", default=os.path.join(ROOT, "core", "data"))
     ap.add_argument("--check", action="store_true", help="do not write; fail if the output differs from --out")
-    ap.add_argument("--pokefinder", help="PokeFinder Core/Resources/EncounterTables directory to compare against")
+    ap.add_argument("--pokefinder", help="PokeFinder Core/Resources/EncounterTables directory to compare against "
+                                         "(implies --check unless --write is given; exit 1 on unexplained mismatches)")
+    ap.add_argument("--write", action="store_true", help="with --pokefinder: also write the files")
+    ap.add_argument("--relocate", action="store_true", help="report citations whose line moved (+-40) instead of aborting; exit 1 if any")
     args = ap.parse_args()
     PRET = args.pret
+    if args.pokefinder and not args.write:
+        args.check = True
+    if args.relocate:
+        global RELOCATE
+        RELOCATE = []
+        args.check = True
 
     species3 = build_species_gen3()
     species4 = build_species_gen4(species3)
+    SPECIES4_ID.update({s["constant"]: s["dex"] for s in species4["species"]})
     enc3 = build_encounters_gen3(species3)
     enc4 = build_encounters_gen4(species4)
     s3 = {s["constant"]: s for s in species3["species"]}
@@ -1600,11 +2036,25 @@ def main():
         len(species4["meta"]["differences_from_gen3"]), statics3["meta"]["entry_count"], statics4["meta"]["entry_count"]))
     for w in species4["meta"]["warnings"]:
         print("warning:", w)
+    if RELOCATE:
+        print("%d citation(s) moved; corrected literals:" % len(RELOCATE))
+        for repo, rel, old, new, text in RELOCATE:
+            print("  %s/%s: %d -> %d  %r" % (repo, rel, old, new, text))
+        rc = 1
 
     if args.pokefinder:
-        tmp = run_pokefinder(args.pokefinder)
-        report = []
-        counts = {}
+        rc = max(rc, compare_with_pokefinder(args.pokefinder, enc3, enc4, statics3, statics4))
+    return rc
+
+
+SPECIES4_ID = {}
+
+
+def compare_with_pokefinder(pf_dir, enc3, enc4, statics3, statics4):
+    tmp = tempfile.mkdtemp(prefix="pf-tables-")
+    try:
+        run_pokefinder(pf_dir, tmp)
+        report, deliberate, counts = [], [], {}
         for game, fn in (("emerald", "emerald.bin"), ("ruby", "ruby.bin"), ("sapphire", "sapphire.bin"),
                          ("firered", "firered.bin"), ("leafgreen", "leafgreen.bin")):
             counts[game] = compare_gen3(game, enc3["games"][game], os.path.join(tmp, fn), report)
@@ -1612,13 +2062,45 @@ def main():
             counts[game] = compare_dppt(game, enc4["games"][game], os.path.join(tmp, fn), report)
         for game, fn in (("heartgold", "heartgold.bin"), ("soulsilver", "soulsilver.bin")):
             counts[game] = compare_hgss(game, enc4["games"][game], os.path.join(tmp, fn), report)
-        compare_statics(3, statics3, os.path.join(args.pokefinder, "Gen3", "encounters.json"), report)
-        compare_statics(4, statics4, os.path.join(args.pokefinder, "Gen4", "encounters.json"), report)
+        # the Gen 4 extras: PokeFinder's packers and its hard-coded tables in Core/Gen4/*.cpp
+        core = os.path.join(pf_dir, "..", "..", "Gen4")
+        cpp = rd_abs(os.path.join(core, "Encounters4.cpp")) + rd_abs(os.path.join(core, "EncounterArea4.cpp"))
+        for game, fn in (("platinum", "pt_honey.bin"), ("diamond", "d_honey.bin"), ("pearl", "p_honey.bin")):
+            counts[game + " honey"] = compare_honey(game, enc4["games"][game]["extra"]["honey_tree"], os.path.join(tmp, fn), report)
+        for game, name in (("platinum", "trophyGardenPt"), ("diamond", "trophyGardenDP"), ("pearl", "trophyGardenDP")):
+            compare_pool(game, "trophy garden pool", [s["species"] for s in enc4["games"][game]["extra"]["trophy_garden_daily"]["pool"]],
+                         cpp_array(cpp, name), report)
+        sid = SPECIES4_ID
+        for game, local, dex in (("platinum", "greatMarshPt", "greatMarshPtDex"), ("diamond", "greatMarshDP", "greatMarshDPDex"),
+                                 ("pearl", "greatMarshDP", "greatMarshDPDex")):
+            m = enc4["games"][game]["extra"]["great_marsh_lookout"]
+            compare_pool(game, "great marsh before dex", [sid[c] for c in m["before_national_dex"]], cpp_array(cpp, local), report, as_set=True)
+            compare_pool(game, "great marsh after dex", [sid[c] for c in m["after_national_dex"]], cpp_array(cpp, dex), report, as_set=True)
+        for game in ("platinum", "diamond", "pearl"):
+            compare_feebas(game, enc4["games"][game]["extra"]["feebas"], cpp, report)
+        cases = compare_unown(enc4["games"]["platinum"]["extra"]["unown_tables"], cpp, report)
+        for game in ("platinum", "diamond", "pearl"):
+            compare_unown_locations(game, enc4["games"][game]["tables"], cases, report)
+        counts["bug contest areas"] = compare_bug(enc4["hgss_shared"]["bug_contest"], os.path.join(tmp, "hgss_bug.bin"), report)
+        for game, fn in (("heartgold", "hg_headbutt.bin"), ("soulsilver", "ss_headbutt.bin")):
+            counts[game + " headbutt"] = compare_headbutt(game, enc4["hgss_shared"]["headbutt"], os.path.join(tmp, fn), report)
+        compare_statics(3, statics3, os.path.join(pf_dir, "Gen3", "encounters.json"), report, deliberate)
+        compare_statics(4, statics4, os.path.join(pf_dir, "Gen4", "encounters.json"), report, deliberate)
         print("PokeFinder tables compared (records):", ", ".join("%s %d" % kv for kv in counts.items()))
+        print("PokeFinder known deliberate differences: %d" % len(deliberate))
+        for line in deliberate:
+            print("  " + line)
         print("PokeFinder mismatches: %d" % len(report))
         for line in report:
             print("  " + line)
-    return rc
+        return 1 if report else 0
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def rd_abs(path):
+    with open(path, encoding="utf-8", errors="replace") as f:
+        return f.read()
 
 
 if __name__ == "__main__":

@@ -3,10 +3,11 @@
 //
 //   node tests/test-data.cjs                      # run the checks
 //   DATA_TEST_NEGATIVE=1 node tests/test-data.cjs # negative control: one assertion is made wrong on purpose
+//   DATA_DIR=/elsewhere node tests/test-data.cjs  # check a different directory (used to show the checks fail on mutated data)
 const fs = require("fs");
 const path = require("path");
 
-const dataDir = path.join(__dirname, "..", "core", "data");
+const dataDir = process.env.DATA_DIR || path.join(__dirname, "..", "core", "data");
 const negative = process.env.DATA_TEST_NEGATIVE === "1";
 let failures = 0;
 let checks = 0;
@@ -119,6 +120,37 @@ check("Route 29 slot 7 differs by version (HG Sentret L2 / SS Rattata L4)",
 const monean = e3.games.firered.maps.find((m) => m.map === "MAP_SEVEN_ISLAND_TANOBY_RUINS_MONEAN_CHAMBER");
 check("FRLG Monean chamber Unown letters", monean.land.unown_letters.join(""), "AAAAAAAAAAA?");
 
+// extras: Gen 3 Feebas, DPPt encdata_ex (trophy garden, honey, Feebas, Great Marsh), Unown groups, swarm hosts
+for (const g of ["ruby", "sapphire", "emerald"]) {
+  const f = e3.games[g].feebas;
+  check(`${g} Route 119 Feebas is L20-25 on the Route 119 table`, [f.species, f.min_level, f.max_level, f.map, f.index],
+    [349, 20, 25, "MAP_ROUTE119", g === "emerald" ? 33 : 73]);
+}
+check("FRLG carry no Feebas record", "feebas" in e3.games.firered || "feebas" in e3.games.leafgreen, false);
+const ptx = e4.games.platinum.extra;
+check("Platinum trophy garden pool has 16 species incl. Ditto, not Porygon", [ptx.trophy_garden_daily.pool.length, ptx.trophy_garden_daily.pool.map((s) => s.species).includes(132), ptx.trophy_garden_daily.pool.map((s) => s.species).includes(137)], [16, true, false]);
+check("Platinum trophy garden replaces slots 6,7 of table 117", [ptx.trophy_garden_daily.table_index, ptx.trophy_garden_daily.replaces_grass_slots], [117, [6, 7]]);
+for (const g of ["diamond", "pearl"]) {
+  const x = e4.games[g].extra;
+  check(`${g} trophy garden pool has Porygon, not Ditto`, [x.trophy_garden_daily.pool.length, x.trophy_garden_daily.pool.map((s) => s.species).includes(137), x.trophy_garden_daily.pool.map((s) => s.species).includes(132)], [16, true, false]);
+  check(`${g} Feebas is L10-20 on table 22 with 528 tiles`, [x.feebas.species, x.feebas.min_level, x.feebas.max_level, x.feebas.table_index, x.feebas.tile_count, x.feebas.tiles.length], [349, 10, 20, 22, 528, 528]);
+  check(`${g} honey tree lists are 6 species each, L5-15`, [x.honey_tree.common.length, x.honey_tree.uncommon.length, x.honey_tree.rare.length, x.honey_tree.min_level, x.honey_tree.max_level], [6, 6, 6, 5, 15]);
+  check(`${g} Great Marsh lookout lists`, [x.great_marsh_lookout.before_national_dex.length, x.great_marsh_lookout.after_national_dex.length, x.great_marsh_lookout.binocular_coords.length], [32, 32, 36]);
+}
+check("Diamond honey common has Silcoon, Pearl has Cascoon", [e4.games.diamond.extra.honey_tree.common[1], e4.games.pearl.extra.honey_tree.common[1]], ["SPECIES_SILCOON", "SPECIES_CASCOON"]);
+check("Diamond honey reads members 2-4, Pearl 5-7", [e4.games.diamond.extra.honey_tree.encdata_ex_members, e4.games.pearl.extra.honey_tree.encdata_ex_members], [{ common: 2, uncommon: 3, rare: 4 }, { common: 5, uncommon: 6, rare: 7 }]);
+check("Platinum Feebas is L10-20 on table 22 (Mt. Coronet B1F) with 528 tiles", [ptx.feebas.species, ptx.feebas.min_level, ptx.feebas.max_level, ptx.feebas.table_index, ptx.feebas.tile_count], [349, 10, 20, 22, 528]);
+check("Platinum honey tree: 21 hosts, two without a wild table", [ptx.honey_tree.hosts.length, ptx.honey_tree.hosts.filter((h) => h.table_index === null).map((h) => h.map)], [21, ["MAP_HEADER_ETERNA_FOREST_OUTSIDE", "MAP_HEADER_FLOAROMA_MEADOW"]]);
+check("Platinum honey tree levels and slot rates", [ptx.honey_tree.min_level, ptx.honey_tree.max_level, ptx.honey_tree.slot_rates], [5, 15, [40, 20, 20, 10, 5, 5]]);
+check("Platinum Unown groups: 8 rows, row 1 has 20 forms, row 8 is ! and ?", [ptx.unown_tables.tables.length, ptx.unown_tables.tables[0].form_count, ptx.unown_tables.tables[7].letters], [8, 20, ["!", "?"]]);
+check("Platinum Unown rows 2-7 are the single letters F, R, I, N, E, D in table order", ptx.unown_tables.tables.slice(1, 7).map((t) => t.letters.join("")).join(""), "FRINED");
+check("Platinum swarm hosts: 22 maps, Route 201 is table 140", [ptx.swarm_hosts.hosts.length, ptx.swarm_hosts.hosts[0]], [22, { map: "MAP_HEADER_ROUTE_201", table_index: 140 }]);
+check("Platinum encdata_ex has 12 members", ptx.encdata_ex_order.length, 12);
+const hs = e4.hgss_shared.swarm_hosts.hosts;
+check("HGSS swarm hosts: 20 rows, Route 12 is a fishing swarm on table 92", [hs.length, hs.find((h) => h.map === "MAP_ROUTE_12")], [20, { map: "MAP_ROUTE_12", kind: "fish", table_index: 92, table: "R12" }]);
+check("HGSS swarm host kinds", hs.map((h) => h.kind).sort().join(","), "fish,fish,fish,fish,land,land,land,land,land,land,land,land,land,land,land,land,land,surf,surf,surf");
+check("every extra with sources cites at least one decomp line", [ptx.trophy_garden_daily, ptx.feebas, ptx.honey_tree, ptx.great_marsh_lookout, ptx.unown_tables, ptx.swarm_hosts, e4.hgss_shared.swarm_hosts, e3.games.emerald.feebas].every((x) => x.sources.length > 0 && x.sources.every((s) => typeof s.line === "number" && s.text.length > 0)), true);
+
 // statics
 function stat(file, id) {
   const s = file.entries.find((x) => x.id === id);
@@ -137,6 +169,8 @@ check("HeartGold Lugia level", stat(st4, "hg/legend/lugia").level, 70);
 check("SoulSilver Lugia level", stat(st4, "ss/legend/lugia").level, 45);
 check("HGSS red Gyarados is forced shiny", stat(st4, "hgss/static/gyarados").shiny, "always");
 check("HGSS roamer Raikou level", stat(st4, "hgss/roamer/raikou").level, 40);
+check("HGSS Spiky-eared Pichu is a fixed-PID gift: L30, never shiny", [stat(st4, "hgss/gift/pichu-spiky-eared").level, stat(st4, "hgss/gift/pichu-spiky-eared").shiny, stat(st4, "hgss/gift/pichu-spiky-eared").form], [30, "never", "spiky-eared"]);
+check("HGSS Suicune cites both the Route 25 and Burned Tower scripts", stat(st4, "hgss/legend/suicune").sources.map((s) => s.file.split("/").pop()).sort(), ["scr_seq_0024_D18R0102.s", "scr_seq_0216_R25.s"]);
 check("Diamond/Pearl entries are marked PokeFinder-provenance", st4.entries.filter((e) => e.id.startsWith("dp/") || e.id.startsWith("d/") || e.id.startsWith("p/")).every((e) => e.provenance === "pokefinder" && e.level_verified_against_decomp === false), true);
 check("every decomp-provenance static cites at least one source line", st3.entries.concat(st4.entries).filter((e) => e.provenance === "decomp").every((e) => e.sources.length > 0 && e.sources.every((s) => typeof s.line === "number" && s.text.length > 0)), true);
 check("static ids are unique (gen3)", new Set(st3.entries.map((e) => e.id)).size, st3.entries.length);

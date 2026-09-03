@@ -2,6 +2,23 @@
  "games": {
   "emerald": {
    "commit": "83df84e40623b79281f2397faa611cbf044170bd",
+   "feebas": {
+    "any_rod": true,
+    "constant": "SPECIES_FEEBAS",
+    "index": 33,
+    "map": "MAP_ROUTE119",
+    "max_level": 25,
+    "min_level": 20,
+    "note": "FishingWildEncounter: when CheckFeebas() passes (Route 119, the rod tile is one of the six Feebas tiles drawn from the Dewford trend seed, and Random() % 100 <= 49) the fishing table is bypassed and CreateWildMon(SPECIES_FEEBAS, ChooseWildMonLevel({20, 25})) runs for every rod; the 50 % roll is one extra Random() call before the level roll",
+    "sources": [
+     {"file": "src/wild_encounter.c", "line": 67, "repo": "pokeemerald", "text": "static const struct WildPokemon sWildFeebas = {20, 25, SPECIES_FEEBAS};"},
+     {"file": "src/wild_encounter.c", "line": 137, "repo": "pokeemerald", "text": "if (Random() % 100 > 49)"},
+     {"file": "src/wild_encounter.c", "line": 784, "repo": "pokeemerald", "text": "if (CheckFeebas() == TRUE)"},
+     {"file": "src/wild_encounter.c", "line": 786, "repo": "pokeemerald", "text": "u8 level = ChooseWildMonLevel(&sWildFeebas);"},
+     {"file": "src/wild_encounter.c", "line": 788, "repo": "pokeemerald", "text": "species = sWildFeebas.species;"}
+    ],
+    "species": 349
+   },
    "map_count": 124,
    "maps": [
     {
@@ -12633,6 +12650,23 @@
   },
   "ruby": {
    "commit": "63a8cbf0016b351a4e68f7036fa0b77e23d2f2c1",
+   "feebas": {
+    "any_rod": true,
+    "constant": "SPECIES_FEEBAS",
+    "index": 73,
+    "map": "MAP_ROUTE119",
+    "max_level": 25,
+    "min_level": 20,
+    "note": "FishingWildEncounter: when CheckFeebas() passes (Route 119, the rod tile is one of the six Feebas tiles drawn from the Dewford trend seed, and Random() % 100 <= 49) the fishing table is bypassed and CreateWildMon(SPECIES_FEEBAS, ChooseWildMonLevel({20, 25})) runs for every rod; the 50 % roll is one extra Random() call before the level roll",
+    "sources": [
+     {"file": "src/wild_encounter.c", "line": 23, "repo": "pokeruby", "text": "const struct WildPokemon gWildFeebasRoute119Data = {20, 25, SPECIES_FEEBAS};"},
+     {"file": "src/wild_encounter.c", "line": 98, "repo": "pokeruby", "text": "if (Random() % 100 > 49) //50% chance of encountering Feebas"},
+     {"file": "src/wild_encounter.c", "line": 602, "repo": "pokeruby", "text": "if (CheckFeebas() == TRUE)"},
+     {"file": "src/wild_encounter.c", "line": 604, "repo": "pokeruby", "text": "u8 level = ChooseWildMonLevel(&gWildFeebasRoute119Data);"},
+     {"file": "src/wild_encounter.c", "line": 606, "repo": "pokeruby", "text": "species = gWildFeebasRoute119Data.species;"}
+    ],
+    "species": 349
+   },
    "map_count": 97,
    "maps": [
     {
@@ -15956,6 +15990,23 @@
   },
   "sapphire": {
    "commit": "63a8cbf0016b351a4e68f7036fa0b77e23d2f2c1",
+   "feebas": {
+    "any_rod": true,
+    "constant": "SPECIES_FEEBAS",
+    "index": 73,
+    "map": "MAP_ROUTE119",
+    "max_level": 25,
+    "min_level": 20,
+    "note": "FishingWildEncounter: when CheckFeebas() passes (Route 119, the rod tile is one of the six Feebas tiles drawn from the Dewford trend seed, and Random() % 100 <= 49) the fishing table is bypassed and CreateWildMon(SPECIES_FEEBAS, ChooseWildMonLevel({20, 25})) runs for every rod; the 50 % roll is one extra Random() call before the level roll",
+    "sources": [
+     {"file": "src/wild_encounter.c", "line": 23, "repo": "pokeruby", "text": "const struct WildPokemon gWildFeebasRoute119Data = {20, 25, SPECIES_FEEBAS};"},
+     {"file": "src/wild_encounter.c", "line": 98, "repo": "pokeruby", "text": "if (Random() % 100 > 49) //50% chance of encountering Feebas"},
+     {"file": "src/wild_encounter.c", "line": 602, "repo": "pokeruby", "text": "if (CheckFeebas() == TRUE)"},
+     {"file": "src/wild_encounter.c", "line": 604, "repo": "pokeruby", "text": "u8 level = ChooseWildMonLevel(&gWildFeebasRoute119Data);"},
+     {"file": "src/wild_encounter.c", "line": 606, "repo": "pokeruby", "text": "species = gWildFeebasRoute119Data.species;"}
+    ],
+    "species": 349
+   },
    "map_count": 97,
    "maps": [
     {
