@@ -171,6 +171,13 @@ phase1 = targetSecond·1000 + calibration + 200 − ms(targetDelay), padded by w
 59.8261 fps. The "+1 year = −1 delay" trick follows from the seed formula's
 `(year − 2000) + delay` term.
 
+That paragraph describes `core/gen4.js` / `Gen4Timer`, which keeps every term unrounded. EonTimer
+itself rounds the calibrated second to whole frames and every frame→ms conversion to whole ms
+(half-to-even), so its phases differ from `gen4.js` by up to half a frame (measured 7.489 ms on
+the 600/50/500/14 defaults, 8.044 ms max over 25 random NDS parameter sets, see the
+[Timer models](#timer-models-eontimer-port) section). The exact EonTimer arithmetic lives in
+`core/timers.js` / `app/Core/Timers.cs`; the webapp still runs `gen4.js` unchanged.
+
 # Gen 3 (Game Boy Advance)
 
 ## The RNG
@@ -346,3 +353,122 @@ Python bindings (`tests/harness/`):
 GBA runs at 16777216 Hz with 280896 cycles per frame = **59.7275005696 fps**. The console
 timer converts advances to milliseconds with this constant; all constant offsets (console
 startup, human reaction) are absorbed by the calibration loop.
+
+# Timer models (EonTimer port)
+
+All EMPIRICAL: these are the formulas the RNG community's timer uses, not game code. Source of
+truth is EonTimer (MIT, https://github.com/DasAmpharos/EonTimer), `main` @
+`ad10886d83bc455ad208c82925610c642d9e8864` (2026-04-20, the React/TypeScript rewrite; the
+project went Kotlin `2.x` → C++ `3.x-cpp` → Python `3.x-python` → TS). Ported function-for-function
+into `core/timers.js` and `app/Core/Timers.cs` with EonTimer's operation order kept, and verified
+by `tests/timer-vectors.json` (467 vectors, every expected value computed by running EonTimer's
+own TS; 47 of them are the literal assertions of its Python unit tests at
+`3.x-python` @ `13d15f72`, which the TS reproduces exactly) plus a 200-parameter-set JS/C#
+cross-check (`tests/timer-parity.json`, also recomputed by EonTimer's TS with 0 mismatches).
+Paths below are inside the EonTimer repo.
+
+## Console frame rates
+
+| Console | fps | ms/frame | EonTimer |
+|---|---|---|---|
+| GBA | 16777216 / 280896 = 59.72750057 | 16.742706298828125 | `src/utils/constants.ts:23,27`; console switch `src/timers/calibrator.ts:40-41` |
+| NDS slot-1 (DS cart) | 59.8261 | 16.71511263478649 | `constants.ts:24,28`; `calibrator.ts:45-47` |
+| NDS slot-2 (GBA cart in a DS) | 59.6555 | 16.76291372966449 | `constants.ts:25,29`; `calibrator.ts:42-43` |
+| DSi, 3DS | = slot-1 (59.8261) | | `calibrator.ts:44-47` (`case Console.DSI: case Console.THREE_DS:` fall into slot-1) |
+| Custom | user fps; 0 throws | 1000 / fps | `calibrator.ts:48-53` |
+| (unknown) | falls back to slot-1 | | `calibrator.ts:54-55` |
+
+The exact ratio for GBA is TS-only: the Python (`eon_timer/settings/timer/model.py:8`) and C++
+(`src/models/Console.cpp:8`) branches use 59.7275, and the 2019 Kotlin branch used 59.7271
+(`model/settings/Console.kt:6`). `core/timers.js` takes GBA from `rng.js` (`GBA_FPS`) and slot-1
+from `gen4.js` (`NDS_FPS`), so the three engines share one constant each. Note the RNG guide's
+shorthand "3DS 59.6555" is wrong by EonTimer's table: 59.6555 is slot-2; 3DS is slot-1.
+
+## Rounding
+
+`roundHalfToEven` (`calibrator.ts:15-36`): floor/ceil, and if the two distances agree within
+`Number.EPSILON × max(1, |v|)` the even neighbour wins ("match the desktop timer's C#
+`Math.Round(decimal)` midpoint-to-even"). Applied by `toDelays(ms) = rhe(ms / msPerFrame)`
+(`:59-61`) and `toMilliseconds(frames) = rhe(msPerFrame × frames)` (`:63-65`), so every
+frame↔ms conversion is a whole number. The Python tests pin the ties: 1.5→2, 2.5→2, 3.5→4
+(`test/timers/calibrator_test.py:14-18`). The C# port uses 2^-52 explicitly (`double.Epsilon`
+is the smallest denormal, not machine epsilon).
+
+`precisionCalibration` (default off, `src/store/index.ts:125`): when on, calibration values are
+kept in ms (`calibrateToMilliseconds` returns the value unchanged, `calibrateToDelays` rounds to
+whole ms, `calibrator.ts:67-75`); when off they are stored in whole frames
+(`toDelays`/`toMilliseconds`).
+
+`createCalibration(frames, seconds) = toMilliseconds(frames − toDelays(seconds × 1000))`
+(`calibrator.ts:77-83`): the calibrated second is quantised to whole frames *before* the
+subtraction — this is the half-frame gap between EonTimer and `gen4.js`.
+
+## Phase constants
+
+| Constant | Value | EonTimer |
+|---|---|---|
+| Minimum phase length | 14000 ms, `while (value < min) value += 60000` | `src/utils/constants.ts:4,6-11`; user-configurable in seconds since #189 (`store/index.ts:127`, ×1000 in each panel) |
+| Minutes before target | `floor(Σ finite phases / 60000)` | `constants.ts:13-20`; computed with calibration 0 (`gen4Timer.ts:25-29`, `gen5Timer.ts:53-72`) |
+| Second-timer offset | +200 ms | `src/timers/secondTimer.ts:8` |
+| Second-hit correction | (target − hit)×1000 − 500 if hit < target; + 500 if hit > target; 0 if equal | `secondTimer.ts:11-18` |
+| Delay-hit close threshold | 167 ms | `src/timers/delayTimer.ts:5` |
+| Delay-hit factors | ×1.0 normally, ×0.75 when \|Δ\| ≤ 167 ms | `delayTimer.ts:6-7,30-33` |
+| Entralink phase-1 pad | +250 ms | `src/timers/entralinkTimer.ts:14` |
+| Entralink advance rate | 0.837148929 advances/s (phase 3 = advances / 0.837148929 × 1000 + frameCalibration) | `entralinkTimer.ts:4,43` |
+| Variable-target open phase | `Infinity` until "Set Target Frame" injects `toMilliseconds(frame) + calibration` | `frameTimer.ts:29-31`, `Gen3Panel.tsx:96-100`, worker `timerWorker.ts:111-151` |
+| Action cue pattern | `count` (6) cues `interval` (500 ms) apart ending at every phase end | `store/index.ts:113-119`, `src/workers/timerWorker.ts:19-30,43` |
+
+## Models
+
+- **Frame (Gen 3 Standard)**: `[preTimer, toMilliseconds(targetFrame) + calibration]`
+  (`frameTimer.ts:4-19`). Calibrate from a frame hit: `calibration += toMilliseconds(target −
+  hit)` (`frameTimer.ts:21-27`, applied `Gen3Panel.tsx:68-73`). Defaults 5000 / 1000 / 0
+  (`store/index.ts:149-154`). **Variable Target**: `[preTimer, ∞]` (`gen3Timer.ts:21-22`).
+- **Delay (Gen 4)**: `calibration = createCalibration(calibratedDelay, calibratedSecond)`
+  (`gen4Timer.ts:12-14`); `phase1 = toMinimumLength(toMinimumLength(second×1000 + calibration +
+  200) − toMilliseconds(delay))`, `phase2 = toMilliseconds(delay) − calibration`
+  (`delayTimer.ts:9-22`). Calibrate from a delay hit: `Δ = toMilliseconds(hit) −
+  toMilliseconds(target)`, ×0.75 if \|Δ\| ≤ 167 else ×1.0, then `calibratedDelay +=
+  toDelays(Δ)`; a hit of 0 is ignored (`delayTimer.ts:24-34`, `gen4Timer.ts:31-40`,
+  `Gen4Panel.tsx:219-224`). Gen 4 always rounds to whole frames — it bypasses
+  `precisionCalibration`. Defaults 600 / 50 / 500 / 14 (`store/index.ts:142-147`).
+- **Second (Gen 5 Standard)**: `[toMinimumLength(second×1000 + calibrateToMilliseconds(cal) +
+  200)]` (`secondTimer.ts:3-9`, `gen5Timer.ts:24,29`); calibrate `cal +=
+  calibrateToDelays(secondHit rule)` (`gen5Timer.ts:96-103`).
+- **C-Gear (Gen 5)**: the Delay model with `calibrateToMilliseconds(cal)`; calibrate from the
+  delay hit only (`gen5Timer.ts:31,104-111`).
+- **Entralink (Gen 5)**: Delay phases, then `+250` on phase 1 and `− calibrateToMilliseconds
+  (entralinkCalibration)` on phase 2 (`entralinkTimer.ts:6-17`). Calibrate: second hit → `cal`,
+  delay hit → `entralinkCalibration`, each only when the hit differs from its target
+  (`gen5Timer.ts:112-125`). **Entralink+** adds the advances phase and `frameCalibration +=
+  (targetAdvances − advancesHit) / 0.837148929 × 1000` (`entralinkTimer.ts:27-49`,
+  `gen5Timer.ts:126-133`). Defaults: calibration −95, entralink 256, frame 0, delay 1200,
+  second 50, advances 100 (`store/index.ts:132-140`).
+- **Custom**: per phase `unit ∈ {ms, advances, hex}`, `value + calibration` with advances/hex
+  first through `toMilliseconds` (`customTimer.ts:10-18`); calibrate `calibration +=
+  toMilliseconds(target − hit)` (ms unit: `target − hit`) (`customTimer.ts:20-29`).
+
+## Community starting calibrations (not in EonTimer's code)
+
+−95 is EonTimer's own Gen 5 default (`store/index.ts:134`, also `3.x-python
+eon_timer/timers/gen5/model.py:18`, Kotlin `Gen5TimerConstants.kt:7`). The −424 "3DS"
+calibration named in the RNG guide design appears in **no** EonTimer branch (grepped `main`,
+`2.x`, `3.x-cpp`, `3.x-python`); it is carried as `GEN5_COMMUNITY_CALIBRATION["3DS"]` /
+`Gen5CommunityCalibration3ds` for the guide's use, source not recorded, re-measure per console.
+
+## Where Shiny Solution's shipped timers differ from EonTimer (unchanged in this phase)
+
+- `core/gen4.js` `timerPhases` / `Gen4Timer.Phases`: no rounding anywhere (`calibration =
+  ms(cd) − cs×1000` instead of `toMilliseconds(cd − toDelays(cs×1000))`); measured gap 7.489 ms
+  on the defaults, ≤ 8.044 ms over 25 random NDS sets, bound half a frame + 1 ms; the 14 s
+  minimum is fixed rather than a setting. `calibrate` returns fractional frames
+  (EonTimer: whole frames, half-to-even) and accepts a hit of 0 (EonTimer ignores it); within
+  0.5 frame of EonTimer except when \|Δ\| sits within ~1 ms of the 167 ms threshold, where
+  the two disagree on the ×0.75 factor.
+- The webapp Gen 3 timer is a single phase from power-on (`advancesToMs(advance) + cal`, no
+  pre-timer, no ms rounding); its calibration is `cal −= advancesToMs(drift)` unrounded.
+- Cue pattern (`webapp/app.js:105-118`): five 1 s-spaced beeps then a long final beep on the
+  last phase only, one beep at the end of earlier phases; EonTimer cues six 500 ms-spaced
+  actions ending at every phase end. Variable-target (`∞`) phases and every Gen 5 mode are
+  absent from the webapp.
+

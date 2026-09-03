@@ -13,6 +13,7 @@ node_modules/
 *.gbc
 publish/
 gen4-vectors.json
+tests/timer-parity.json
 webapp/rng.js
 webapp/gen4.js
 webapp/gen12.js
