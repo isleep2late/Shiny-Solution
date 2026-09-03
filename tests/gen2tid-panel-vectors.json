@@ -885,7 +885,8 @@
      "  This attempt implies a correction of 1321.5 ms (used 250.0 ms).",
      "  That is more than 60 frames (15 bins, 1.0 s) from the aim: NOT added to the calibration (menu anchor).",
      "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
-     "  of a different attempt. If it really was this attempt, tick 'force' and record again."
+     "  of a different attempt. If it really was this attempt, tick 'force' and record again.",
+     "  Methodology: gold/gbc/hold-start-v1 (nothing recorded under it from this attempt)."
     ]
    },
    "store": {}
@@ -1054,7 +1055,8 @@
      "  This attempt implies a correction of -971.5 ms (used 100.0 ms).",
      "  That is more than 60 frames (15 bins, 1.0 s) from the aim: NOT added to the calibration (poweron anchor).",
      "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
-     "  of a different attempt. If it really was this attempt, tick 'force' and record again."
+     "  of a different attempt. If it really was this attempt, tick 'force' and record again.",
+     "  Methodology: gold/dmg/hold-start-v1 (nothing recorded under it from this attempt)."
     ]
    },
    "store": {}
@@ -2823,7 +2825,8 @@
      "  This attempt implies a correction of -972.7 ms (used 350.0 ms).",
      "  That is more than 60 frames (15 bins, 1.0 s) from the aim: NOT added to the calibration (poweron anchor).",
      "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
-     "  of a different attempt. If it really was this attempt, tick 'force' and record again."
+     "  of a different attempt. If it really was this attempt, tick 'force' and record again.",
+     "  Methodology: crystal/gbc/hold-start-v1 (nothing recorded under it from this attempt)."
     ]
    },
    "store": {}
@@ -3120,7 +3123,8 @@
      "  Those IDs are in no GSE or gambatte-speedrun in GBP mode with the GBC BIOS table in scope (the one Crystal table), so nothing can be learned from this attempt.",
      "  Usual causes: START held outside the window, the save was not cleared (CONTINUE menu), a tap longer than 8 frames",
      "  or START still down at the roll, another console family, or the press was later than bin 598.",
-     "  Correction unchanged."
+     "  Correction unchanged.",
+     "  Methodology: crystal/gbp/hold-start-v1 (nothing recorded under it from this attempt)."
     ]
    },
    "store": {}
@@ -3196,7 +3200,8 @@
     "  You hit bin 302 (A down 1209..1212 frames after the visible menu), aimed 300: 8.0 frames late (133.9 ms; state days0).",
     "  This attempt implies a correction of 333.9 ms (used 200.0 ms).",
     "  Looks like the same attempt entered twice (same Trainer ID and the same aim): not added (menu anchor).",
-    "  Tick 'force' if it really was a new attempt."
+    "  Tick 'force' if it really was a new attempt.",
+    "  Methodology: gold/gbp/hold-start-v1 (nothing recorded under it from this attempt)."
    ]
   },
   "forced": {
@@ -3253,7 +3258,8 @@
     "  This attempt implies a correction of 1271.5 ms (used 200.0 ms).",
     "  That is more than 60 frames (15 bins, 1.0 s) from the aim: NOT added to the calibration (menu anchor).",
     "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
-    "  of a different attempt. If it really was this attempt, tick 'force' and record again."
+    "  of a different attempt. If it really was this attempt, tick 'force' and record again.",
+    "  Methodology: gold/gbp/hold-start-v1 (nothing recorded under it from this attempt)."
    ]
   },
   "outlierForced": {
@@ -3432,7 +3438,8 @@
     "  Those IDs are in no GSE or gambatte-speedrun in GBP mode with the GBC BIOS table in scope (the two-state prior (days0, days512)), so nothing can be learned from this attempt.",
     "  Usual causes: START held outside the window, the save was not cleared (CONTINUE menu), a tap longer than 8 frames",
     "  or START still down at the roll, another console family, or the press was later than bin 598.",
-    "  They ARE produced on this platform in another RTC state: gold/gbp/halt-days200 bin 392 (first boot only). That is a different table (the clock, not your timing), so the correction is unchanged; pick that state above if it is this cartridge's."
+    "  They ARE produced on this platform in another RTC state: gold/gbp/halt-days200 bin 392 (first boot only). That is a different table (the clock, not your timing), so the correction is unchanged; pick that state above if it is this cartridge's.",
+    "  Methodology: gold/gbp/hold-start-v1 (nothing recorded under it from this attempt)."
    ]
   },
   "invertAll": [

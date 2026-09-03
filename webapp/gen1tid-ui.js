@@ -1011,7 +1011,7 @@
     var tid;
     try { tid = G.parseTid($("g1-verify-tid").value); } catch (e) { setText("g1-verify-out", "not a Trainer ID (" + e.message + ")"); return; }
     var s = numOr("g1-verify-s", NaN);
-    if (isNaN(s)) { setText("g1-verify-out", "give the menu-to-press seconds measured from the video"); return; }
+    if (!isFinite(s)) { setText("g1-verify-out", "give the menu-to-press seconds measured from the video"); return; }
     var r = verifyLines(plat, tid, s, $("g1-verify-from").value === "visible", Math.max(0, Math.round(numOr("g1-verify-tol", 3))), null);
     setText("g1-verify-out", r.lines);
   }

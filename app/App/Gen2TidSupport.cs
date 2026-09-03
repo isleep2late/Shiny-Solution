@@ -153,7 +153,8 @@ public sealed class Gen2Platform
         if (J.S(g, "status") != "supported") throw new ArgumentException("no runnable methodology for " + gameKey);
         var (def, ids) = PlatformMethodologies(data, platformKey, gameKey);
         string mid = string.IsNullOrEmpty(methodologyId) ? def ?? "" : methodologyId;
-        if (mid == "" || !ids.Contains(mid)) throw new ArgumentException($"methodology {mid} is not available on {platformKey} for {gameKey}");
+        if (mid == "") throw new ArgumentException($"no methodology is available on {platformKey} for {gameKey}");
+        if (!ids.Contains(mid)) throw new ArgumentException($"methodology {mid} is not available on {platformKey} for {gameKey}");
         var m = data.Methodology(mid);
         var states = data.StateIds(gameKey);
         string st = string.IsNullOrEmpty(state) ? J.S(data.Root.GetProperty("defaults"), "state", "days0") : state;
@@ -538,6 +539,7 @@ public static class Gen2TidText
                 out_.Lines.Add("  They ARE produced on this platform in another RTC state: " + string.Join("; ", broad.Candidates.Select(c => c.Table + " bin " + c.Bin + (c.ReachableAfterFirstBoot ? "" : " (first boot only)"))) +
                     ". That is a different table (the clock, not your timing), so the correction is unchanged; pick that state above if it is this cartridge's.");
             else out_.Lines.Add("  Correction unchanged.");
+            out_.Lines.Add($"  Methodology: {p.MethodologyId} (nothing recorded under it from this attempt).");
             return out_;
         }
         int hit = sh.NearestBin!.Value;
@@ -559,6 +561,7 @@ public static class Gen2TidText
             out_.Lines.Add($"  That is more than {Gen2Tid.OutlierFrames} frames ({Gen2Tid.OutlierFrames / Gen2Tid.PollPeriodFrames} bins, {F(Gen1Tid.FramesToSeconds(Gen2Tid.OutlierFrames), 1)} s) from the aim: NOT added to the calibration ({anchor} anchor).");
             out_.Lines.Add("  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID");
             out_.Lines.Add("  of a different attempt. If it really was this attempt, tick 'force' and record again.");
+            out_.Lines.Add($"  Methodology: {p.MethodologyId} (nothing recorded under it from this attempt).");
             return out_;
         }
         if (!force && Gen1Tid.IsDuplicate(stored.Select(s => s.ToGen1Sample()), sample.ToGen1Sample()))
@@ -566,6 +569,7 @@ public static class Gen2TidText
             out_.Refused = "duplicate";
             out_.Lines.Add($"  Looks like the same attempt entered twice (same Trainer ID and the same aim): not added ({anchor} anchor).");
             out_.Lines.Add("  Tick 'force' if it really was a new attempt.");
+            out_.Lines.Add($"  Methodology: {p.MethodologyId} (nothing recorded under it from this attempt).");
             return out_;
         }
         stored.Add(sample);

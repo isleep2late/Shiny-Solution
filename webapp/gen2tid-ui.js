@@ -141,7 +141,8 @@
     if (!g || g.status !== "supported") throw new Error("no runnable methodology for " + gameKey);
     var pm = platformMethodologies(data, platformKey, gameKey);
     var mid = methodologyId || pm.def;
-    if (!mid || pm.ids.indexOf(mid) === -1) throw new Error("methodology " + mid + " is not available on " + platformKey + " for " + gameKey);
+    if (!mid) throw new Error("no methodology is available on " + platformKey + " for " + gameKey);
+    if (pm.ids.indexOf(mid) === -1) throw new Error("methodology " + mid + " is not available on " + platformKey + " for " + gameKey);
     var m = data.methodologies[mid];
     var states = G.stateIds(data, gameKey);
     var st = state || data.defaults.state;
@@ -371,6 +372,7 @@
           return c.table + " bin " + c.bin + (c.reachableAfterFirstBoot ? "" : " (first boot only)");
         }).join("; ") + ". That is a different table (the clock, not your timing), so the correction is unchanged; pick that state above if it is this cartridge's.");
       } else out.lines.push("  Correction unchanged.");
+      out.lines.push("  Methodology: " + plat.methodologyId + " (nothing recorded under it from this attempt).");
       return out;
     }
     var hit = sh.nearestBin;
@@ -395,13 +397,15 @@
       out.refused = "outlier";
       out.lines.push("  That is more than " + G.OUTLIER_FRAMES + " frames (" + (G.OUTLIER_FRAMES / G.POLL_PERIOD_FRAMES) + " bins, " + f(G1.framesToSeconds(G.OUTLIER_FRAMES), 1) + " s) from the aim: NOT added to the calibration (" + anchor + " anchor).",
         "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
-        "  of a different attempt. If it really was this attempt, tick 'force' and record again.");
+        "  of a different attempt. If it really was this attempt, tick 'force' and record again.",
+        "  Methodology: " + plat.methodologyId + " (nothing recorded under it from this attempt).");
       return out;
     }
     if (!o.force && G1.isDuplicate(stored, sample)) {
       out.refused = "duplicate";
       out.lines.push("  Looks like the same attempt entered twice (same Trainer ID and the same aim): not added (" + anchor + " anchor).",
-        "  Tick 'force' if it really was a new attempt.");
+        "  Tick 'force' if it really was a new attempt.",
+        "  Methodology: " + plat.methodologyId + " (nothing recorded under it from this attempt).");
       return out;
     }
     cal[key] = { samples: stored.concat([sample]) };
@@ -783,7 +787,7 @@
     try { tid = parseIdField("g2-verify-tid", "Trainer ID"); lid = parseIdField("g2-verify-lid", "Lucky ID"); } catch (e) { setText("g2-verify-out", e.message); return; }
     if (tid === null) { setText("g2-verify-out", "type the Trainer ID in the run"); return; }
     var s = numOr("g2-verify-s", NaN);
-    if (isNaN(s)) { setText("g2-verify-out", "give the seconds from the visible menu box to the press, measured from the video"); return; }
+    if (!isFinite(s)) { setText("g2-verify-out", "give the seconds from the visible menu box to the press, measured from the video"); return; }
     setText("g2-verify-out", verifyLines(plat, tid, lid, s).lines);
   }
 
