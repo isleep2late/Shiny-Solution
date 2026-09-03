@@ -110,7 +110,10 @@ and game code briefly maps other banks, so the bot only trusts a `0xD000`–`0xD
 > The heads that run on these facts (the webapp's Gen 1 TID tab, the desktop app's Gen 1 TID
 > panel, RNG Solution's terminal front end over the same `core/data` files) are described in
 > [../README.md](../README.md) and [../USAGE.md](../USAGE.md); this section is the record of
-> the constants and their validation, unchanged.
+> the constants and their validation, unchanged. The RUN / PRACTICE-HUNT wall the heads carry
+> (RUN by default, the explicit switch and banner, the split calibration stores, the
+> `webapp/hunt/` boundary the bundlers refuse) is the README's "Modes" section; it is a rule
+> about inputs and stores, not a constant, so it is not recorded here.
 
 Copied from RNG Solution's `docs/FACTS.md` (the Gen 1 console tool; the text is its commit e105e84's,
 unchanged through bd47f98, the commit whose `tests/emit_vectors.py` emitted the vectors), which is

@@ -12,7 +12,10 @@
   var G = root.ShinyGen1Tid;
   var DATA = root.ShinyGen1Data;
   var SID = root.ShinyGen3SidData;
-  var STORE_KEY_CAL = "shinySolution.gen1tid.calibration";      // {"<platform>/<anchor>": {"samples": [...]}} (RNG Solution's config.json shape)
+  var MODE = root.ShinyMode;                                     // webapp/mode.js: the RUN / PRACTICE-HUNT wall's switch
+  if (!MODE) throw new Error("webapp/mode.js (ShinyMode) must load before gen1tid-ui.js");
+  var STORE_KEY_CAL = "shinySolution.gen1tid.calibration";      // RUN mode: {"<platform>/<anchor>": {"samples": [...]}} (RNG Solution's config.json shape)
+  // PRACTICE / HUNT mode keeps its own store, STORE_KEY_CAL + ".practice" (calStoreKey): a mode never reads the other's.
   var STORE_KEY_PINS = "shinySolution.gen1tid.sidPins";         // {"<methodology>/<tid>": [{pid, shiny, note, when}]}
   var STORE_KEY_RESET = "shinySolution.gen1tid.resetAdjust";    // {"<platform>": frames}
   var METHODOLOGY_SENTENCE = "Predictions are valid only under this methodology.";
@@ -297,33 +300,51 @@
   }
 
   // ---- calibration records (rngsolution/config.py over timeline.py) -------------------------
+  // Every record carries the mode it was made in ("run" | "practice") and each mode has its own
+  // store; inside a store, a record under another methodology or made in the other mode is left
+  // out of the correction and named in a note (RNG Solution's per-methodology rule, applied to
+  // modes too), so a practice-derived correction is never in force in a run.
   function calKey(platformKey, anchor) { return platformKey + "/" + anchor; }
-  function loadCalibration() { return loadJson(STORE_KEY_CAL, {}); }
-  function saveCalibration(cal) { saveJson(STORE_KEY_CAL, cal); }
+  function calStoreKey(mode) { return MODE.storeKey(STORE_KEY_CAL, mode); }
+  function loadCalibration(mode) { return loadJson(calStoreKey(mode), {}); }
+  function saveCalibration(cal, mode) { saveJson(calStoreKey(mode), cal); }
   function allSamples(cal, platformKey, anchor) { return ((cal[calKey(platformKey, anchor)] || {}).samples || []).slice(); }
-  function samplesFor(cal, platformKey, anchor, methodologyId) {
-    return G.splitByMethodology(allSamples(cal, platformKey, anchor), methodologyId).kept;
+  function samplesFor(cal, platformKey, anchor, methodologyId, mode) {
+    return MODE.splitByMode(G.splitByMethodology(allSamples(cal, platformKey, anchor), methodologyId).kept, mode).kept;
   }
-  function ignoredSamples(cal, platformKey, anchor, methodologyId) {
-    return G.splitByMethodology(allSamples(cal, platformKey, anchor), methodologyId).rest;
+  // {methodology: under another methodology, mode: under this methodology but made in the other mode}
+  function ignoredSamples(cal, platformKey, anchor, methodologyId, mode) {
+    var byMethodology = G.splitByMethodology(allSamples(cal, platformKey, anchor), methodologyId);
+    var byMode = MODE.splitByMode(byMethodology.kept, mode);
+    return { methodology: byMethodology.rest, mode: byMode.rest };
   }
-  function correctionInForce(cal, plat, anchor) {
-    return G.meanCorrection(samplesFor(cal, plat.key, anchor, plat.methodologyId), plat.defaults.correction_ms[anchor]);
+  function correctionInForce(cal, plat, anchor, mode) {
+    return G.meanCorrection(samplesFor(cal, plat.key, anchor, plat.methodologyId, mode), plat.defaults.correction_ms[anchor]);
   }
   function describeSampleMethodology(s) { return s.methodology || "no methodology (recorded before methodology ids existed)"; }
-  function ignoredSampleLines(cal, plat, anchor) {
-    var ign = ignoredSamples(cal, plat.key, anchor, plat.methodologyId);
-    if (!ign.length) return [];
-    var others = {};
-    ign.forEach(function (x) { others[describeSampleMethodology(x)] = true; });
-    return ["NOTE: " + plural(ign.length, "stored sample") + " for " + plat.key + "/" + anchor + " ignored: recorded under " +
-      Object.keys(others).sort().join(", ") + ", not " + plat.methodologyId + ". Samples are never mixed across methodologies."];
+  function ignoredSampleLines(cal, plat, anchor, mode) {
+    var ign = ignoredSamples(cal, plat.key, anchor, plat.methodologyId, mode);
+    var lines = [];
+    if (ign.methodology.length) {
+      var others = {};
+      ign.methodology.forEach(function (x) { others[describeSampleMethodology(x)] = true; });
+      lines.push("NOTE: " + plural(ign.methodology.length, "stored sample") + " for " + plat.key + "/" + anchor + " ignored: recorded under " +
+        Object.keys(others).sort().join(", ") + ", not " + plat.methodologyId + ". Samples are never mixed across methodologies.");
+    }
+    if (ign.mode.length) {
+      var modes = {};
+      ign.mode.forEach(function (x) { modes[MODE.label(MODE.effectiveMode(x))] = true; });
+      lines.push("NOTE: " + plural(ign.mode.length, "stored sample") + " for " + plat.key + "/" + anchor + " ignored: recorded in " +
+        Object.keys(modes).sort().join(", ") + " mode, not " + MODE.label(mode) + ". Samples are never mixed across modes: a practice-derived correction is never in force in a run.");
+    }
+    return lines;
   }
 
   // The outcome of one attempt: the typed Trainer ID inverted to the offset nearest the aim, the
   // implied correction, and (unless refused by the outlier / duplicate guard) the sample recorded.
   function recordOutcome(cal, plat, anchor, aimed, correctionUsed, tid, opts) {
     var o = opts || {};
+    var mode = MODE.checkMode(o.mode);         // the record must say which mode it was made in
     var out = { tid: tid, aimed: aimed, offsets: G.invert(plat.table, tid), lines: [], added: false, refused: null, hit: null, implied: null };
     out.lines.push("You got " + G.formatTid(tid) + ": " + G.verdictText(tid, plat.targetSets) + ".");
     if (!out.offsets.length) {
@@ -343,6 +364,7 @@
     out.lines.push("  This attempt implies a correction of " + f(out.implied, 1) + " ms (used " + f(correctionUsed, 1) + " ms).");
     var sample = G.makeSample(tid, aimed, hit, correctionUsed, { attempt: o.attempt || null, player: o.player || "webaudio", methodology: plat.methodologyId });
     sample.when = o.when || nowStamp();
+    sample.mode = mode;
     var key = calKey(plat.key, anchor);
     var stored = allSamples(cal, plat.key, anchor);
     try {
@@ -365,27 +387,40 @@
       throw e;
     }
     out.added = true;
-    var n = samplesFor(cal, plat.key, anchor, plat.methodologyId).length;
-    out.newCorrection = correctionInForce(cal, plat, anchor);
+    var n = samplesFor(cal, plat.key, anchor, plat.methodologyId, mode).length;
+    out.newCorrection = correctionInForce(cal, plat, anchor, mode);
     out.lines.push("  Correction updated to " + f(out.newCorrection, 1) + " ms (" + plural(n, "sample") + ", " + anchor + " anchor).",
-      "  Methodology: " + plat.methodologyId + " (recorded with the sample; only samples under it are averaged).");
-    out.lines = out.lines.concat(ignoredSampleLines(cal, plat, anchor).map(function (l) { return "  " + l; }));
+      "  Methodology: " + plat.methodologyId + " (recorded with the sample; only samples under it are averaged).",
+      "  Mode: " + MODE.label(mode) + " (recorded with the sample; only samples made in this mode are averaged, from this mode's own store).");
+    out.lines = out.lines.concat(ignoredSampleLines(cal, plat, anchor, mode).map(function (l) { return "  " + l; }));
     return out;
   }
 
-  function dropLastSample(cal, plat, anchor) {
+  function inScope(s, plat, mode) { return s.methodology === plat.methodologyId && MODE.effectiveMode(s) === mode; }
+  // the newest sample under this methodology made in this mode; others stay where they are
+  function dropLastSample(cal, plat, anchor, mode) {
+    MODE.checkMode(mode);
     var key = calKey(plat.key, anchor);
-    var r = G.dropLastUnder(allSamples(cal, plat.key, anchor), plat.methodologyId);
-    if (r.dropped) cal[key] = { samples: r.rest };
-    return r.dropped;
+    var stored = allSamples(cal, plat.key, anchor);
+    for (var i = stored.length - 1; i >= 0; i--) {
+      if (inScope(stored[i], plat, mode)) {
+        var dropped = stored[i];
+        stored.splice(i, 1);
+        cal[key] = { samples: stored };
+        return dropped;
+      }
+    }
+    return null;
   }
-  function clearSamples(cal, plat, anchor, allMethodologies) {
+  function clearSamples(cal, plat, anchor, allMethodologies, mode) {
+    MODE.checkMode(mode);
     var key = calKey(plat.key, anchor);
     var stored = allSamples(cal, plat.key, anchor);
     if (allMethodologies) { delete cal[key]; return { removed: stored, kept: [] }; }
-    var split = G.splitByMethodology(stored, plat.methodologyId);
-    if (split.rest.length) cal[key] = { samples: split.rest }; else delete cal[key];
-    return { removed: split.kept, kept: split.rest };
+    var removed = [], kept = [];
+    stored.forEach(function (s) { (inScope(s, plat, mode) ? removed : kept).push(s); });
+    if (kept.length) cal[key] = { samples: kept }; else delete cal[key];
+    return { removed: removed, kept: kept };
   }
   function sampleLine(x) {
     return "  " + (x.when || "") + "  aimed " + x.aimed + "  hit " + x.hit + "  used " + f(x.correction_used_ms, 1) + " ms  implied " + f(x.implied_ms, 1) + " ms  " + G.formatTid(x.tid);
@@ -408,10 +443,10 @@
     }
     return { p: null, line: "P(hit): no spread estimate yet. 2+ calibrated attempts on the " + anchor + " anchor under " + methodologyId + " give one." };
   }
-  function statsLines(samples, plat, anchor) {
+  function statsLines(samples, plat, anchor, mode) {
     var st = G.anchorStats(samples);
     var def = plat.defaults.correction_ms[anchor];
-    var lines = [plat.name + " / " + anchor + " anchor  (methodology " + plat.methodologyId + ")"];
+    var lines = [plat.name + " / " + anchor + " anchor  (methodology " + plat.methodologyId + (isNil(mode) ? "" : ", " + MODE.label(mode) + " mode") + ")"];
     if (st.n === 0) {
       lines.push("  n 0: no calibrated attempts; correction " + fmtMs(def) + " (default)");
       lines.push("  recommendation: cue an attempt and type the Trainer ID you got; 2 give a spread, 3+ a drift check.");
@@ -629,7 +664,7 @@
     targetSetKeys: targetSetKeys, otherTargetSetKeys: otherTargetSetKeys, derivationTag: derivationTag, setTag: setTag, describeTarget: describeTarget,
     methodologyLines: methodologyLines, targetSetLines: targetSetLines, protocolLines: protocolLines, scheduleLines: scheduleLines,
     announceCue: announceCue, buildSchedule: buildSchedule, renderCues: renderCues,
-    calKey: calKey, loadCalibration: loadCalibration, saveCalibration: saveCalibration, allSamples: allSamples, samplesFor: samplesFor,
+    calKey: calKey, calStoreKey: calStoreKey, loadCalibration: loadCalibration, saveCalibration: saveCalibration, allSamples: allSamples, samplesFor: samplesFor,
     ignoredSamples: ignoredSamples, correctionInForce: correctionInForce, ignoredSampleLines: ignoredSampleLines, recordOutcome: recordOutcome,
     dropLastSample: dropLastSample, clearSamples: clearSamples, sampleLine: sampleLine,
     hitSummary: hitSummary, statsLines: statsLines, pRangeText: pRangeText,
@@ -692,7 +727,7 @@
     player.announce = announce || announceCue;
     player.t0 = performance.now();
     var stateAtAnchor = ctx.state;
-    logEl.textContent = "anchor at " + nowStamp().split(" ")[1] + "\n";
+    logEl.textContent = "anchor at " + nowStamp().split(" ")[1] + "  [" + MODE.label(MODE.get()) + " mode]\n";
     Promise.resolve(ctx.state === "suspended" ? ctx.resume() : null).then(function () {
       if (!player.running || player.sched !== sched) return;
       var elapsed = (performance.now() - player.t0) / 1000.0;
@@ -743,8 +778,16 @@
 
   // -- state
   var st = { plat: null, offset: null, anchor: G.ANCHOR_MENU, sched: null, correction: null, attempt: null, sidCue: null };
-  var cal = loadCalibration();
+  var mode = MODE.get();
+  var cal = loadCalibration(mode);
   var pins = loadPins();
+  MODE.subscribe(function (m) {
+    // the other mode's store, never merged: the correction, the stats and the notes are re-read from it
+    mode = m;
+    cal = loadCalibration(m);
+    $("g1-correction")._manual = false;
+    if (st.plat) { refreshAnchor(); refreshStats(); }
+  });
 
   function currentTargetSetKeys() {
     var keys = [];
@@ -815,13 +858,14 @@
   function refreshAnchor() {
     var plat = st.plat;
     st.anchor = $("g1-anchor").value || plat.anchors[0];
-    var samples = samplesFor(cal, plat.key, st.anchor, plat.methodologyId);
-    var inForce = correctionInForce(cal, plat, st.anchor);
+    var samples = samplesFor(cal, plat.key, st.anchor, plat.methodologyId, mode);
+    var inForce = correctionInForce(cal, plat, st.anchor, mode);
     if (!$("g1-correction")._manual) $("g1-correction").value = f(inForce, 1);
     st.correction = numOr("g1-correction", inForce);
+    var ignored = ignoredSampleLines(cal, plat, st.anchor, mode);
     setText("g1-correction-note", ($("g1-correction")._manual ? "Correction: " + fmtMs(st.correction) + " (typed for this session; in force " + fmtMs(inForce) + ")" :
-      "Correction in force: " + fmtMs(inForce) + " (" + (samples.length === 0 ? "default, no calibration yet" : "mean of " + plural(samples.length, "calibrated attempt")) + ")") +
-      (ignoredSampleLines(cal, plat, st.anchor).length ? "\n" + ignoredSampleLines(cal, plat, st.anchor).join("\n") : ""));
+      "Correction in force: " + fmtMs(inForce) + " (" + (samples.length === 0 ? "default, no calibration yet" : "mean of " + plural(samples.length, "calibrated attempt")) + ", " + MODE.label(mode) + " mode's store)") +
+      (ignored.length ? "\n" + ignored.join("\n") : ""));
     st.sched = null;
     if (st.offset === null) {
       setText("g1-protocol", "Pick a target first (a row above, a typed Trainer ID, or an offset).");
@@ -859,15 +903,15 @@
     var text = $("g1-got").value;
     var tid;
     try { tid = G.parseTid(text); } catch (e) { setText("g1-outcome", "not a Trainer ID (" + e.message + ")"); return; }
-    var r = recordOutcome(cal, st.plat, st.anchor, st.offset, st.correction, tid, { force: $("g1-force").checked, attempt: st.attempt });
-    if (r.added) { saveCalibration(cal); $("g1-force").checked = false; $("g1-correction")._manual = false; }
+    var r = recordOutcome(cal, st.plat, st.anchor, st.offset, st.correction, tid, { force: $("g1-force").checked, attempt: st.attempt, mode: mode });
+    if (r.added) { saveCalibration(cal, mode); $("g1-force").checked = false; $("g1-correction")._manual = false; }
     setText("g1-outcome", r.lines);
     refreshAnchor();
     refreshStats();
   }
   function refreshStats() {
     var plat = st.plat;
-    setText("g1-stats", statsLines(samplesFor(cal, plat.key, st.anchor, plat.methodologyId), plat, st.anchor));
+    setText("g1-stats", statsLines(samplesFor(cal, plat.key, st.anchor, plat.methodologyId, mode), plat, st.anchor, mode));
   }
   function refreshReset() {
     var plat = st.plat;
@@ -1042,17 +1086,17 @@
   $("g1-record").addEventListener("click", record);
   $("g1-got").addEventListener("keydown", function (e) { if (e.key === "Enter") record(); });
   $("g1-drop-last").addEventListener("click", function () {
-    var d = dropLastSample(cal, st.plat, st.anchor);
-    saveCalibration(cal);
-    setText("g1-outcome", d ? "dropped the newest sample: aimed " + d.aimed + ", hit " + d.hit + ", " + G.formatTid(d.tid) + " (under " + st.plat.methodologyId + ")" : "no samples under " + st.plat.methodologyId + " for " + st.plat.key + "/" + st.anchor);
+    var d = dropLastSample(cal, st.plat, st.anchor, mode);
+    saveCalibration(cal, mode);
+    setText("g1-outcome", d ? "dropped the newest sample: aimed " + d.aimed + ", hit " + d.hit + ", " + G.formatTid(d.tid) + " (under " + st.plat.methodologyId + ", " + MODE.label(mode) + " mode)" : "no samples under " + st.plat.methodologyId + " in " + MODE.label(mode) + " mode for " + st.plat.key + "/" + st.anchor);
     $("g1-correction")._manual = false;
     refreshAnchor(); refreshStats();
   });
   $("g1-clear").addEventListener("click", function () {
-    var r = clearSamples(cal, st.plat, st.anchor, false);
-    saveCalibration(cal);
-    setText("g1-outcome", "cleared calibration for " + st.plat.key + "/" + st.anchor + " under " + st.plat.methodologyId + ": " + plural(r.removed.length, "sample") + " removed" +
-      (r.kept.length ? "; " + plural(r.kept.length, "sample") + " under other methodologies kept, untouched" : ""));
+    var r = clearSamples(cal, st.plat, st.anchor, false, mode);
+    saveCalibration(cal, mode);
+    setText("g1-outcome", "cleared calibration for " + st.plat.key + "/" + st.anchor + " under " + st.plat.methodologyId + " (" + MODE.label(mode) + " mode): " + plural(r.removed.length, "sample") + " removed" +
+      (r.kept.length ? "; " + plural(r.kept.length, "sample") + " under other methodologies or modes kept, untouched" : ""));
     $("g1-correction")._manual = false;
     refreshAnchor(); refreshStats();
   });
@@ -1152,6 +1196,7 @@
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       document.dispatchEvent(new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true, cancelable: true }));
       report.spaceAnchoredGen1 = $("g1-cue-log").textContent.indexOf("anchor at") === 0;
+      report.cueLogNamesMode = /^anchor at \d\d:\d\d:\d\d  \[RUN mode\]\n/.test($("g1-cue-log").textContent);
       report.g3StartClicksOnSpace = g3Clicks;
       stop("cancel");
       // a prepared Secret ID cue is dropped when the model changes, and the listing then ignores it
@@ -1163,9 +1208,33 @@
       $("sid-kmin").value = ""; $("sid-kmax").value = "";
       sidRun();
       report.sidListingMentionsOldWindow = $("sid-out").textContent.indexOf("2240-2266") !== -1;
+      // the RUN / PRACTICE-HUNT wall: RUN by default with the banner hidden; PRACTICE / HUNT turned on
+      // through the switch shows the banner (outside every tab section); a sample recorded there is
+      // stamped and lands in the practice store while the RUN store is untouched; back in RUN the
+      // practice sample is not in force.
+      report.modeDefault = MODE.get();
+      report.bannerHiddenInRun = $("mode-banner").hidden === true;
+      report.correctionInRunBefore = $("g1-correction").value;
+      var runStoreBefore = storageGet(STORE_KEY_CAL);
+      $("mode-practice").checked = true; $("mode-practice").dispatchEvent(new Event("change"));
+      report.modeAfterToggle = MODE.get();
+      report.bannerShownInPractice = $("mode-banner").hidden === false && $("mode-banner").textContent === MODE.BANNER;
+      report.bannerOutsideTabs = !$("mode-banner").closest(".tab") && !!$("mode-banner").closest("body");
+      report.correctionInPracticeBefore = $("g1-correction").value;
+      $("g1-got").value = String(st.plat.table[364]);
+      record();
+      report.practiceOutcome = $("g1-outcome").textContent.split("\n")[1];
+      report.practiceStored = JSON.parse(storageGet(calStoreKey(MODE.PRACTICE)) || "{}");
+      report.runStoreUnchangedByPractice = storageGet(STORE_KEY_CAL) === runStoreBefore;
+      report.correctionInPractice = $("g1-correction").value;
+      $("mode-practice").checked = false; $("mode-practice").dispatchEvent(new Event("change"));
+      report.modeBack = MODE.get();
+      report.bannerHiddenAgain = $("mode-banner").hidden === true;
+      report.correctionBackInRun = $("g1-correction").value;
+      report.runNoteAboutPractice = $("g1-correction-note").textContent.indexOf("PRACTICE") !== -1;
       // nothing the self-test did reached the real localStorage
       var real = {};
-      try { [STORE_KEY_CAL, STORE_KEY_PINS, STORE_KEY_RESET].forEach(function (k) { real[k] = root.localStorage ? root.localStorage.getItem(k) : null; }); } catch (e) { real.error = String(e); }
+      try { [STORE_KEY_CAL, calStoreKey(MODE.PRACTICE), STORE_KEY_PINS, STORE_KEY_RESET, MODE.KEY].forEach(function (k) { real[k] = root.localStorage ? root.localStorage.getItem(k) : null; }); } catch (e) { real.error = String(e); }
       report.realStorage = real;
       var el = document.createElement("pre");
       el.id = "g1-selftest";

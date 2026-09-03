@@ -142,6 +142,12 @@ promoted), the desktop app's
    attempts per hit, a drift flag and a recommendation. Samples are kept per console and anchor
    with their methodology id (the browser's localStorage, the desktop app's settings.json,
    `~/.rng-solution/config.json`); samples under another methodology are ignored, never mixed.
+   **Mode.** Leave the switch above the tabs off: that is RUN, the default, and every sample,
+   cue log and calibration result is stamped with it. Turn PRACTICE / HUNT on only to practise,
+   calibrate or hunt: a banner stays on every tab, the tab reads and writes the practice store
+   (a separate key; a practice-derived correction is never in force in RUN, and a practice
+   sample that turns up in the RUN store is listed as ignored), and the correction, P(hit) and
+   drift you see are the practice ones until you switch back.
 6. **Save-corruption reset.** The metronome beats RESET then A (GSE, Game Boy Player: 199.2 ms
    on the route path, 149.6 ms over a practice save) or A then power off (handhelds, DMG:
    397.9 ms). Calibrate from outcomes (does CONTINUE give the 255-Pokémon party?), never from
@@ -215,7 +221,9 @@ available without installing anything:
 
 - **hackmons.com/rng-solution** (in preview until it is promoted) — the full toolset in the
   browser, including the Gen 1 TID tab and the Emerald / FRLG Secret ID search (no capture reading
-  by design). **hackmons.com/shiny-solution** is the live page with the earlier tools until then.
+  by design: `webapp/hunt/` is never bundled into it, and the RUN / PRACTICE-HUNT switch above the
+  tabs only changes which calibration store is in force). **hackmons.com/shiny-solution** is the
+  live page with the earlier tools until then.
 - **Hackmons Hub app** — Fun → Shiny Solution (same tools, beeps included).
 - **Linux/macOS desktop** — the calculators-and-timers app from the releases page
   (Linux AppImage/tarball; macOS dmg/zip, unsigned — right-click → Open the first time).

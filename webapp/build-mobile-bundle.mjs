@@ -1,15 +1,47 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+// Inlines the web app into one HTML string for the Hackmons Hub mobile screen.
+//   node build-mobile-bundle.mjs [--with-hunt] <output.ts>
+// The wall: webapp/hunt/ (capture-watching code, PRACTICE / HUNT only) never goes into the bundle
+// unless --with-hunt is passed explicitly. Without it, a page that references a script under
+// hunt/ is refused, and a bundle that turns out to contain any hunt file's text is refused too.
+// The published bundle is built without the flag (tests/run-tests.sh checks both ways).
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const outPath = process.argv[2];
-if (!outPath) {
-  console.error("usage: node build-mobile-bundle.mjs <output.ts>");
+const args = process.argv.slice(2);
+const withHunt = args.includes("--with-hunt");
+const unknown = args.filter((a) => a.startsWith("--") && a !== "--with-hunt");
+const outPath = args.filter((a) => !a.startsWith("--"))[0];
+if (!outPath || unknown.length) {
+  console.error("usage: node build-mobile-bundle.mjs [--with-hunt] <output.ts>");
   process.exit(2);
 }
 
+const huntDir = join(here, "hunt");
+function huntFiles(dir) {
+  let out = [];
+  let names = [];
+  try { names = readdirSync(dir).sort(); } catch (e) { return out; }
+  for (const name of names) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) out = out.concat(huntFiles(p));
+    else out.push(p);
+  }
+  return out;
+}
+function refuse(why) {
+  console.error("refusing to build the mobile bundle: " + why);
+  console.error("  webapp/hunt/ is PRACTICE / HUNT code (it reads the capture) and never ships in the static site or the mobile bundle;");
+  console.error("  pass --with-hunt for a practice build, never for the published one (webapp/hunt/README.md).");
+  process.exit(1);
+}
+
 let html = readFileSync(join(here, "index.html"), "utf8");
+const scriptSrcs = [...html.matchAll(/<script[^>]*\ssrc="([^"]*)"/g)].map((m) => m[1]);
+const huntRefs = scriptSrcs.filter((src) => /(^|\/)hunt\//.test(src));
+if (huntRefs.length && !withHunt) refuse("index.html references " + huntRefs.join(", ") + " under webapp/hunt/ and --with-hunt was not passed");
+
 const css = readFileSync(join(here, "app.css"), "utf8") +
   "\nbody { padding: 10px; } button { min-height: 40px; } input, select { min-height: 38px; font-size: 16px; }\n";
 html = html.replace('<link rel="stylesheet" href="app.css">', "<style>\n" + css + "\n</style>");
@@ -22,9 +54,27 @@ for (const name of ["rng.js", "gen4.js", "gen12.js", "gen1tid.js"]) {
 const inlineJson = (name) => readFileSync(join(here, "..", "core", "data", name), "utf8").trim().replace(/<\//g, "<\\/");
 const dataJs = "window.ShinyGen1Data = " + inlineJson("gen1-tid.json") + ";\nwindow.ShinyGen3SidData = " + inlineJson("gen3-sid.json") + ";\n";
 html = html.replace('<script src="gen1-data.js"></script>', "<script>\n" + dataJs + "</script>");
-for (const local of ["downloads.js", "app.js", "gen1tid-ui.js"]) {
+for (const local of ["downloads.js", "mode.js", "app.js", "gen1tid-ui.js"]) {
   const js = readFileSync(join(here, local), "utf8");
   html = html.replace(`<script src="${local}"></script>`, "<script>\n" + js + "\n</script>");
+}
+if (withHunt) {
+  // a practice build: the referenced hunt scripts in place, every other hunt/*.js appended before </body>
+  for (const src of huntRefs) {
+    const js = readFileSync(join(here, src), "utf8");
+    html = html.replace(`<script src="${src}"></script>`, "<script>\n" + js + "\n</script>");
+  }
+  const extra = huntFiles(huntDir).filter((p) => p.endsWith(".js") && !huntRefs.includes(relative(here, p)));
+  const tail = "<script>\nwindow.SHINY_HUNT_BUNDLED = true;\n</script>\n" +
+    extra.map((p) => "<script>\n" + readFileSync(p, "utf8") + "\n</script>\n").join("");
+  html = html.replace("</body>", tail + "</body>");
+  console.error("--with-hunt: " + (huntRefs.length + extra.length) + " file(s) from webapp/hunt/ bundled (a PRACTICE / HUNT build, not for publishing)");
+} else {
+  // nothing from webapp/hunt/ may be in the page, whatever path it took
+  for (const p of huntFiles(huntDir)) {
+    const text = readFileSync(p, "utf8").trim();
+    if (text.length >= 20 && html.includes(text)) refuse("the bundle contains the text of " + relative(here, p) + " without --with-hunt");
+  }
 }
 if (html.includes("<script src=")) {
   console.error("unresolved script tag remains");
@@ -32,4 +82,4 @@ if (html.includes("<script src=")) {
 }
 const ts = "export const shinySolutionHtml = " + JSON.stringify(html) + ";\n";
 writeFileSync(outPath, ts);
-console.log(`wrote ${outPath} (${ts.length} bytes)`);
+console.log(`wrote ${outPath} (${ts.length} bytes${withHunt ? ", WITH webapp/hunt/" : ""})`);

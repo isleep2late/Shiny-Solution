@@ -26,19 +26,20 @@ public sealed class CountdownController
         _calLabel = calLabel;
     }
 
-    public double Calibration => CalKey == "" ? 0 : SettingsStore.Get("cal." + CalKey);
+    // the correction of the mode in force (AppMode.Scoped: RUN's key is the one that always existed)
+    public double Calibration => CalKey == "" ? 0 : SettingsStore.Get(AppMode.Scoped("cal." + CalKey));
 
     public void AdjustCalibration(double deltaMs)
     {
         if (CalKey == "") return;
-        SettingsStore.Set("cal." + CalKey, Calibration + deltaMs);
+        SettingsStore.Set(AppMode.Scoped("cal." + CalKey), Calibration + deltaMs);
         Refresh();
     }
 
     public void ResetCalibration()
     {
         if (CalKey == "") return;
-        SettingsStore.Set("cal." + CalKey, 0);
+        SettingsStore.Set(AppMode.Scoped("cal." + CalKey), 0);
         Refresh();
     }
 
@@ -60,7 +61,7 @@ public sealed class CountdownController
         double total = TotalMs();
         _info.Text = $"{_description}  |  press at {TimerMath.FmtMs(total)} after power-on";
         if (!Running) _display.Text = TimerMath.FmtMs(total);
-        _calLabel.Text = $"calibration: {Math.Round(Calibration)} ms";
+        _calLabel.Text = $"calibration: {Math.Round(Calibration)} ms ({AppMode.Label} mode)";
     }
 
     public void Start()

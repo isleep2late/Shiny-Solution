@@ -55,14 +55,29 @@ assert("no unresolved script tag", !html.includes("<script src="));
 assert("the existing tabs are still there", ["g3timer", "g3check", "g4", "g12", "about"].every((t) => html.includes('data-tab="' + t + '"')));
 assert("the Gen 3 timer's Space handler is scoped to its tab", html.includes('document.getElementById("tab-g3timer").classList.contains("active")'));
 assert("the self-test keeps storage in memory", html.includes('root.location.search.indexOf("g1selftest") !== -1);') && html.includes("if (MEMORY_ONLY) return;"));
+// the RUN / PRACTICE-HUNT wall in the bundle: the switch and the banner above every tab, mode.js before the tabs' scripts, and no hunt code
+assert("bundle embeds mode.js", html.includes("root.ShinyMode = api"));
+assert("mode.js comes before app.js and the tab module", html.indexOf("root.ShinyMode = api") < html.indexOf("var MODE = window.ShinyMode") && html.indexOf("root.ShinyMode = api") < html.indexOf("root.ShinyGen1TidUi = api"));
+assert("bundle has the mode banner outside the tab sections", html.includes('<div id="mode-banner" hidden>') && html.indexOf('id="mode-banner"') < html.indexOf("<main>"));
+assert("bundle carries the banner text", html.includes("PRACTICE / HUNT mode - tools that read the capture are enabled; not for submitted runs"));
+assert("bundle has the explicit switch", html.includes('<input id="mode-practice" type="checkbox">'));
+assert("bundle references no script under hunt/", !/<script[^>]*\ssrc="([^"]*\/)?hunt\//.test(html));
+const sentinelSrc = fs.readFileSync(path.join(root, "webapp", "hunt", "sentinel.js"), "utf8");
+const sentinel = (sentinelSrc.match(/SHINY_HUNT_SENTINEL = "([^"]+)"/) || [])[1];
+assert("hunt/sentinel.js defines the sentinel", !!sentinel);
+assert("bundle carries no hunt code (the sentinel is absent)", !!sentinel && !html.includes(sentinel));
+assert("bundle is not marked as a hunt build", !html.includes("SHINY_HUNT_BUNDLED"));
+assert("the static page loads nothing under hunt/ (no src or href into it)", !/(src|href)="([^"]*\/)?hunt\//.test(fs.readFileSync(path.join(root, "webapp", "index.html"), "utf8")));
 
 // ---- 2. the pure module in node ---------------------------------------------------------------
 globalThis.ShinyCore = require(path.join(root, "core", "rng.js"));
 globalThis.ShinyGen1Tid = require(path.join(root, "core", "gen1tid.js"));
 globalThis.ShinyGen1Data = DATA;
 globalThis.ShinyGen3SidData = SIDDATA;
+globalThis.ShinyMode = require(path.join(root, "webapp", "mode.js"));
 const G = globalThis.ShinyGen1Tid;
 const U = require(path.join(root, "webapp", "gen1tid-ui.js"));
+const RUN = globalThis.ShinyMode.RUN, PRACTICE = globalThis.ShinyMode.PRACTICE;
 
 // data resolution: every supported game on every platform that offers it, like tables.get_platform
 for (const game of U.supportedGames(DATA)) {
@@ -122,25 +137,32 @@ assert("metronome onsets are one interval apart", rr.onsets["A-1"] - rr.onsets["
 
 // calibration: the outcome flow with the guards, like rngsolution/cli.py report_outcome
 const cal = {};
-let o = U.recordOutcome(cal, plat, "menu", 358, 200, plat.table[360], { attempt: "a1", when: "2026-09-03 00:00:00" });
+let o = U.recordOutcome(cal, plat, "menu", 358, 200, plat.table[360], { attempt: "a1", when: "2026-09-03 00:00:00", mode: RUN });
 assert("outcome inverts to the hit", o.hit === 360 && o.added && near(o.implied, 200 + 2 * G.FRAME_MS));
 assert("outcome text", o.lines.join("\n").includes("You hit offset 360, aimed 358: 2 frames late (33.5 ms)."));
-assert("correction in force after one sample", near(U.correctionInForce(cal, plat, "menu"), 200 + 2 * G.FRAME_MS));
-o = U.recordOutcome(cal, plat, "menu", 358, 200, plat.table[360], { attempt: "a1" });
+assert("correction in force after one sample", near(U.correctionInForce(cal, plat, "menu", RUN), 200 + 2 * G.FRAME_MS));
+assert("the stored sample is stamped with the mode", U.allSamples(cal, "gse", "menu")[0].mode === RUN);
+o = U.recordOutcome(cal, plat, "menu", 358, 200, plat.table[360], { attempt: "a1", mode: RUN });
 assert("duplicate refused", !o.added && o.refused === "duplicate");
-o = U.recordOutcome(cal, plat, "menu", 358, 200, plat.table[458], { attempt: "a2" });
+o = U.recordOutcome(cal, plat, "menu", 358, 200, plat.table[458], { attempt: "a2", mode: RUN });
 assert("outlier refused", !o.added && o.refused === "outlier" && o.lines.join("\n").includes("more than 60 frames"));
-o = U.recordOutcome(cal, plat, "menu", 358, 200, plat.table[458], { attempt: "a2", force: true });
+o = U.recordOutcome(cal, plat, "menu", 358, 200, plat.table[458], { attempt: "a2", force: true, mode: RUN });
 assert("outlier added when forced", o.added);
-o = U.recordOutcome(cal, plat, "menu", 358, 233.5, 0xFFFF & (plat.table[358] ^ 0x1234), { attempt: "a3" });
+o = U.recordOutcome(cal, plat, "menu", 358, 233.5, 0xFFFF & (plat.table[358] ^ 0x1234), { attempt: "a3", mode: RUN });
 assert("an out-of-table ID teaches nothing", !o.added && o.hit === null && o.lines.join("\n").includes("nothing can be learned from it"));
 assert("stored samples carry the methodology", U.allSamples(cal, "gse", "menu").every((s) => s.methodology === "red/gba/hold-start-v1"));
 cal["gse/menu"].samples.push({ tid: 1, aimed: 358, hit: 358, correction_used_ms: 200, implied_ms: 200, attempt: "x", note: "", player: "none", methodology: "red/gba/tap-start-v1" });
-assert("foreign-methodology samples are ignored", U.samplesFor(cal, "gse", "menu", plat.methodologyId).length === 2 && U.ignoredSampleLines(cal, plat, "menu")[0].includes("recorded under red/gba/tap-start-v1"));
-const d = U.dropLastSample(cal, plat, "menu");
-assert("drop last stays inside the methodology", d && d.hit === 458 && U.allSamples(cal, "gse", "menu").length === 2);
-const cl = U.clearSamples(cal, plat, "menu", false);
-assert("clear keeps the other methodology's sample", cl.removed.length === 1 && cl.kept.length === 1 && U.allSamples(cal, "gse", "menu")[0].methodology === "red/gba/tap-start-v1");
+assert("foreign-methodology samples are ignored", U.samplesFor(cal, "gse", "menu", plat.methodologyId, RUN).length === 2 && U.ignoredSampleLines(cal, plat, "menu", RUN)[0].includes("recorded under red/gba/tap-start-v1"));
+// the RUN / PRACTICE-HUNT wall: a practice-made sample in the RUN store is never in force there, and is said so
+cal["gse/menu"].samples.push({ tid: 2, aimed: 358, hit: 380, correction_used_ms: 200, implied_ms: 568.3, attempt: "p", note: "", player: "hunt-watch", methodology: plat.methodologyId, mode: PRACTICE });
+assert("a practice sample is not in force in RUN", U.samplesFor(cal, "gse", "menu", plat.methodologyId, RUN).length === 2 && near(U.correctionInForce(cal, plat, "menu", RUN), (233.4854 + 200 + 100 * G.FRAME_MS) / 2, 1e-3));
+assert("RUN says the practice sample is ignored", U.ignoredSampleLines(cal, plat, "menu", RUN).some((l) => l.includes("recorded in PRACTICE / HUNT mode, not RUN")));
+assert("the practice sample is the one in force in PRACTICE", U.samplesFor(cal, "gse", "menu", plat.methodologyId, PRACTICE).length === 1 && near(U.correctionInForce(cal, plat, "menu", PRACTICE), 568.3));
+assert("the stores of the two modes are different keys", U.calStoreKey(RUN) !== U.calStoreKey(PRACTICE));
+const d = U.dropLastSample(cal, plat, "menu", RUN);
+assert("drop last stays inside the methodology and the mode", d && d.hit === 458 && U.allSamples(cal, "gse", "menu").length === 3);
+const cl = U.clearSamples(cal, plat, "menu", false, RUN);
+assert("clear keeps the other methodology's and the other mode's samples", cl.removed.length === 1 && cl.kept.length === 2 && cl.kept.some((s) => s.methodology === "red/gba/tap-start-v1") && cl.kept.some((s) => s.mode === PRACTICE));
 
 // the runner's timing text (sd 20 ms -> 32 %, RNG Solution control 7)
 const three = [180, 200, 220].map((v) => ({ tid: 1, aimed: 358, hit: 358, correction_used_ms: 200, implied_ms: v, methodology: plat.methodologyId, when: "" }));

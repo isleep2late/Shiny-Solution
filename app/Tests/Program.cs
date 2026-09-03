@@ -16,8 +16,18 @@ void Check<T>(string label, T actual, T expected)
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root>");
+    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> | --mode-wall <mode-wall-fixture.json>");
     return 2;
+}
+
+if (args[0] == "--mode-wall")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --mode-wall <mode-wall-fixture.json>");
+        return 2;
+    }
+    return ModeWallChecks.Run(args[1]);
 }
 
 if (args[0] == "--gen1tid")

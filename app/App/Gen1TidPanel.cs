@@ -8,7 +8,9 @@ namespace ShinySolution.App;
 // pre-rendered buffer per schedule, so every beep is sample-exact; the display flashes with each)
 // -> "What did you get?" calibration with P(hit) and drift, the save-corruption reset metronome,
 // the moderators' verify, and the Emerald / FireRed / LeafGreen Secret ID branch. Calibration
-// samples, pins and reset adjusts live in the app's settings (SettingsStore).
+// samples, pins and reset adjusts live in the app's settings (SettingsStore); the calibration store
+// follows the RUN / PRACTICE-HUNT mode (AppMode.Scoped), every sample is stamped with the mode it
+// was made in, and the cue log names the mode of every attempt.
 public sealed class Gen1TidPanel : UserControl
 {
     const string CalKeySetting = "gen1tid.calibration";
@@ -111,7 +113,7 @@ public sealed class Gen1TidPanel : UserControl
 
     public Gen1TidPanel()
     {
-        _cal = SettingsStore.GetObject<Dictionary<string, CalEntry>>(CalKeySetting) ?? new();
+        _cal = LoadCal();
         _pins = SettingsStore.GetObject<Dictionary<string, List<PinRecord>>>(PinsSetting) ?? new();
         _resetAdjust = SettingsStore.GetObject<Dictionary<string, double>>(ResetAdjustSetting) ?? new();
         _anchorBtn = Ui.Btn("ANCHOR (Space)", (_, _) => AnchorNow(), 200);
@@ -208,6 +210,8 @@ public sealed class Gen1TidPanel : UserControl
         _sidNameLen.ValueChanged += (_, _) => { if (!_loading) SidDropCue(); };
         _sidMargin.ValueChanged += (_, _) => { if (!_loading) SidDropCue(); };
         _sidTid.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SidRun(); } };
+        // a mode change swaps the calibration store: the correction, the stats and the notes are re-read from the mode's own
+        AppMode.Changed += _ => { _cal = LoadCal(); _correctionManual = false; RefreshAnchor(); RefreshStats(); };
 
         _loading = true;
         foreach (var g in Gen1Platform.SupportedGames(_data)) _game.Items.Add(new Item(g, J.S(_data.Root.GetProperty("games").GetProperty(g), "name", g)));
@@ -345,8 +349,8 @@ public sealed class Gen1TidPanel : UserControl
         var plat = _plat;
         _anchorKey = KeyOf(_anchor);
         if (_anchorKey == "") _anchorKey = plat.Anchors[0];
-        var samples = Gen1TidText.SamplesFor(_cal, plat, _anchorKey);
-        double inForce = Gen1TidText.CorrectionInForce(_cal, plat, _anchorKey);
+        var samples = Gen1TidText.SamplesFor(_cal, plat, _anchorKey, AppMode.Mode);
+        double inForce = Gen1TidText.CorrectionInForce(_cal, plat, _anchorKey, AppMode.Mode);
         if (!_correctionManual)
         {
             _loading = true;
@@ -356,9 +360,9 @@ public sealed class Gen1TidPanel : UserControl
         _correctionMs = (double)_correction.Value;
         var note = _correctionManual
             ? $"Correction: {Gen1TidText.FmtMs(_correctionMs)} (typed for this session; in force {Gen1TidText.FmtMs(inForce)})"
-            : $"Correction in force: {Gen1TidText.FmtMs(inForce)} ({(samples.Count == 0 ? "default, no calibration yet" : "mean of " + Gen1TidText.Plural(samples.Count, "calibrated attempt"))})";
-        var ign = Gen1TidText.IgnoredSampleLines(_cal, plat, _anchorKey);
-        _correctionNote.Text = note + (ign.Count > 0 ? "   " + ign[0] : "");
+            : $"Correction in force: {Gen1TidText.FmtMs(inForce)} ({(samples.Count == 0 ? "default, no calibration yet" : "mean of " + Gen1TidText.Plural(samples.Count, "calibrated attempt"))}, {AppMode.Label} mode's store)";
+        var ign = Gen1TidText.IgnoredSampleLines(_cal, plat, _anchorKey, AppMode.Mode);
+        _correctionNote.Text = note + (ign.Count > 0 ? "   " + string.Join("   ", ign) : "");
         _sched = null;
         _prepared?.Dispose();
         _prepared = null;
@@ -408,10 +412,10 @@ public sealed class Gen1TidPanel : UserControl
         if (_plat is null || _target is null) { _outcome.Text = "Load a target and play a cue first."; return; }
         int tid;
         try { tid = Gen1Tid.ParseTid(_got.Text); } catch (ArgumentException e) { _outcome.Text = "not a Trainer ID (" + e.Message + ")"; return; }
-        var r = Gen1TidText.RecordOutcome(_cal, _plat, _anchorKey, _target.Value, _correctionMs, tid, _force.Checked, _attempt);
+        var r = Gen1TidText.RecordOutcome(_cal, _plat, _anchorKey, _target.Value, _correctionMs, tid, _force.Checked, _attempt, AppMode.Mode);
         if (r.Added)
         {
-            SettingsStore.SetObject(CalKeySetting, _cal);
+            SaveCal();
             _force.Checked = false;
             _correctionManual = false;
         }
@@ -422,10 +426,10 @@ public sealed class Gen1TidPanel : UserControl
     void DropLast()
     {
         if (_plat is null) return;
-        var d = Gen1TidText.DropLastSample(_cal, _plat, _anchorKey);
-        SettingsStore.SetObject(CalKeySetting, _cal);
-        _outcome.Text = d is null ? $"no samples under {_plat.MethodologyId} for {_plat.Key}/{_anchorKey}"
-            : $"dropped the newest sample: aimed {d.Aimed}, hit {d.Hit}, {Gen1Tid.FormatTid(d.Tid)} (under {_plat.MethodologyId})";
+        var d = Gen1TidText.DropLastSample(_cal, _plat, _anchorKey, AppMode.Mode);
+        SaveCal();
+        _outcome.Text = d is null ? $"no samples under {_plat.MethodologyId} in {AppMode.Label} mode for {_plat.Key}/{_anchorKey}"
+            : $"dropped the newest sample: aimed {d.Aimed}, hit {d.Hit}, {Gen1Tid.FormatTid(d.Tid)} (under {_plat.MethodologyId}, {AppMode.Label} mode)";
         _correctionManual = false;
         RefreshAnchor();
         RefreshStats();
@@ -433,10 +437,10 @@ public sealed class Gen1TidPanel : UserControl
     void ClearSamples()
     {
         if (_plat is null) return;
-        var (removed, kept) = Gen1TidText.ClearSamples(_cal, _plat, _anchorKey);
-        SettingsStore.SetObject(CalKeySetting, _cal);
-        _outcome.Text = $"cleared calibration for {_plat.Key}/{_anchorKey} under {_plat.MethodologyId}: {Gen1TidText.Plural(removed, "sample")} removed" +
-            (kept > 0 ? $"; {Gen1TidText.Plural(kept, "sample")} under other methodologies kept, untouched" : "");
+        var (removed, kept) = Gen1TidText.ClearSamples(_cal, _plat, _anchorKey, AppMode.Mode);
+        SaveCal();
+        _outcome.Text = $"cleared calibration for {_plat.Key}/{_anchorKey} under {_plat.MethodologyId} ({AppMode.Label} mode): {Gen1TidText.Plural(removed, "sample")} removed" +
+            (kept > 0 ? $"; {Gen1TidText.Plural(kept, "sample")} under other methodologies or modes kept, untouched" : "");
         _correctionManual = false;
         RefreshAnchor();
         RefreshStats();
@@ -444,8 +448,12 @@ public sealed class Gen1TidPanel : UserControl
     void RefreshStats()
     {
         if (_plat is null) return;
-        Set(_stats, Gen1TidText.StatsLines(Gen1TidText.SamplesFor(_cal, _plat, _anchorKey), Gen1TidText.AllSamples(_cal, _plat.Key, _anchorKey), _plat, _anchorKey));
+        Set(_stats, Gen1TidText.StatsLines(Gen1TidText.SamplesFor(_cal, _plat, _anchorKey, AppMode.Mode), Gen1TidText.AllSamples(_cal, _plat.Key, _anchorKey), _plat, _anchorKey, AppMode.Mode));
     }
+
+    // the calibration store of the mode in force: RUN's key is the one that always existed, PRACTICE / HUNT's ends in ".practice"
+    static Dictionary<string, CalEntry> LoadCal() => SettingsStore.GetObject<Dictionary<string, CalEntry>>(AppMode.Scoped(CalKeySetting)) ?? new();
+    void SaveCal() => SettingsStore.SetObject(AppMode.Scoped(CalKeySetting), _cal);
 
     // ---- the reset metronome ---------------------------------------------------------------------
     void RefreshReset()
@@ -652,7 +660,7 @@ public sealed class Gen1TidPanel : UserControl
             Running = true;
             _sched = sched; _rendered = rendered; _display = display; _log = log; _announce = announce; _onDone = onDone; _announced = 0;
             _base = display.BackColor;
-            log.Text = "anchor at " + DateTime.Now.ToString("HH:mm:ss") + Environment.NewLine;
+            log.Text = "anchor at " + DateTime.Now.ToString("HH:mm:ss") + "  [" + AppMode.Label + " mode]" + Environment.NewLine;
             _watch = Stopwatch.StartNew();
             rendered.Play();
             _ui = new System.Windows.Forms.Timer { Interval = 15 };
