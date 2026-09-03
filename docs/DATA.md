@@ -383,11 +383,17 @@ pret at `~/AI/pret` or `--pret`). One entry per distinct citation, sorted by cit
 The file also carries `pret` (the HEAD commit of each repository the entries were read in) and `skipped`: every
 citation the generator could not resolve (a bare path with no repository in its paragraph, a file name that is
 not unique) with the FACTS.md line and the reason, so nothing is dropped silently; a cited line past the end of its
-file is an error (exit 1), not a skip. Readers: `webapp/wizard-ui.js` (as `window.ShinyCitations`, written into
-`gen1-data.js` by `sync-core.sh` and inlined by the mobile bundle) and `app/App/WizardSupport.cs` (embedded as
-`data.citations`, a `citations.json` beside the executable preferred): each wizard procedure step's sources are
-footnotes over it, and a source the registry lacks is printed as NOT IN THE REGISTRY. `tests/run-tests.sh`
-regenerates the file when pret is present and requires it byte-identical to the committed one.
+file is an error (exit 1), not a skip. Readers: `webapp/footnotes.js` (as `window.ShinyCitations`, written into
+`gen1-data.js` by `sync-core.sh` and inlined by the mobile bundle; the Gen 1 TID, Gen 2 TID and wizard tabs render
+their footnotes through it) and `app/App/Citations.cs` (embedded as `data.citations`, a `citations.json` beside the
+executable preferred; the three desktop panels render through it): each protocol step, target line, schedule line
+and verify line that rests on a mechanic is marked `[^n]` and the sources are listed under the protocol, a decomp
+line with its FACTS.md section, SYNTHESISED for a source with no decomp line, or a measured constant under its
+validation status word (EMULATOR-EXACT, HARDWARE-VALIDATED n or EMPIRICAL from the console's status in
+`gen1-tid.json` and `gen2-tid.json`); a source the registry lacks is printed as NOT IN THE REGISTRY, which the tests
+refuse. Every Gen 1 and Gen 2 citation of FACTS.md names its repository (pokered, pokeyellow, pokegold, pokecrystal),
+so the file carries no skipped citation. `tests/run-tests.sh` regenerates the file when pret is present and requires
+it byte-identical to the committed one.
 
 ## Verification record (this checkout)
 

@@ -42,11 +42,14 @@ reads every `repo/path:lines` citation here (a bare `file.c:lines` inherits the 
 previous full citation in its paragraph; `repo/.../file.c:lines` finds the one file of that name),
 reads each cited line in the pret checkout, and writes `core/data/citations.json` with the citation,
 the section of this file it sits in, the line of this file and the text of the first cited line
-(`docs/DATA.md`). The wizard's procedure (the web tab and the desktop panel) marks each step's sources
-`[^n]` and lists them after the steps: a decomp line with the section it is filed under here, or
-SYNTHESISED for a source with no decomp line (a timer model, a measured constant, a community
-convention); a citation this file does not carry is printed as NOT IN THE REGISTRY, which the tests
-refuse. `tests/run-tests.sh` regenerates the registry when pret is present and requires it byte-identical.
+(`docs/DATA.md`). The Gen 1 TID, Gen 2 TID and wizard tabs, and the desktop panels, mark each protocol
+step, target line, schedule line and verify line with `[^n]` and list the sources under the protocol
+(`webapp/footnotes.js`, `app/App/Citations.cs`): a decomp line with the section it is filed under here,
+SYNTHESISED for a source with no decomp line (a timer model, a community convention), or a measured
+constant under its validation status word (EMULATOR-EXACT, HARDWARE-VALIDATED n or EMPIRICAL, from the
+console's status in the Gen 1 and Gen 2 data files); a citation this file does not carry is printed as
+NOT IN THE REGISTRY, which the tests refuse. `tests/run-tests.sh` regenerates the registry when pret is
+present and requires it byte-identical.
 
 # Gen 1/2 (Game Boy)
 

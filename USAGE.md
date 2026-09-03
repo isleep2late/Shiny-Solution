@@ -131,7 +131,13 @@ promoted), the desktop app's
    Read the **PROTOCOL**: clear the save, power on, hold START inside the window, press ANCHOR
    at the anchor moment, then four short beeps and one long high beep: press A ON the long
    beep. On the power-on and reset anchors low beeps mark the START window and a double blip
-   marks when the menu should appear.
+   marks when the menu should appear. Each step that rests on a mechanic is marked `[^n]` and the
+   sources are listed under the protocol: the pokered (or pokeyellow) lines for the title loop that
+   reads the held START, the A on NEW GAME and the DIV stir under their `docs/FACTS.md` sections, and
+   the table's hold window and menu frame under the console's validation status word (EMULATOR-EXACT
+   on GSE, HARDWARE-VALIDATED 5 of 5 on the GBA HD and 5 of 6 on the DMG for Red, EMPIRICAL where no
+   console was sampled); the target line, the schedule's A cue and the verify output carry the same
+   numbers.
 4. **Cue.** Press ANCHOR at the anchor moment. The whole schedule is one pre-rendered buffer
    (every beep on an exact sample) and the screen or display flashes with each beep.
 5. **What did you get?** Type the Trainer ID (a Pokémon's status screen shows IDNo). It inverts
@@ -211,7 +217,15 @@ and the halted-clock family last one boot.
    200 ms (menu) or 100 ms (power-on, reset) and becomes the mean of your calibrated attempts. Read
    the **PROTOCOL**: clear the save, hold START inside the window, release it as the box appears,
    then four short beeps and one long high beep: tap A ON the long beep, once, 67-134 ms, and press
-   nothing for 0.35 s.
+   nothing for 0.35 s. Each step is marked `[^n]` and the sources are listed under the protocol: the
+   pokegold (or pokecrystal) lines for the title screen that reads the held START, the main menu's
+   one poll every 4 frames (the bin), `_ResetWRAM` writing `wPlayerID` from `hRandomSub`, the VBlank
+   stir, `StartClock` before the LCD and `FixDays` (the RTC brackets), `StartRTC` clearing the halt bit
+   on every boot (Crystal: its LCD-first init that makes it immune, and its Secret ID roll) and the
+   Lucky ID roll, each under its `docs/FACTS.md` section; the tables' roll (13 frames after the
+   accepting poll, Crystal 14) and the 4-8-frame tap rule under the console's status word
+   (EMULATOR-EXACT on GSE, EMPIRICAL on every console: no hardware sample); the target line, the
+   schedule, the invert panel and verify carry the same numbers.
 4. **Cue.** Press ANCHOR at the anchor moment: the schedule plays from the Gen 1 tab's player (one
    pre-rendered buffer, every beep on an exact sample, the screen flashing with each). The cue log
    names the attempt's mode.
