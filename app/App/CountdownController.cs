@@ -127,3 +127,93 @@ public sealed class CountdownController
         if (TargetAdvance >= 0) Refresh();
     }
 }
+
+// A two-phase countdown with EonTimer's shape, the one the wanted-IVs wizard runs for both generations (Gen 3: the
+// pre-timer then the frame phase; Gen 4: the delay model's two phases): phase 1 counts down to a long beep, phase 2 to
+// the last long beep with the five short beeps before it, the same beeps and the same 33 ms display as the Gen 4 panel's
+// timer. Nothing here reads the game: the phases come from Timers and the start is your click.
+public sealed class PhaseCountdown
+{
+    readonly Label _display;
+    readonly Label _phase;
+    Stopwatch? _watch;
+    System.Windows.Forms.Timer? _uiTimer;
+    volatile bool _cancelled;
+    double _p1, _p2;
+    string _label1 = "", _label2 = "";
+
+    public bool Running { get; private set; }
+    public event Action? Finished;
+
+    public PhaseCountdown(Label display, Label phase)
+    {
+        _display = display;
+        _phase = phase;
+    }
+
+    public void Start(double phase1Ms, double phase2Ms, string label1, string label2)
+    {
+        if (Running) return;
+        _p1 = phase1Ms; _p2 = phase2Ms; _label1 = label1; _label2 = label2;
+        _cancelled = false;
+        Running = true;
+        _watch = Stopwatch.StartNew();
+        _uiTimer = new System.Windows.Forms.Timer { Interval = 33 };
+        _uiTimer.Tick += (_, _) => Tick();
+        _uiTimer.Start();
+        new Thread(BeepWorker) { IsBackground = true }.Start();
+    }
+
+    void Tick()
+    {
+        if (_watch is null) return;
+        double e = _watch.Elapsed.TotalMilliseconds;
+        if (e < _p1) { _phase.Text = _label1; _display.Text = TimerMath.FmtMs(_p1 - e); }
+        else if (e < _p1 + _p2) { _phase.Text = _label2; _display.Text = TimerMath.FmtMs(_p1 + _p2 - e); }
+        else
+        {
+            _display.Text = "00:00.000";
+            _uiTimer?.Stop();
+            _uiTimer = null;
+            Running = false;
+            Finished?.Invoke();
+        }
+    }
+
+    void BeepWorker()
+    {
+        if (!SleepUntil(_p1)) return;
+        BeepPlayer.PlayLong();
+        for (int s = 5; s >= 1; s--)
+        {
+            double at = _p1 + _p2 - s * 1000;
+            if (at <= CurrentMs()) continue;
+            if (!SleepUntil(at)) return;
+            BeepPlayer.PlayShort();
+        }
+        if (SleepUntil(_p1 + _p2) && !_cancelled) BeepPlayer.PlayLong();
+    }
+
+    double CurrentMs() => _watch?.Elapsed.TotalMilliseconds ?? double.MaxValue;
+
+    bool SleepUntil(double at)
+    {
+        while (true)
+        {
+            var w = _watch;
+            if (_cancelled || w is null) return false;
+            double left = at - w.Elapsed.TotalMilliseconds;
+            if (left <= 0) return true;
+            Thread.Sleep(left > 60 ? 25 : 1);
+        }
+    }
+
+    public void Cancel()
+    {
+        _cancelled = true;
+        Running = false;
+        _uiTimer?.Stop();
+        _uiTimer = null;
+        _watch = null;
+    }
+}
