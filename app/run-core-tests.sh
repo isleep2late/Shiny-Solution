@@ -54,3 +54,25 @@ else
   grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /'
 fi
 rm -f "$corrupted" "$corrupted.out"
+
+# Negative control: a corrupted generator vector (one PokeFinder PID bumped by 1, one IV bit flipped) must FAIL, and is
+# shown failing.
+corrupted=$(mktemp --suffix=.json)
+python3 - tests/generators-vectors.json "$corrupted" <<'PY'
+import json, sys
+v = json.load(open(sys.argv[1]))
+s = v["static3"][0]["results"][0]; w = v["wild3"][0]["results"][0]
+assert isinstance(s["pid"], int) and isinstance(w["ivs"], list), "negative control setup: static3[0].results[0].pid or wild3[0].results[0].ivs is missing"
+s["pid"] = (s["pid"] + 1) % 2**32
+w["ivs"][0] ^= 1
+json.dump(v, open(sys.argv[2], "w"))
+PY
+if dotnet run --project app/Tests -c Release --no-build -- --generators "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted generator vectors, C#): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted generator vectors, C#): FAILED as required ->"
+  grep -E '^FAIL|failed' "$corrupted.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"

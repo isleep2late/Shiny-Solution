@@ -39,6 +39,7 @@ assert("bundle has the Secret ID card", html.includes('id="sid-card"'));
 assert("bundle embeds gen1tid.js", html.includes("root.ShinyGen1Tid = factory(root.ShinyCore)"));
 assert("bundle embeds timers.js", html.includes("root.ShinyTimers = factory(root.ShinyCore, root.ShinyGen4)"));
 assert("bundle embeds gen5.js", html.includes("root.ShinyGen5 = factory(root.ShinyGen4)"));
+assert("bundle embeds generators.js", html.includes("root.ShinyGenerators = factory(root.ShinyCore, root.ShinyGen4)"));
 assert("bundle embeds the tab module", html.includes("root.ShinyGen1TidUi = api"));
 assert("bundle embeds the Gen 1 data as a global", html.includes("window.ShinyGen1Data = {"));
 assert("bundle embeds the Gen 3 SID data as a global", html.includes("window.ShinyGen3SidData = {"));

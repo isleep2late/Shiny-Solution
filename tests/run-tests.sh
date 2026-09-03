@@ -44,6 +44,28 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# Negative control: a corrupted generator vector (one PokeFinder PID bumped by 1, one IV bit flipped) must FAIL, and is
+# shown failing. (test-generators.cjs' own GEN_TEST_NEGATIVE=1 corrupts in memory; this corrupts the file it is given.)
+corrupted=$(mktemp --suffix=.json)
+node -e '
+const fs = require("fs");
+const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const s = v.static3[0].results[0], w = v.wild3[0].results[0];
+if (typeof s.pid !== "number" || !Array.isArray(w.ivs)) { console.error("negative control setup: static3[0].results[0].pid or wild3[0].results[0].ivs is missing"); process.exit(1); }
+s.pid = (s.pid + 1) % 4294967296;
+w.ivs[0] ^= 1;
+fs.writeFileSync(process.argv[2], JSON.stringify(v));
+' generators-vectors.json "$corrupted"
+if node test-generators.cjs "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted generator vectors): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted generator vectors): FAILED as required ->"
+  grep -E '^FAIL|failed' "$corrupted.out" | head -3 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # Gen 1 Trainer ID / Gen 3 Secret ID / press-jitter engine against the vectors emitted by RNG Solution's
 # Python (tests/emit_vectors.py there; the committed copy is gen1tid-vectors.json).
 node test-gen1tid.cjs gen1tid-vectors.json

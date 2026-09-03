@@ -2,8 +2,16 @@
 
 Six JSON files generated from the pret decompilations by one script. They are the data
 layer for the RNG guide wizard (design doc section 6.3): species tables, wild encounter
-tables and the static/gift catalogue for Gen 3 and Gen 4. No engine code reads them yet
-(the engines are being changed elsewhere); `tests/test-data.cjs` is the only consumer.
+tables and the static/gift catalogue for Gen 3 and Gen 4. No engine reads the files: the
+generator engines (`core/generators.js`, `app/Core/Generators.cs`) take these species and
+slot records as arguments, `tools/build-generator-vectors.cjs` resolves PokeFinder's cases
+against them, and `tests/test-data.cjs` asserts them.
+
+TODO (wizard phase): no shipped head loads these six files yet, so `webapp/sync-core.sh`,
+`webapp/build-mobile-bundle.mjs`, `electron/build.sh` and the `build-desktop` workflow carry
+only `gen1-tid.json` / `gen3-sid.json` (as `gen1-data.js`) and the engines, `core/generators.js`
+included. The wizard phase adds species/encounters/statics to those four the same way once a
+tab consumes them (4.7 MB of JSON in total; a per-game split or a lazy fetch is the open choice).
 
 | File | Bytes | Content |
 |---|---|---|

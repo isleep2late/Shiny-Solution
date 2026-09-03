@@ -20,6 +20,7 @@ webapp/gen12.js
 webapp/gen1tid.js
 webapp/timers.js
 webapp/gen5.js
+webapp/generators.js
 webapp/gen1-data.js
 webapp/data/
 electron/node_modules/

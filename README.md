@@ -66,6 +66,7 @@ RNG Solution's registry and tables and embedded in every head.
 | `lua/shiny-solution.lua`, `lua/shiny-solution-gb.lua` | The Gen 3 mGBA auto-manip script and the Gen 1/2 hunt bot (also usable standalone). |
 | `core/gen1tid.js` + `app/Core/Gen1Tid.cs` | The Gen 1 Trainer ID engine (cue schedules for the menu / power-on / reset anchors, target sets and verdicts, inversion, calibration with the 60-frame outlier and duplicate guards, the reset metronome, verify, the runner's press-jitter model: P(hit), drift, fusion) and the Gen 3 typed-TID -> SID model, ported from RNG Solution's Python and checked against the vectors it emits (`tests/gen1tid-vectors.json`, about 1,840 cases: integers, strings and error classes exact, floats to 1e-9 relative). Target sets are never defaulted (a verdict needs the game's sets), and every number is checked at the JS boundary. |
 | `core/generators.js` + `app/Core/Generators.cs` | The Gen 3/4 encounter engines: Method 1/2/4 statics, wild Method H (RS, FRLG, Emerald leads), J and K (DPPt/HGSS leads, Safari, Bug Contest, headbutt, honey trees, Poke Radar), Gen 3 and Gen 4 eggs, per-stat/Hidden Power filters, exact rarity counts, LCRNG distance and the Gen 4 IV-to-seed back-step. Every call cited in `docs/FACTS.md` ("Generators"), checked bit-for-bit against PokeFinder's own test vectors. |
+| `core/data/{species,encounters,statics}-gen{3,4}.json` | The Gen 3/4 species tables, wild encounter tables and static/gift catalogue generated from the pret decompilations by `tools/gen-guide-data.py` (`docs/DATA.md`): the records the generator engines take as input. Not carried into the webapp heads yet (the wizard phase adds them; `docs/DATA.md` has the TODO). |
 | `core/rng.js` + `core/gen4.js` + `core/gen12.js` + `app/Core/` | The Gen 3 LCRNG / Method 1, Gen 4 seed / MT19937 / timer and Gen 1-2 DV engines, parity-tested between JS and C#. |
 | `core/gen5.js` + `app/Core/Gen5.cs` | The Gen 5 engine: the SHA-1 boot seed, LCRNG64, the boot advances, TID/SID rows and the profile searcher (Timer0/VCount/VFrame/GxStat from typed IVs or save needles), a port of PokeFinder's code (Admiral-Fish) credited in the file headers and in `docs/FACTS.md`, bit-for-bit parity-tested between JS and C#. Engine only: no tab yet. |
 | `core/timers.js` + `app/Core/Timers.cs` | EonTimer's timer models (Gen 3 frame, Gen 4 delay, Gen 5 second / C-Gear / Entralink / Entralink+, custom phases) ported function-for-function, parity-tested between JS and C#; the shipped timers still run `gen4.js` (the gap is recorded in `docs/FACTS.md`). |
@@ -86,7 +87,8 @@ RNG Solution's registry and tables and embedded in every head.
   Google Chrome is installed, the tab driven headless through its own handlers.
 - `tests/test-timers.cjs` and `app/Tests --check-timer-vectors` (in both runners): both timer engines vs
   `tests/timer-vectors.json` (469 vectors, every expected value computed by running EonTimer's own
-  TypeScript; 47 are its Python unit tests' literal assertions), a corrupted vector shown failing, plus
+  TypeScript; 47 are its Python unit tests' literal assertions; builder `tools/build-timer-vectors.js`),
+  a corrupted vector shown failing, plus
   200 random parameter sets answered by C# (`--emit-timer-parity`) and re-checked in JS.
 - `tests/test-gen5.cjs` and `app/Tests --gen5` (in both runners): both Gen 5 engines vs `tests/gen5-vectors.json`
   (PokeFinder's own test vectors, the RNGWriteups worked seed 0xb082b4a755192171, and
@@ -94,8 +96,12 @@ RNG Solution's registry and tables and embedded in every head.
   200 random inputs answered by C# (`--emit-gen5-random`) and re-checked in JS.
 - `tests/test-generators.cjs` and `app/Tests --generators` (in both runners): both generator engines vs
   PokeFinder's test suite (`tests/generators-vectors.json`, 85 cases / 1833 results), the
-  decomp-vs-PokeFinder pins, the rarity and reversal math, and a 300-case JS/C# cross-check;
-  `tools/check-generator-citations.py` re-reads every cited decomp line.
+  decomp-vs-PokeFinder pins, the rarity and reversal math, and a 300-case JS/C# cross-check, a
+  corrupted vector shown failing in both runners; `tools/check-generator-citations.py` re-reads every
+  cited decomp line.
+- `tests/test-data.cjs` (in `run-tests.sh`): 128 assertions over `core/data/{species,encounters,statics}-gen{3,4}.json`
+  (`DATA_TEST_NEGATIVE=1` is its negative control); regeneration, the citation re-read and the PokeFinder diff
+  are `tools/gen-guide-data.py` (`docs/DATA.md`).
 - `app/run-core-tests.sh`: the C# engine vs the same vectors, plus canonical MT19937 vectors,
   the Gen 4 seed/timer model, the generator vectors, and `Gen1Tid.cs` vs the gen1tid vectors with
   its own negative control. `dotnet build app/App -c Release -p:EnableWindowsTargeting=true` compiles the
@@ -116,6 +122,8 @@ bash webapp/sync-core.sh                                            # the static
 node webapp/build-mobile-bundle.mjs out.ts                          # the mobile bundle
 bash electron/build.sh                                              # Linux AppImage / tar.gz
 python3 tools/gen-gen1-data.py ../RNG-Solution                      # regenerate core/data from the registry
+python3 tools/gen-guide-data.py                                     # regenerate core/data/{species,encounters,statics}-gen{3,4}.json from ~/AI/pret
+node tools/build-timer-vectors.js <eontimer-dist>                   # regenerate tests/timer-vectors.json (the header has the EonTimer build recipe)
 ```
 
 ## Roadmap, with the hardware that gates each step
