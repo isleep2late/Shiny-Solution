@@ -9,13 +9,14 @@
 <body>
 <header>
   <h1>Shiny-Solution</h1>
-  <p>RNG manipulation calculators &amp; timers for Pokémon Gens 1–4 — no emulator required. Decomp-verified math.</p>
+  <p>RNG manipulation calculators &amp; timers for Pokémon Gens 1–4 — no emulator required. Decomp-verified math. Gen 1 Trainer ID cues (Red / Blue / Yellow) and the Emerald / FireRed / LeafGreen Secret ID search under the Gen 1 TID tab.</p>
 </header>
 <nav id="tabs">
   <button data-tab="g3timer" class="active">Gen 3 Timer</button>
   <button data-tab="g3check">Gen 3 Checker</button>
   <button data-tab="g4">Gen 4</button>
   <button data-tab="g12">Gen 1/2 DVs</button>
+  <button data-tab="g1tid">Gen 1 TID</button>
   <button data-tab="about">About</button>
 </nav>
 <main>
@@ -174,6 +175,157 @@
       app driving mGBA, not this web version.</p>
     </div>
   </section>
+  <section id="tab-g1tid" class="tab">
+    <div class="card">
+      <h2>1. Gen 1 Trainer ID (Red / Blue / Yellow): the one timed A press on NEW GAME</h2>
+      <p id="g1-rules"></p>
+      <p>TARGET mode: you say which Trainer ID (or which table offset) you want, the tool says what to do,
+      cues the one timed press, and learns from the ID you type afterwards. Every prediction names its
+      methodology, the input protocol it is valid under; the protocol's steps ARE the methodology.</p>
+      <div class="row">
+        <label>Game <select id="g1-game"></select></label>
+        <label>Console or emulator <select id="g1-platform"></select></label>
+        <label id="g1-methodology-row">Methodology <select id="g1-methodology"></select></label>
+        <div class="field">Target sets in force <span id="g1-targetsets" class="checks"></span></div>
+      </div>
+      <p id="g1-status" class="result pre"></p>
+      <details><summary>Methodology, validity conditions and target sets</summary><pre id="g1-methodology-text" class="text"></pre></details>
+    </div>
+    <div class="card">
+      <h2>2. Target</h2>
+      <p>Route-valid Trainer IDs under the target sets in force (click a row to aim at it), or type a Trainer ID for another category, or any offset.</p>
+      <div id="g1-targets-table"></div>
+      <p id="g1-table-note" class="hint"></p>
+      <div class="row">
+        <label>Trainer ID you want (decimal like 16387, or hex $4003) <input id="g1-tid" class="mono" value="16387"></label>
+        <button id="g1-find">Find press times</button>
+        <label>or any offset <input id="g1-offset" type="number" min="0" max="5999" value="358"></label>
+        <button id="g1-use-offset" class="secondary">Aim at offset</button>
+      </div>
+      <pre id="g1-invert" class="text"></pre>
+      <div id="g1-invert-buttons" class="row"></div>
+      <p id="g1-target-info" class="result">Target: none yet</p>
+    </div>
+    <div class="card">
+      <h2>3. Anchor and correction</h2>
+      <div class="row">
+        <label>Anchor: when will you press the anchor button? <select id="g1-anchor"></select></label>
+        <label>Correction (ms) <input id="g1-correction" type="number" step="0.1"></label>
+        <button id="g1-correction-reset" class="secondary">Use the calibrated one</button>
+        <label>Count-in beeps <input id="g1-beeps" type="number" min="0" max="10" value="4"></label>
+        <label>Spacing (s) <input id="g1-spacing" type="number" min="0.2" step="0.1" value="1.0"></label>
+      </div>
+      <p id="g1-correction-note" class="result pre"></p>
+      <pre id="g1-protocol" class="text"></pre>
+      <pre id="g1-schedule" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>4. Cue</h2>
+      <p>Press ANCHOR (or Space with nothing focused) at the anchor moment the protocol names. The beeps play
+      from one pre-rendered buffer on the audio clock, every tone on an exact sample; the screen flashes with
+      each beep, and the long high beep is the A press. Space again cancels.</p>
+      <div id="g1-display" class="bigtime">--</div>
+      <div class="row">
+        <button id="g1-anchor-btn" disabled>ANCHOR (Space)</button>
+        <button id="g1-cancel" class="secondary">Cancel</button>
+      </div>
+      <p id="g1-phit" class="hint"></p>
+      <pre id="g1-cue-log" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>5. What did you get?</h2>
+      <div class="row">
+        <label>Trainer ID you got (decimal as on the status screen, e.g. 16387, or hex $4003) <input id="g1-got" class="mono"></label>
+        <label class="check"><input id="g1-force" type="checkbox"> force (add even if it looks like a duplicate or is more than 60 frames out)</label>
+        <button id="g1-record">Record</button>
+        <button id="g1-drop-last" class="secondary">Drop last</button>
+        <button id="g1-clear" class="secondary">Clear (this methodology)</button>
+      </div>
+      <pre id="g1-outcome" class="text"></pre>
+      <h3>Your timing: spread, P(hit), attempts per hit, drift</h3>
+      <pre id="g1-stats" class="text"></pre>
+      <p class="hint">Samples are kept in this browser per console and anchor, each with its methodology id; only samples under the active methodology are averaged. The record is the same shape as RNG Solution's config.json "calibration" block.</p>
+    </div>
+    <div class="card">
+      <h2>Save-corruption reset metronome (RESET then A, or A then power off)</h2>
+      <div class="row">
+        <label>Which save are you interrupting? <select id="g1-reset-preset"><option value="route">the real route: cleared save, NEW GAME, first save</option><option value="practice-save">saving over a valid file with the same Trainer ID (practice save): +50 ms</option></select></label>
+        <label>Adjust (frames) <input id="g1-reset-adjust" type="number" step="0.5" value="0"></label>
+        <button id="g1-reset-save-adjust" class="secondary">Remember the adjust</button>
+        <label>Pairs <input id="g1-reset-pairs" type="number" min="1" max="200" value="15"></label>
+        <label>Cadence (s) <input id="g1-reset-cadence" type="number" min="0.5" step="0.5" value="2"></label>
+        <label>Interval override (ms; blank = the centre) <input id="g1-reset-interval" type="number" step="0.1"></label>
+      </div>
+      <p id="g1-reset-note" class="hint"></p>
+      <pre id="g1-reset-text" class="text"></pre>
+      <div id="g1-reset-display" class="bigtime">--</div>
+      <div class="row">
+        <button id="g1-reset-start">Start the metronome</button>
+        <button id="g1-reset-stop" class="secondary">Stop</button>
+      </div>
+      <pre id="g1-reset-log" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>Verify (moderators): is a Trainer ID consistent with a hand-measured press time?</h2>
+      <div class="row">
+        <label>Trainer ID in the run <input id="g1-verify-tid" class="mono"></label>
+        <label>Menu to press (s, measured from the video) <input id="g1-verify-s" type="number" step="0.001"></label>
+        <label>Measured from <select id="g1-verify-from"><option value="press">the press itself (button overlay, hand cam)</option><option value="visible">its first visible effect on the game screen (the lag is subtracted)</option></select></label>
+        <label>Tolerance (frames) <input id="g1-verify-tol" type="number" min="0" max="30" value="3"></label>
+        <button id="g1-verify">Verify</button>
+      </div>
+      <pre id="g1-verify-out" class="text"></pre>
+    </div>
+    <div class="card" id="sid-card">
+      <h2>Emerald / FireRed / LeafGreen: the Secret ID from a typed Trainer ID</h2>
+      <p>These games cannot have their Trainer ID chosen: it is the raw Timer1 count at the instant the player
+      naming screen finishes fading out. That count seeds the RNG, which then advances once per VBlank until the
+      Secret ID is rolled, so SID = high 16 bits of LCRNG^(k+1)(TID) with k the VBlank count from the seed to the
+      roll. [TARGET] The Trainer ID is human input: read it off the Trainer Card and type it; nothing reads the game.
+      The press cue pins k to a window of 27 instead of 1201; a pin (a PID you can see is shiny or not) narrows the list to one.</p>
+      <div class="row">
+        <label>Game <select id="sid-game"></select></label>
+        <label>OPTIONS text speed <select id="sid-speed"><option value="">(choose)</option><option value="fast">fast</option><option value="mid">mid</option><option value="slow">slow</option></select></label>
+        <label>Player name length <input id="sid-namelen" type="number" min="1" max="7" value="7"></label>
+        <label id="sid-rival-row">Rival name path <select id="sid-rival"><option value="newname">NEW NAME, a 1-letter rival (the PSR route)</option><option value="preset">preset name: DOWN then A</option></select></label>
+      </div>
+      <details><summary>Methodology and validity conditions</summary><pre id="sid-methodology-text" class="text"></pre></details>
+      <h3>Cue the presses after naming (optional)</h3>
+      <div class="row">
+        <label>Margin (frames after each box is ready) <input id="sid-margin" type="number" min="0" max="120" value="30"></label>
+        <button id="sid-prepare" class="secondary">Show the cue protocol</button>
+        <button id="sid-cue-btn" disabled>ANCHOR: A on OK (Space)</button>
+        <button id="sid-cancel" class="secondary">Cancel</button>
+      </div>
+      <div id="sid-display" class="bigtime">--</div>
+      <pre id="sid-protocol" class="text"></pre>
+      <pre id="sid-cue-log" class="text"></pre>
+      <h3>Candidates</h3>
+      <div class="row">
+        <label>Trainer ID you got (Trainer Card IDNo) <input id="sid-tid" class="mono"></label>
+        <label>k min <input id="sid-kmin" type="number" min="0"></label>
+        <label>k max <input id="sid-kmax" type="number" min="0"></label>
+        <label>TSV filter <input id="sid-tsv" type="number" min="0" max="8191"></label>
+        <label>Rows to show (0 = all) <input id="sid-limit" type="number" min="0" value="60"></label>
+        <button id="sid-run">List candidates</button>
+      </div>
+      <div class="row">
+        <label>Known shiny PIDs (hex, not stored) <input id="sid-shiny-pid" class="mono"></label>
+        <label>Known non-shiny PIDs (hex, not stored) <input id="sid-nonshiny-pid" class="mono"></label>
+        <label class="check"><input id="sid-nopins" type="checkbox"> ignore the stored pins</label>
+      </div>
+      <div class="row">
+        <label>Pin a PID (hex) <input id="sid-pin-pid" class="mono"></label>
+        <label>Note <input id="sid-pin-note"></label>
+        <button id="sid-pin-shiny" class="secondary">Pin: it IS shiny</button>
+        <button id="sid-pin-nonshiny" class="secondary">Pin: NOT shiny</button>
+        <button id="sid-pins-clear" class="secondary">Clear the pins for this ID</button>
+      </div>
+      <p id="sid-pin-out" class="result"></p>
+      <pre id="sid-out" class="text"></pre>
+      <div id="sid-table"></div>
+    </div>
+  </section>
   <section id="tab-about" class="tab">
     <div class="card">
       <h2>About</h2>
@@ -192,13 +344,17 @@
     </div>
   </section>
 </main>
+<div id="g1-flash"></div>
 <footer>
   <p>GBA timing: 59.7275 fps. NDS timing: 59.8261 fps. All timing error is absorbed by the calibration loops.</p>
 </footer>
 <script src="rng.js"></script>
 <script src="gen4.js"></script>
 <script src="gen12.js"></script>
+<script src="gen1tid.js"></script>
+<script src="gen1-data.js"></script>
 <script src="downloads.js"></script>
 <script src="app.js"></script>
+<script src="gen1tid-ui.js"></script>
 </body>
 </html>

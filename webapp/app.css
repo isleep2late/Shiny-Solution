@@ -96,3 +96,21 @@ footer p { color: var(--muted); font-size: 12px; }
   letter-spacing: 2px;
 }
 .bigtime.soon { color: var(--accent); }
+
+/* Gen 1 TID tab */
+#g1-flash { position: fixed; inset: 0; pointer-events: none; background: #fff; opacity: 0; z-index: 50; transition: opacity 80ms ease-out; }
+#g1-flash.on { opacity: 0.55; transition: none; }
+#g1-flash.on.A { opacity: 0.95; background: var(--accent); }
+#g1-flash.on.hold { background: #6cf; }
+#g1-flash.on.menu { background: var(--good); }
+#g1-flash.on.reset, #g1-flash.on.power { background: #f66; }
+pre.text { white-space: pre-wrap; font-family: ui-monospace, "Cascadia Mono", monospace; font-size: 13px; background: var(--panel2); border: 1px solid var(--edge); border-radius: 6px; padding: 10px; margin: 8px 0; color: var(--text); }
+pre.text:empty { display: none; }
+.result.pre { white-space: pre-wrap; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.checks { display: flex; gap: 12px; flex-wrap: wrap; min-height: 38px; align-items: center; }
+.checks label, label.check { flex-direction: row; align-items: center; gap: 6px; color: var(--text); }
+button.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--edge); }
+button:disabled { opacity: 0.5; cursor: default; }
+details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+.card h3 { margin: 14px 0 6px; font-size: 15px; }
