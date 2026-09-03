@@ -365,7 +365,7 @@
     var timing = TIMING[platformKey];
     methLine.textContent = assumes(methodology) + " (hold START inside frames " + timing.hold_lo_frame + "-" + timing.hold_hi_frame + ", the menu opens on " + timing.menu_frame + "); detector " + profileId + ".";
     if (!MODE || !MODE.isPractice()) {
-      status.textContent = "PRACTICE / HUNT mode is off: turn it on with the switch above to use this panel. Nothing here runs in RUN mode.";
+      status.textContent = "PRACTICE / HUNT mode is off: turn it on with the switch above the tabs in the main window to use this panel. Nothing here runs in RUN mode.";
       return true;
     }
     var meth = DATA && DATA.methodologies ? DATA.methodologies[methodology] : null;

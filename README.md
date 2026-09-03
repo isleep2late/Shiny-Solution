@@ -94,12 +94,19 @@ practice adjustment, a practice pin) never in force and named in the notes.
 **The Practice & Hunt window (Electron, `--with-hunt` builds only).** `webapp/hunt/hunt-panel.js`
 is RNG Solution's Gen 1 menu-box watcher in JS (its `rngsolution/hunt/`, design section 7): a
 frame source (a PNG-sequence replay from `tests/fixtures/hunt/`, or live obs-websocket
-screenshots through the main process's optional `ws` package, opened only after a confirmation
-dialog and never by a test), the extractor for the GBA HD profile (the NEW GAME box's dark
+screenshots through the `ws` package, which `build.sh --with-hunt` installs and no
+package.json lists, opened only after a confirmation dialog and never by a test), the extractor
+for the GBA HD profile (the NEW GAME box's dark
 fraction and the screen below it, geometry measured on the owner's capture), the sample-rate
 guard (below 2 samples per game frame the source is refused and every prediction names its
 quantisation), the open -> close state machine with the overlay's START-hold check, and the
-table lookup with the lag calibrated from typed true Trainer IDs. It runs only while PRACTICE /
+table lookup with the lag calibrated from typed true Trainer IDs. The menu and the window live in
+`webapp/hunt/electron-main.js`, which `electron/main.js` requires only when the directory was
+staged; the menu item is enabled only while the main window's mode is PRACTICE / HUNT (read from
+its page every second and at the click, which refuses with a dialog otherwise), the window has no
+switch of its own, and it is closed, from the page and from the main process, as soon as the main
+window goes back to RUN. `tests/test-hunt.cjs` drives that side with Electron stood in for, and a
+copy with the mode check cut out is shown failing it. It runs only while PRACTICE /
 HUNT is on, keeps its samples under `shinySolution.hunt.calibration.practice` (never a RUN key),
 stamps every record `practice`, and prints "this prediction assumes methodology
 red/gba/hold-start-v1" with every offset. `tests/test-hunt.cjs` replays the shared fixtures and

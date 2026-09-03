@@ -120,5 +120,75 @@ for (const k of ["hold_lo_frame", "hold_hi_frame", "menu_frame"]) assert("timing
   assert("lag scoped to the detector", near(H.lagFrames(store, "gba", V.methodology, "gba-hd/wholebox-v1"), -26.17, 1e-6) && H.lagFrames(store, "gba", V.methodology, "gba-hd/border-v1") === 0.0);
 }
 
-console.log("hunt parity: " + checks + " checks, " + failures + " failure" + (failures === 1 ? "" : "s") + " (" + path.basename(vectorPath) + ")");
-process.exit(failures ? 1 : 0);
+// ---- 4. the Practice & Hunt window (webapp/hunt/electron-main.js, the main-process side) with Electron stood in for:
+//         opened only while the MAIN window's mode is PRACTICE / HUNT, the menu item disabled otherwise, a window still
+//         open when the mode goes back to RUN closed; the page has no switch of its own; the plain build's main.js and
+//         package.json name none of it. usage: a 4th argument replaces electron-main.js (the negative control).
+async function windowChecks() {
+  const huntDir = path.join(root, "webapp", "hunt");
+  const W = require(process.argv[4] || path.join(huntDir, "electron-main.js"));
+  let modeInMain = null, dialogs = 0;
+  const windows = [];
+  const mainWin = {
+    isDestroyed: () => false,
+    webContents: { executeJavaScript: (js) => { assert("the mode is read from the main window's page (localStorage, mode.js's key)", /localStorage\.getItem\("shinySolution\.mode"\)/.test(js)); return Promise.resolve(modeInMain); } }
+  };
+  let mainWindow = mainWin;
+  function FakeBrowserWindow(o) { this.opts = o; this.loaded = null; this.closed = false; this.handlers = {}; windows.push(this); }
+  FakeBrowserWindow.prototype.loadFile = function (p) { this.loaded = p; };
+  FakeBrowserWindow.prototype.on = function (ev, fn) { this.handlers[ev] = fn; };
+  FakeBrowserWindow.prototype.close = function () { this.closed = true; if (this.handlers.closed) this.handlers.closed(); };
+  const fakeMenu = { items: [], getMenuItemById(id) { return this.items.find((i) => i.id === id) || null; } };
+  const Menu = {
+    buildFromTemplate: (t) => { fakeMenu.template = t; fakeMenu.items = []; for (const top of t) for (const it of (top.submenu || [])) fakeMenu.items.push(it); return fakeMenu; },
+    setApplicationMenu: (m) => { Menu.applied = m; }
+  };
+  const handlers = {};
+  const ipcMain = { handle: (channel, fn) => { handlers[channel] = fn; } };
+  const dialog = { showMessageBox: () => { dialogs++; return Promise.resolve({ response: 0 }); } };
+  const ctl = W.install({ BrowserWindow: FakeBrowserWindow, Menu, dialog, ipcMain }, { huntDir, fixturesDir: fixtures, mainWindow: () => mainWindow });
+  const item = fakeMenu.getMenuItemById(W.ITEM_ID);
+  assert("the Practice & Hunt menu is installed with its one item", Menu.applied === fakeMenu && !!item && item.label === W.ITEM_LABEL && fakeMenu.template.some((t) => t.label === "Practice & Hunt"));
+  assert("the frame sources are registered on the main process's ipc", ["hunt:list-replays", "hunt:open-replay", "hunt:next-frame", "hunt:open-obs", "hunt:close"].every((c) => typeof handlers[c] === "function"));
+  assert("the replay source lists the shared PNG fixture", handlers["hunt:list-replays"]().some((p) => p.endsWith("gen1-gba-hd-menu")));
+  // RUN (the default: no mode stored) and a mode the head does not know: the item is disabled and a click refuses
+  for (const m of [null, "run", "hunt", ""]) {
+    modeInMain = m;
+    const on = await ctl.tick();
+    const before = dialogs;
+    const w = await ctl.open();
+    assert("in mode " + JSON.stringify(m) + " the item is disabled, the click refuses with a dialog and opens nothing", on === false && item.enabled === false && w === null && dialogs === before + 1 && windows.length === 0);
+  }
+  // PRACTICE / HUNT: the item is enabled and the window opens on hunt.html with the hunt preload, isolated
+  modeInMain = "practice";
+  assert("in PRACTICE / HUNT the item is enabled", (await ctl.tick()) === true && item.enabled === true);
+  const w = await ctl.open();
+  assert("the window opens hunt.html with the hunt preload and context isolation", !!w && windows.length === 1 && w.loaded === path.join(huntDir, "hunt.html") &&
+    w.opts.webPreferences.contextIsolation === true && w.opts.webPreferences.preload === path.join(huntDir, "preload.js") && ctl.windows().length === 1);
+  // back to RUN in the main window: the open hunt window is closed from here and the item disabled again
+  modeInMain = "run";
+  await ctl.tick();
+  assert("back in RUN the open hunt window is closed and the item disabled", w.closed === true && ctl.windows().length === 0 && item.enabled === false);
+  // no main window at all (closed): refused
+  mainWindow = null;
+  modeInMain = "practice";
+  assert("with no main window to ask, the click refuses", (await ctl.open()) === null && windows.length === 1);
+  mainWindow = { isDestroyed: () => true, webContents: mainWin.webContents };
+  assert("with the main window destroyed, the click refuses", (await ctl.open()) === null && windows.length === 1);
+  ctl.stop();
+  // the page: no switch of its own, and it closes itself in RUN
+  const page = fs.readFileSync(path.join(huntDir, "hunt.html"), "utf8");
+  assert("hunt.html carries no mode switch of its own", !/id="mode-practice"/.test(page) && !/<input/.test(page) && !/mode-toggle/.test(page));
+  assert("hunt.html closes itself when the mode is RUN", /window\.close\(\)/.test(page) && /isPractice\(\)/.test(page) && /"storage"/.test(page));
+  // every build's main.js and package.json: the hook only, no window, menu, source or package
+  const mainjs = fs.readFileSync(path.join(root, "electron", "main.js"), "utf8");
+  assert("electron/main.js only requires webapp/hunt/electron-main.js when it exists", /electron-main\.js/.test(mainjs) && /existsSync\(huntMain\)/.test(mainjs) &&
+    !/Practice & Hunt|createHuntWindow|electron-source|preload|hunt\.html|GetSourceScreenshot|obs-websocket|"ws"/.test(mainjs));
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, "electron", "package.json"), "utf8"));
+  assert("electron/package.json pulls no package for the hunt window (ws is installed by build.sh --with-hunt alone)", !JSON.stringify(pkg).includes('"ws"'));
+}
+
+windowChecks().catch((e) => { failures++; console.error("FAIL window checks threw: " + (e && e.stack || e)); }).then(() => {
+  console.log("hunt parity: " + checks + " checks, " + failures + " failure" + (failures === 1 ? "" : "s") + " (" + path.basename(vectorPath) + ")");
+  process.exit(failures ? 1 : 0);
+});

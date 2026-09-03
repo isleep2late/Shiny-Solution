@@ -13,7 +13,7 @@
   "MIN_SAMPLES_PER_GAME_FRAME": 2.0,
   "PRE_GAP_MIN": 10.0
  },
- "generated_by": "tests/fixtures/hunt/emit_parity.py at RNG Solution f3b1268",
+ "generated_by": "tests/fixtures/hunt/emit_parity.py on top of RNG Solution 97afa6c (the commit checked out when it was emitted; the vector itself lands in the next one)",
  "methodology": "red/gba/hold-start-v1",
  "mode": "hunt",
  "png": {

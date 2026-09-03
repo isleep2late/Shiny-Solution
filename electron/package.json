@@ -16,9 +16,6 @@
     "electron": "31.7.7",
     "electron-builder": "24.13.3"
   },
-  "optionalDependencies": {
-    "ws": "^8.18.0"
-  },
   "build": {
     "appId": "com.hackmons.shinysolution",
     "files": ["main.js", "webapp/**"],

@@ -32,12 +32,20 @@ What lives here (all of it staged and bundled only with `--with-hunt`):
   checks them against RNG Solution's `tests/fixtures/hunt/gen1-parity.json`, frame for frame on
   the shared PNG poll and attempt for attempt on the real GBA HD timeline) and mounts the panel
   into `#hunt-panel` when the page has one; it refuses to run while RUN mode is on.
-- `hunt.html`: the page the Electron app opens from its "Practice & Hunt" menu (present only
-  when this directory was staged), with the mode banner and switch above the panel.
+- `hunt.html`: the page the Electron app opens from its "Practice & Hunt" menu. It has no mode
+  switch of its own: the mode is the main window's (the one shared setting), the banner is shown,
+  and the page closes itself when it finds RUN at load or when the main window switches back
+  (the `storage` event, and a check every second).
+- `electron-main.js`: the menu and the window, in the Electron main process. `electron/main.js`
+  requires it only when this directory was staged, so a plain build's main process names no
+  window, menu or capture source. The menu item is enabled only while the main window's page
+  holds mode `practice` (read every second, and again at the click, which refuses with a dialog
+  otherwise), and a hunt window still open when the mode goes back to RUN is closed from here.
 - `preload.js` and `electron-source.js`: the hunt window's bridge and its frame sources in the
   Electron main process: a PNG-sequence replay (`tests/fixtures/hunt/<name>/frames.csv`), and
-  obs-websocket screenshots through the optional `ws` package, opened only after the renderer's
-  confirmation dialog and never by any test.
+  obs-websocket screenshots through the `ws` package, opened only after the renderer's
+  confirmation dialog and never by any test. `ws` is not in `electron/package.json`;
+  `electron/build.sh --with-hunt` installs it (`npm install --no-save ws`), a plain build never.
 - `sentinel.js`: the marker the bundle tests use.
 
 Every prediction the panel prints says which methodology it assumes and, when the source was
