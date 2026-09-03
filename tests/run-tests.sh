@@ -218,6 +218,11 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# The desktop Gen 2 TID panel is pinned to the web tab through tests/gen2tid-panel-vectors.json (what webapp/gen2tid-ui.js
+# computes for 20 target inputs; app/run-core-tests.sh checks Gen2TidSupport.cs against it). A re-emit from the tab's
+# functions must be byte-identical to the committed file, so the file always says what the tab says now.
+node ../tools/gen-gen2-panel-vectors.cjs | cmp - gen2tid-panel-vectors.json && echo "gen2tid panel vectors re-emitted from the web tab: byte-identical"
+
 # The PRACTICE / HUNT head (webapp/hunt/hunt-panel.js): its Gen 1 menu-box pipeline over the shared fixtures must equal
 # RNG Solution's, frame for frame and event for event (tests/fixtures/hunt/gen1-parity.json, emitted by RNG Solution's
 # tests/fixtures/hunt/emit_parity.py; the PNG poll gen1-gba-hd-menu/ and the real GBA HD timeline gba-timeline.csv).

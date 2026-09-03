@@ -126,6 +126,37 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# The desktop Gen 2 TID panel's pure part (app/App/Gen2TidSupport.cs, compiled into the test project) against
+# tests/gen2tid-panel-vectors.json, emitted from the web app's Gen 2 TID tab by tools/gen-gen2-panel-vectors.cjs: 20 target
+# inputs (the schedule's every cue, the schedule and protocol text, the typed outcome), the bin guards and the mode split.
+dotnet run --project app/Tests -c Release --no-build -- --gen2tid-panel tests/gen2tid-panel-vectors.json
+
+# Negative control: a corrupted copy (one A cue moved by 1e-6 s, one outcome's hit bin bumped, the RUN correction with the
+# practice sample averaged in) must FAIL, and is shown failing.
+corrupted=$(mktemp --suffix=.json)
+python3 - tests/gen2tid-panel-vectors.json "$corrupted" <<'PY'
+import json, sys
+v = json.load(open(sys.argv[1]))
+c = next(x for x in v["cases"] if "schedule" in x)
+c["schedule"]["tA"] += 1e-6
+c["outcome"]["hitBin"] += 1
+g = v["guards"]
+s = g["store"]["gse/menu"]["samples"]
+assert s[-1]["mode"] == "practice", "negative control setup: the last guard sample is not the practice one"
+imp = [x["implied_ms"] for x in s]
+g["runCorrection"] = sum(imp) / len(imp)
+json.dump(v, open(sys.argv[2], "w"))
+PY
+if dotnet run --project app/Tests -c Release --no-build -- --gen2tid-panel "$corrupted" > "$corrupted.out" 2>&1; then
+  echo "negative control (corrupted gen2tid panel vectors, C#): DID NOT FAIL"
+  rm -f "$corrupted" "$corrupted.out"
+  exit 1
+else
+  echo "negative control (corrupted gen2tid panel vectors, C#): FAILED as required ->"
+  grep -E '^FAIL|failure' "$corrupted.out" | head -4 | sed 's/^/      /'
+fi
+rm -f "$corrupted" "$corrupted.out"
+
 # SeedTime4.cs (Gen 4 seed-to-time, calibrate rows, advance planner, PKHeX-semantics LCRNG reversal, the
 # reachability search) against the same vectors the JS suite checks (tests/seedtime4-vectors.json).
 dotnet run --project app/Tests -c Release --no-build -- --seedtime4 tests/seedtime4-vectors.json

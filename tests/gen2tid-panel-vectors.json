@@ -1,0 +1,3565 @@
+{
+ "source": "webapp/gen2tid-ui.js over core/gen2tid.js and core/data/gen2-tid.json, emitted by tools/gen-gen2-panel-vectors.cjs; app/App/Gen2TidSupport.cs is checked against it by app/Tests/Gen2TidPanelChecks.cs",
+ "when": "2026-09-03 00:00:00",
+ "player": "winforms",
+ "cases": [
+  {
+   "input": {
+    "game": "gold",
+    "platform": "gse",
+    "state": "days0",
+    "anchor": "menu",
+    "bin": 300,
+    "correctionMs": 200,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 2
+   },
+   "methodologyId": "gold/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 20322,
+    "lid": 61052,
+    "sid": null,
+    "offsets": [
+     1205,
+     1208
+    ],
+    "visible": [
+     1201,
+     1204
+    ],
+    "aim": 1206.5,
+    "aimV": 1202.5,
+    "aimS": 20.13310432434082,
+    "afterPowerOnS": 27.667322158813477
+   },
+   "describeBin": "bin 300 (A down 1201..1204 frames after the visible menu box, aim 1202.5 = 20.133 s (1202.5 frames)) -> TID 20322 ($4F62), Lucky ID 61052 ($EE7C)   methodology gold/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 19.93310432434082,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     15.933104324340821,
+     16.93310432434082,
+     17.93310432434082,
+     18.93310432434082
+    ],
+    "duration": 20.08310432434082,
+    "cues": [
+     {
+      "t": 15.933104324340821,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 16.93310432434082,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 17.93310432434082,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 18.93310432434082,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 19.93310432434082,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 300,
+    "aimOffset": 1206.5,
+    "aimV": 1202.5,
+    "aWindow": [
+     20.107990264892578,
+     20.17496109008789
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/gbp/hold-start-v1   RTC state: days0",
+    "  count-in beeps      15.933, 16.933, 17.933, 18.933",
+    "  A cue (long beep)   19.933 s   = aim 1202.5 frames after the visible menu (20.133 s (1202.5 frames)) minus correction 200.0 ms (11.95 frames)",
+    "  A window (bin 300) 20.108 - 20.175 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS, target bin 300 -> TID 20322 ($4F62), Lucky ID 61052 ($EE7C))",
+    "    Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GSE or gambatte-speedrun in GBP mode with the GBC BIOS): The tables were derived on this core with this boot (CGB_MODE|GBA_FLAG, cgb_boot.bin), so the numbers are exact here; GSE boots with gambatte's fresh clock (RTC day 0, running) = the primary tables' state.",
+    "    RTC state: days0 (0-139 days, no carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    "    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.",
+    " 2. Power on (Ctrl+R hard reset on GSE). Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    "    Hold window: START down between 0.00 s and 5.94 s after the boot starts (frames 0-355); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 450, 7.53 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 300 = A down 1201..1204 frames after the visible menu box (aim 1202.5 = 20.133 s (1202.5 frames)).",
+    "    The beep is 200.0 ms (11.95 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 4652,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 302,
+    "implied": 333.941650390625,
+    "newCorrection": 333.941650390625,
+    "candidateBins": [
+     302
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 4652 ($122C): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 302 (A down 1209..1212 frames after the visible menu), aimed 300: 8.0 frames late (133.9 ms; state days0).",
+     "  This attempt implies a correction of 333.9 ms (used 200.0 ms).",
+     "  Correction updated to 333.9 ms (1 sample, menu anchor).",
+     "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gse/menu": {
+     "samples": [
+      {
+       "tid": 4652,
+       "lid": null,
+       "aimed_bin": 300,
+       "hit_bin": 302,
+       "aimed": 1206.5,
+       "hit": 1214.5,
+       "correction_used_ms": 200,
+       "implied_ms": 333.941650390625,
+       "state": "days0",
+       "methodology": "gold/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "gse",
+    "state": "days0",
+    "anchor": "reset",
+    "bin": 300,
+    "correctionMs": 100,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 0
+   },
+   "methodologyId": "gold/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 20322,
+    "lid": 61052,
+    "sid": null,
+    "offsets": [
+     1205,
+     1208
+    ],
+    "visible": [
+     1201,
+     1204
+    ],
+    "aim": 1206.5,
+    "aimV": 1202.5,
+    "aimS": 20.13310432434082,
+    "afterPowerOnS": 27.667322158813477
+   },
+   "describeBin": "bin 300 (A down 1201..1204 frames after the visible menu box, aim 1202.5 = 20.133 s (1202.5 frames)) -> TID 20322 ($4F62), Lucky ID 61052 ($EE7C)   methodology gold/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "reset",
+    "tA": 29.742505693435668,
+    "holdLo": 2.175183534622193,
+    "holdHi": 8.118844270706177,
+    "menu": 9.709401369094849,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     25.742505693435668,
+     26.742505693435668,
+     27.742505693435668,
+     28.742505693435668
+    ],
+    "duration": 29.892505693435666,
+    "cues": [
+     {
+      "t": 2.175183534622193,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-start",
+      "kind": "hold"
+     },
+     {
+      "t": 5.147013902664185,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-centre",
+      "kind": "hold"
+     },
+     {
+      "t": 9.709401369094849,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu",
+      "kind": "menu"
+     },
+     {
+      "t": 9.789401369094849,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu-2",
+      "kind": "menu"
+     },
+     {
+      "t": 25.742505693435668,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 26.742505693435668,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 27.742505693435668,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 28.742505693435668,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 29.742505693435668,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 300,
+    "aimOffset": 1206.5,
+    "aimV": 1202.5,
+    "aWindow": [
+     29.817391633987427,
+     29.88436245918274
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/gbp/hold-start-v1   RTC state: days0",
+    "  hold START window   2.175 - 8.119 s   (low beeps at the start and the middle)",
+    "  menu box visible    9.709 s   (double blip: release START)",
+    "  count-in beeps      25.743, 26.743, 27.743, 28.743",
+    "  A cue (long beep)   29.743 s   = aim 1202.5 frames after the visible menu (20.133 s (1202.5 frames)), from your anchor minus correction 100.0 ms (5.97 frames)",
+    "  A window (bin 300) 29.817 - 29.884 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS, target bin 300 -> TID 20322 ($4F62), Lucky ID 61052 ($EE7C))",
+    "    Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GSE or gambatte-speedrun in GBP mode with the GBC BIOS): The tables were derived on this core with this boot (CGB_MODE|GBA_FLAG, cgb_boot.bin), so the numbers are exact here; GSE boots with gambatte's fresh clock (RTC day 0, running) = the primary tables' state.",
+    "    RTC state: days0 (0-139 days, no carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    "    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.",
+    " 2. Press the ANCHOR button (or Space) at the SAME instant you press Ctrl+R (hard reset) (2.175 s of fade and stall are added to every time below).",
+    " 3. Two low beeps mark the START-hold window (2.18 s and 5.15 s after your anchor): HOLD START on the first low beep and keep holding.",
+    "    Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    " 4. A double blip at 9.71 s marks when the NEW GAME / OPTION menu box should appear (visible on frame 450 of the boot): release START as it appears.",
+    "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
+    " 5. Then 4 short beeps 1.0 s apart and one long high beep. On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 300 = A down 1201..1204 frames after the visible menu box (aim 1202.5) = 29.843 s (1782.4 frames) after your anchor.",
+    "    The beep is 100.0 ms (5.97 frames) early for the audio delay (this anchor's correction).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 20322,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 300,
+    "implied": 100,
+    "newCorrection": 100,
+    "candidateBins": [
+     300
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 20322 ($4F62): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 300 exactly (aimed 300; state days0).",
+     "  This attempt implies a correction of 100.0 ms (used 100.0 ms).",
+     "  Correction updated to 100.0 ms (1 sample, reset anchor).",
+     "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gse/reset": {
+     "samples": [
+      {
+       "tid": 20322,
+       "lid": null,
+       "aimed_bin": 300,
+       "hit_bin": 300,
+       "aimed": 1206.5,
+       "hit": 1206.5,
+       "correction_used_ms": 100,
+       "implied_ms": 100,
+       "state": "days0",
+       "methodology": "gold/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "gbp",
+    "state": "days512",
+    "anchor": "menu",
+    "bin": 598,
+    "correctionMs": 200,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": -3
+   },
+   "methodologyId": "gold/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 56734,
+    "lid": 39798,
+    "sid": null,
+    "offsets": [
+     2397,
+     2399
+    ],
+    "visible": [
+     2393,
+     2395
+    ],
+    "aim": 2398,
+    "aimV": 2394,
+    "aimS": 40.08203887939453,
+    "afterPowerOnS": 47.61625671386719
+   },
+   "describeBin": "bin 598 (A down 2393..2395 frames after the visible menu box, aim 2394.0 = 40.082 s (2394 frames)) -> TID 56734 ($DD9E), Lucky ID 39798 ($9B76)   methodology gold/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 39.88203887939453,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     35.88203887939453,
+     36.88203887939453,
+     37.88203887939453,
+     38.88203887939453
+    ],
+    "duration": 40.03203887939453,
+    "cues": [
+     {
+      "t": 35.88203887939453,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 36.88203887939453,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 37.88203887939453,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 38.88203887939453,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 39.88203887939453,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 598,
+    "aimOffset": 2398,
+    "aimV": 2394,
+    "aWindow": [
+     40.0652961730957,
+     40.11552429199219
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/gbp/hold-start-v1   RTC state: days512",
+    "  count-in beeps      35.882, 36.882, 37.882, 38.882",
+    "  A cue (long beep)   39.882 s   = aim 2394.0 frames after the visible menu (40.082 s (2394 frames)) minus correction 200.0 ms (11.95 frames)",
+    "  A window (bin 598) 40.065 - 40.116 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on GameCube Game Boy Player, target bin 598 -> TID 56734 ($DD9E), Lucky ID 39798 ($9B76))",
+    "    Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GameCube Game Boy Player): Same boot as the derivation (CGB boot ROM + GBA flag). No Gen 2 hardware sample exists; the community's Gold/Silver script manips are done on this console, which is consistent with, but not a test of, these tables.",
+    "    RTC state: days512 (0-139 days (mod 512) + carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Power on. Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    "    Hold window: START down between 0.00 s and 5.94 s after the boot starts (frames 0-355); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 450, 7.53 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 598 = A down 2393..2395 frames after the visible menu box (aim 2394.0 = 40.082 s (2394 frames)).",
+    "    The beep is 200.0 ms (11.95 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 59839,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 595,
+    "implied": 7.4588775634765625,
+    "newCorrection": 7.4588775634765625,
+    "candidateBins": [
+     595
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 59839 ($E9BF): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 595 (A down 2381..2384 frames after the visible menu), aimed 598: 11.5 frames early (192.5 ms; state days512).",
+     "  This attempt implies a correction of 7.5 ms (used 200.0 ms).",
+     "  Correction updated to 7.5 ms (1 sample, menu anchor).",
+     "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gbp/menu": {
+     "samples": [
+      {
+       "tid": 59839,
+       "lid": null,
+       "aimed_bin": 598,
+       "hit_bin": 595,
+       "aimed": 2398,
+       "hit": 2386.5,
+       "correction_used_ms": 200,
+       "implied_ms": 7.4588775634765625,
+       "state": "days512",
+       "methodology": "gold/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "gba",
+    "state": "days0",
+    "anchor": "poweron",
+    "bin": 120,
+    "correctionMs": 100,
+    "beeps": 3,
+    "spacingS": 0.5,
+    "deltaBins": 15
+   },
+   "methodologyId": "gold/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 22173,
+    "lid": 30852,
+    "sid": null,
+    "offsets": [
+     485,
+     488
+    ],
+    "visible": [
+     481,
+     484
+    ],
+    "aim": 486.5,
+    "aimV": 482.5,
+    "aimS": 8.07835578918457,
+    "afterPowerOnS": 15.612573623657227
+   },
+   "describeBin": "bin 120 (A down 481..484 frames after the visible menu box, aim 482.5 = 8.078 s (482.5 frames)) -> TID 22173 ($569D), Lucky ID 30852 ($7884)   methodology gold/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "poweron",
+    "tA": 15.512573623657227,
+    "holdLo": 0,
+    "holdHi": 5.943660736083984,
+    "menu": 7.534217834472656,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     14.012573623657227,
+     14.512573623657227,
+     15.012573623657227
+    ],
+    "duration": 15.662573623657227,
+    "cues": [
+     {
+      "t": 0,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-start",
+      "kind": "hold"
+     },
+     {
+      "t": 2.971830368041992,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-centre",
+      "kind": "hold"
+     },
+     {
+      "t": 7.534217834472656,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu",
+      "kind": "menu"
+     },
+     {
+      "t": 7.614217834472656,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu-2",
+      "kind": "menu"
+     },
+     {
+      "t": 14.012573623657227,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 14.512573623657227,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 15.012573623657227,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 15.512573623657227,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 120,
+    "aimOffset": 486.5,
+    "aimV": 482.5,
+    "aWindow": [
+     15.587459564208984,
+     15.654430389404297
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/gbp/hold-start-v1   RTC state: days0",
+    "  hold START window   0.000 - 5.944 s   (low beeps at the start and the middle)",
+    "  menu box visible    7.534 s   (double blip: release START)",
+    "  count-in beeps      14.013, 14.513, 15.013",
+    "  A cue (long beep)   15.513 s   = aim 482.5 frames after the visible menu (8.078 s (482.5 frames)), from your anchor minus correction 100.0 ms (5.97 frames)",
+    "  A window (bin 120) 15.587 - 15.654 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on GBA, GBA SP or GBA HD, target bin 120 -> TID 22173 ($569D), Lucky ID 30852 ($7884))",
+    "    Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GBA, GBA SP or GBA HD): Same silicon and boot ROM as the GBP path. The power-on anchor is INFERRED: the harness's frame 0 includes gambatte's 485808-sample (13.8-frame) GBA->CGB stall and a real GBA's power-on-to-CGB-boot delay is not measured, so use the menu anchor until a calibration sample settles the offset.",
+    "    RTC state: days0 (0-139 days, no carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Press the ANCHOR button (or Space) at the SAME instant you flip the power on (INFERRED on a handheld GBA: the power-on-to-boot delay is not measured; prefer the menu anchor until a sample settles it).",
+    " 3. Two low beeps mark the START-hold window (0.00 s and 2.97 s after your anchor): HOLD START on the first low beep and keep holding.",
+    "    Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    " 4. A double blip at 7.53 s marks when the NEW GAME / OPTION menu box should appear (visible on frame 450 of the boot): release START as it appears.",
+    "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
+    " 5. Then 3 short beeps 0.5 s apart and one long high beep. On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 120 = A down 481..484 frames after the visible menu box (aim 482.5) = 15.613 s (932.5 frames) after your anchor.",
+    "    The beep is 100.0 ms (5.97 frames) early for the audio delay (this anchor's correction).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 12007,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 135,
+    "implied": 1104.5623779296875,
+    "newCorrection": 1104.5623779296875,
+    "candidateBins": [
+     135
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 12007 ($2EE7): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 135 (A down 541..544 frames after the visible menu), aimed 120: 60.0 frames late (1004.6 ms; state days0).",
+     "  This attempt implies a correction of 1104.6 ms (used 100.0 ms).",
+     "  Correction updated to 1104.6 ms (1 sample, poweron anchor).",
+     "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gba/poweron": {
+     "samples": [
+      {
+       "tid": 12007,
+       "lid": null,
+       "aimed_bin": 120,
+       "hit_bin": 135,
+       "aimed": 486.5,
+       "hit": 546.5,
+       "correction_used_ms": 100,
+       "implied_ms": 1104.5623779296875,
+       "state": "days0",
+       "methodology": "gold/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "gbc",
+    "state": "days200",
+    "anchor": "menu",
+    "bin": 392,
+    "correctionMs": 250,
+    "beeps": 2,
+    "spacingS": 1,
+    "deltaBins": 16
+   },
+   "methodologyId": "gold/gbc/hold-start-v1",
+   "reachable": false,
+   "outcomeState": "days200",
+   "binInfo": {
+    "tid": 44310,
+    "lid": 18989,
+    "sid": null,
+    "offsets": [
+     1573,
+     1576
+    ],
+    "visible": [
+     1569,
+     1572
+    ],
+    "aim": 1574.5,
+    "aimV": 1570.5,
+    "aimS": 26.29442024230957,
+    "afterPowerOnS": 33.82863807678223
+   },
+   "describeBin": "bin 392 (A down 1569..1572 frames after the visible menu box, aim 1570.5 = 26.294 s (1570.5 frames)) -> TID 44310 ($AD16), Lucky ID 18989 ($4A2D)   [RTC state days200: first boot only]   methodology gold/gbc/hold-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 26.04442024230957,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     24.04442024230957,
+     25.04442024230957
+    ],
+    "duration": 26.19442024230957,
+    "cues": [
+     {
+      "t": 24.04442024230957,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 25.04442024230957,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 26.04442024230957,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 392,
+    "aimOffset": 1574.5,
+    "aimV": 1570.5,
+    "aWindow": [
+     26.269306182861328,
+     26.33627700805664
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/gbc/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/gbc/hold-start-v1   RTC state: days200",
+    "  count-in beeps      24.044, 25.044",
+    "  A cue (long beep)   26.044 s   = aim 1570.5 frames after the visible menu (26.294 s (1570.5 frames)) minus correction 250.0 ms (14.93 frames)",
+    "  A window (bin 392) 26.269 - 26.336 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on Game Boy Color, target bin 392 -> TID 44310 ($AD16), Lucky ID 18989 ($4A2D))",
+    "    Methodology: gold/gbc/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (Game Boy Color): Emulator-derived (CGB boot ROM, no GBA flag).",
+    "    RTC state: days200 (140-255 days, no carry; first boot only). This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512.",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Power on. Hold START before switching the console on (or at any rate before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears.",
+    "    Hold window: START down between 0.00 s and 5.94 s after the boot starts (frames 0-355); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 450, 7.53 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 2 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 392 = A down 1569..1572 frames after the visible menu box (aim 1570.5 = 26.294 s (1570.5 frames)).",
+    "    The beep is 250.0 ms (14.93 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 61242,
+   "outcome": {
+    "added": false,
+    "refused": "outlier",
+    "hitBin": 408,
+    "implied": 1321.533203125,
+    "newCorrection": null,
+    "candidateBins": [
+     408
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 61242 ($EF3A): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 408 (A down 1633..1636 frames after the visible menu), aimed 392: 64.0 frames late (1071.5 ms; state days200).",
+     "  This attempt implies a correction of 1321.5 ms (used 250.0 ms).",
+     "  That is more than 60 frames (15 bins, 1.0 s) from the aim: NOT added to the calibration (menu anchor).",
+     "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
+     "  of a different attempt. If it really was this attempt, tick 'force' and record again."
+    ]
+   },
+   "store": {}
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "dmg",
+    "methodology": "gold/dmg/hold-start-v1",
+    "state": "days0",
+    "anchor": "poweron",
+    "bin": 45,
+    "correctionMs": 100,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": -16
+   },
+   "methodologyId": "gold/dmg/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 6826,
+    "lid": 58381,
+    "sid": null,
+    "offsets": [
+     185,
+     188
+    ],
+    "visible": [
+     181,
+     184
+    ],
+    "aim": 186.5,
+    "aimV": 182.5,
+    "aimS": 3.055543899536133,
+    "afterPowerOnS": 13.62019157409668
+   },
+   "describeBin": "bin 45 (A down 181..184 frames after the visible menu box, aim 182.5 = 3.056 s (182.5 frames)) -> TID 6826 ($1AAA), Lucky ID 58381 ($E40D)   methodology gold/dmg/hold-start-v1",
+   "schedule": {
+    "anchor": "poweron",
+    "tA": 13.52019157409668,
+    "holdLo": 0,
+    "holdHi": 5.809719085693359,
+    "menu": 10.564647674560547,
+    "droppedCountIn": 2,
+    "countInTimes": [
+     11.52019157409668,
+     12.52019157409668
+    ],
+    "duration": 13.67019157409668,
+    "cues": [
+     {
+      "t": 0,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-start",
+      "kind": "hold"
+     },
+     {
+      "t": 2.9048595428466797,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-centre",
+      "kind": "hold"
+     },
+     {
+      "t": 10.564647674560547,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu",
+      "kind": "menu"
+     },
+     {
+      "t": 10.644647674560547,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu-2",
+      "kind": "menu"
+     },
+     {
+      "t": 11.52019157409668,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 12.52019157409668,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 13.52019157409668,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 45,
+    "aimOffset": 186.5,
+    "aimV": 182.5,
+    "aWindow": [
+     13.595077514648438,
+     13.66204833984375
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/dmg/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/dmg/hold-start-v1   RTC state: days0",
+    "  hold START window   0.000 - 5.810 s   (low beeps at the start and the middle)",
+    "  menu box visible    10.565 s   (double blip: release START)",
+    "  count-in beeps      11.520, 12.520",
+    "  A cue (long beep)   13.520 s   = aim 182.5 frames after the visible menu (3.056 s (182.5 frames)), from your anchor minus correction 100.0 ms (5.97 frames)",
+    "  A window (bin 45) 13.595 - 13.662 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on Original Game Boy (DMG), target bin 45 -> TID 6826 ($1AAA), Lucky ID 58381 ($E40D))",
+    "    Methodology: gold/dmg/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (Original Game Boy (DMG)): Emulator-derived (DMG boot ROM). Choose the hold-start or the late-start methodology by when START went down (family note).",
+    "    RTC state: days0 (0-139 days, no carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Press the ANCHOR button (or Space) at the SAME instant you flip the power on.",
+    " 3. Two low beeps mark the START-hold window (0.00 s and 2.90 s after your anchor): HOLD START on the first low beep and keep holding.",
+    "    Two protocols, two tables: 'hold-start' = START down before the boot logo ends (hold frames 0-347: hold it before switching on); 'late-start' = START first pressed while the copyright text is on screen (frames 435-536; the white gap 348-434 also belongs to this table). The 347/348 boundary is 14 frames after the boot logo vanishes (334), so 'press START when the logo disappears' lands on either side: never cue that.",
+    " 4. A double blip at 10.56 s marks when the NEW GAME / OPTION menu box should appear (visible on frame 631 of the boot): release START as it appears.",
+    "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
+    " 5. Then 2 short beeps 1.0 s apart and one long high beep. On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 45 = A down 181..184 frames after the visible menu box (aim 182.5) = 13.620 s (813.5 frames) after your anchor.",
+    "    The beep is 100.0 ms (5.97 frames) early for the audio delay (this anchor's correction).",
+    "    (2 count-in beeps left out: they would have sounded before the menu.)",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 34518,
+   "outcome": {
+    "added": false,
+    "refused": "outlier",
+    "hitBin": 29,
+    "implied": -971.533203125,
+    "newCorrection": null,
+    "candidateBins": [
+     29
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 34518 ($86D6): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 29 (A down 117..120 frames after the visible menu), aimed 45: 64.0 frames early (1071.5 ms; state days0).",
+     "  This attempt implies a correction of -971.5 ms (used 100.0 ms).",
+     "  That is more than 60 frames (15 bins, 1.0 s) from the aim: NOT added to the calibration (poweron anchor).",
+     "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
+     "  of a different attempt. If it really was this attempt, tick 'force' and record again."
+    ]
+   },
+   "store": {}
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "dmg",
+    "methodology": "gold/dmg/late-start-v1",
+    "state": "days0",
+    "anchor": "menu",
+    "bin": 300,
+    "correctionMs": 200,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 1
+   },
+   "methodologyId": "gold/dmg/late-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 13253,
+    "lid": 5944,
+    "sid": null,
+    "offsets": [
+     1205,
+     1208
+    ],
+    "visible": [
+     1201,
+     1204
+    ],
+    "aim": 1206.5,
+    "aimV": 1202.5,
+    "aimS": 20.13310432434082,
+    "afterPowerOnS": 30.697751998901367
+   },
+   "describeBin": "bin 300 (A down 1201..1204 frames after the visible menu box, aim 1202.5 = 20.133 s (1202.5 frames)) -> TID 13253 ($33C5), Lucky ID 05944 ($1738)   methodology gold/dmg/late-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 19.93310432434082,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     15.933104324340821,
+     16.93310432434082,
+     17.93310432434082,
+     18.93310432434082
+    ],
+    "duration": 20.08310432434082,
+    "cues": [
+     {
+      "t": 15.933104324340821,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 16.93310432434082,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 17.93310432434082,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 18.93310432434082,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 19.93310432434082,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 300,
+    "aimOffset": 1206.5,
+    "aimV": 1202.5,
+    "aWindow": [
+     20.107990264892578,
+     20.17496109008789
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/dmg/late-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/dmg/late-start-v1   RTC state: days0",
+    "  count-in beeps      15.933, 16.933, 17.933, 18.933",
+    "  A cue (long beep)   19.933 s   = aim 1202.5 frames after the visible menu (20.133 s (1202.5 frames)) minus correction 200.0 ms (11.95 frames)",
+    "  A window (bin 300) 20.108 - 20.175 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on Original Game Boy (DMG), target bin 300 -> TID 13253 ($33C5), Lucky ID 05944 ($1738))",
+    "    Methodology: gold/dmg/late-start-v1   (press START during the copyright text, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (Original Game Boy (DMG)): Emulator-derived (DMG boot ROM). Choose the hold-start or the late-start methodology by when START went down (family note).",
+    "    RTC state: days0 (0-139 days, no carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Power on. Two protocols, two tables: 'hold-start' = START down before the boot logo ends (hold frames 0-347: hold it before switching on); 'late-start' = START first pressed while the copyright text is on screen (frames 435-536; the white gap 348-434 also belongs to this table). The 347/348 boundary is 14 frames after the boot logo vanishes (334), so 'press START when the logo disappears' lands on either side: never cue that.",
+    "    Hold window: START down between 5.83 s and 9.12 s after the boot starts (frames 348-545); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 631, 10.56 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 300 = A down 1201..1204 frames after the visible menu box (aim 1202.5 = 20.133 s (1202.5 frames)).",
+    "    The beep is 200.0 ms (11.95 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 22504,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 301,
+    "implied": 266.9708251953125,
+    "newCorrection": 266.9708251953125,
+    "candidateBins": [
+     301
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 22504 ($57E8): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 301 (A down 1205..1208 frames after the visible menu), aimed 300: 4.0 frames late (67.0 ms; state days0).",
+     "  This attempt implies a correction of 267.0 ms (used 200.0 ms).",
+     "  Correction updated to 267.0 ms (1 sample, menu anchor).",
+     "  Methodology: gold/dmg/late-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "dmg/menu": {
+     "samples": [
+      {
+       "tid": 22504,
+       "lid": null,
+       "aimed_bin": 300,
+       "hit_bin": 301,
+       "aimed": 1206.5,
+       "hit": 1210.5,
+       "correction_used_ms": 200,
+       "implied_ms": 266.9708251953125,
+       "state": "days0",
+       "methodology": "gold/dmg/late-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "gse",
+    "state": "halt-days200",
+    "anchor": "menu",
+    "bin": 392,
+    "correctionMs": 200,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 0
+   },
+   "methodologyId": "gold/gbp/hold-start-v1",
+   "reachable": false,
+   "outcomeState": "halt-days200",
+   "binInfo": {
+    "tid": 28499,
+    "lid": 1001,
+    "sid": null,
+    "offsets": [
+     1573,
+     1576
+    ],
+    "visible": [
+     1569,
+     1572
+    ],
+    "aim": 1574.5,
+    "aimV": 1570.5,
+    "aimS": 26.29442024230957,
+    "afterPowerOnS": 33.82863807678223
+   },
+   "describeBin": "bin 392 (A down 1569..1572 frames after the visible menu box, aim 1570.5 = 26.294 s (1570.5 frames)) -> TID 28499 ($6F53), Lucky ID 01001 ($03E9)   route target (glitchless-lid-01001; the published protocol for it is a community script, not this single tap)   [RTC state halt-days200: first boot only]   methodology gold/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 26.09442024230957,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     22.09442024230957,
+     23.09442024230957,
+     24.09442024230957,
+     25.09442024230957
+    ],
+    "duration": 26.24442024230957,
+    "cues": [
+     {
+      "t": 22.09442024230957,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 23.09442024230957,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 24.09442024230957,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 25.09442024230957,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 26.09442024230957,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 392,
+    "aimOffset": 1574.5,
+    "aimV": 1570.5,
+    "aWindow": [
+     26.269306182861328,
+     26.33627700805664
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/gbp/hold-start-v1   RTC state: halt-days200",
+    "  count-in beeps      22.094, 23.094, 24.094, 25.094",
+    "  A cue (long beep)   26.094 s   = aim 1570.5 frames after the visible menu (26.294 s (1570.5 frames)) minus correction 200.0 ms (11.95 frames)",
+    "  A window (bin 392) 26.269 - 26.336 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS, target bin 392 -> TID 28499 ($6F53), Lucky ID 01001 ($03E9))",
+    "    Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GSE or gambatte-speedrun in GBP mode with the GBC BIOS): The tables were derived on this core with this boot (CGB_MODE|GBA_FLAG, cgb_boot.bin), so the numbers are exact here; GSE boots with gambatte's fresh clock (RTC day 0, running) = the primary tables' state.",
+    "    RTC state: halt-days200 (HALTED, 140-255 days, no carry; first boot only). This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512.",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    "    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.",
+    " 2. Power on (Ctrl+R hard reset on GSE). Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    "    Hold window: START down between 0.00 s and 5.94 s after the boot starts (frames 0-355); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 450, 7.53 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 392 = A down 1569..1572 frames after the visible menu box (aim 1570.5 = 26.294 s (1570.5 frames)).",
+    "    The beep is 200.0 ms (11.95 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 28499,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 392,
+    "implied": 200,
+    "newCorrection": 200,
+    "candidateBins": [
+     392
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 28499 ($6F53): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 392 exactly (aimed 392; state halt-days200).",
+     "  This attempt implies a correction of 200.0 ms (used 200.0 ms).",
+     "  Correction updated to 200.0 ms (1 sample, menu anchor).",
+     "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gse/menu": {
+     "samples": [
+      {
+       "tid": 28499,
+       "lid": null,
+       "aimed_bin": 392,
+       "hit_bin": 392,
+       "aimed": 1574.5,
+       "hit": 1574.5,
+       "correction_used_ms": 200,
+       "implied_ms": 200,
+       "state": "halt-days200",
+       "methodology": "gold/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "gbc",
+    "state": "days1000",
+    "anchor": "poweron",
+    "bin": 10,
+    "correctionMs": 100,
+    "beeps": 6,
+    "spacingS": 0.5,
+    "deltaBins": -1
+   },
+   "methodologyId": "gold/gbc/hold-start-v1",
+   "reachable": false,
+   "outcomeState": "days1000",
+   "binInfo": {
+    "tid": 41454,
+    "lid": 8376,
+    "sid": null,
+    "offsets": [
+     45,
+     48
+    ],
+    "visible": [
+     41,
+     44
+    ],
+    "aim": 46.5,
+    "aimV": 42.5,
+    "aimS": 0.7115650177001953,
+    "afterPowerOnS": 8.245782852172852
+   },
+   "describeBin": "bin 10 (A down 41..44 frames after the visible menu box, aim 42.5 = 0.712 s (42.5 frames)) -> TID 41454 ($A1EE), Lucky ID 08376 ($20B8)   [RTC state days1000: first boot only]   methodology gold/gbc/hold-start-v1",
+   "schedule": {
+    "anchor": "poweron",
+    "tA": 8.145782852172852,
+    "holdLo": 0,
+    "holdHi": 5.943660736083984,
+    "menu": 7.534217834472656,
+    "droppedCountIn": 6,
+    "countInTimes": [],
+    "duration": 8.295782852172852,
+    "cues": [
+     {
+      "t": 0,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-start",
+      "kind": "hold"
+     },
+     {
+      "t": 2.971830368041992,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-centre",
+      "kind": "hold"
+     },
+     {
+      "t": 7.534217834472656,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu",
+      "kind": "menu"
+     },
+     {
+      "t": 7.614217834472656,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu-2",
+      "kind": "menu"
+     },
+     {
+      "t": 8.145782852172852,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 10,
+    "aimOffset": 46.5,
+    "aimV": 42.5,
+    "aWindow": [
+     8.22066879272461,
+     8.287639617919922
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "gold/gbc/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: gold/gbc/hold-start-v1   RTC state: days1000",
+    "  hold START window   0.000 - 5.944 s   (low beeps at the start and the middle)",
+    "  menu box visible    7.534 s   (double blip: release START)",
+    "  A cue (long beep)   8.146 s   = aim 42.5 frames after the visible menu (0.712 s (42.5 frames)), from your anchor minus correction 100.0 ms (5.97 frames)",
+    "  A window (bin 10) 8.221 - 8.288 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Gold (English) on Game Boy Color, target bin 10 -> TID 41454 ($A1EE), Lucky ID 08376 ($20B8))",
+    "    Methodology: gold/gbc/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (Game Boy Color): Emulator-derived (CGB boot ROM, no GBA flag).",
+    "    RTC state: days1000 (420-511 days (mod 512) + carry; first boot only). This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512.",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Press the ANCHOR button (or Space) at the SAME instant you flip the power on.",
+    " 3. Two low beeps mark the START-hold window (0.00 s and 2.97 s after your anchor): HOLD START on the first low beep and keep holding.",
+    "    Hold START before switching the console on (or at any rate before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears.",
+    " 4. A double blip at 7.53 s marks when the NEW GAME / OPTION menu box should appear (visible on frame 450 of the boot): release START as it appears.",
+    "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
+    " 5. Then 0 short beeps 0.5 s apart and one long high beep. On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 10 = A down 41..44 frames after the visible menu box (aim 42.5) = 8.246 s (492.5 frames) after your anchor.",
+    "    The beep is 100.0 ms (5.97 frames) early for the audio delay (this anchor's correction).",
+    "    (6 count-in beeps left out: they would have sounded before the menu.)",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 12311,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 9,
+    "implied": 33.0291748046875,
+    "newCorrection": 33.0291748046875,
+    "candidateBins": [
+     9
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 12311 ($3017): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+     "  You hit bin 9 (A down 37..40 frames after the visible menu), aimed 10: 4.0 frames early (67.0 ms; state days1000).",
+     "  This attempt implies a correction of 33.0 ms (used 100.0 ms).",
+     "  Correction updated to 33.0 ms (1 sample, poweron anchor).",
+     "  Methodology: gold/gbc/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gbc/poweron": {
+     "samples": [
+      {
+       "tid": 12311,
+       "lid": null,
+       "aimed_bin": 10,
+       "hit_bin": 9,
+       "aimed": 46.5,
+       "hit": 42.5,
+       "correction_used_ms": 100,
+       "implied_ms": 33.0291748046875,
+       "state": "days1000",
+       "methodology": "gold/gbc/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "silver",
+    "platform": "gse",
+    "state": "halt-days260",
+    "anchor": "menu",
+    "bin": 457,
+    "correctionMs": 200,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 0
+   },
+   "methodologyId": "silver/gbp/hold-start-v1",
+   "reachable": false,
+   "outcomeState": "halt-days260",
+   "binInfo": {
+    "tid": 55785,
+    "lid": 30725,
+    "sid": null,
+    "offsets": [
+     1833,
+     1836
+    ],
+    "visible": [
+     1829,
+     1832
+    ],
+    "aim": 1834.5,
+    "aimV": 1830.5,
+    "aimS": 30.647523880004883,
+    "afterPowerOnS": 38.215227127075195
+   },
+   "describeBin": "bin 457 (A down 1829..1832 frames after the visible menu box, aim 1830.5 = 30.648 s (1830.5 frames)) -> TID 55785 ($D9E9), Lucky ID 30725 ($7805)   route target (psr-gs-old-55785; the published protocol for it is a community script, not this single tap)   [RTC state halt-days260: first boot only]   methodology silver/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 30.447523880004884,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     26.447523880004884,
+     27.447523880004884,
+     28.447523880004884,
+     29.447523880004884
+    ],
+    "duration": 30.597523880004882,
+    "cues": [
+     {
+      "t": 26.447523880004884,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 27.447523880004884,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 28.447523880004884,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 29.447523880004884,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 30.447523880004884,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 457,
+    "aimOffset": 1834.5,
+    "aimV": 1830.5,
+    "aWindow": [
+     30.62240982055664,
+     30.689380645751953
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "silver/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: silver/gbp/hold-start-v1   RTC state: halt-days260",
+    "  count-in beeps      26.448, 27.448, 28.448, 29.448",
+    "  A cue (long beep)   30.448 s   = aim 1830.5 frames after the visible menu (30.648 s (1830.5 frames)) minus correction 200.0 ms (11.95 frames)",
+    "  A window (bin 457) 30.622 - 30.689 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Silver (English) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS, target bin 457 -> TID 55785 ($D9E9), Lucky ID 30725 ($7805))",
+    "    Methodology: silver/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GSE or gambatte-speedrun in GBP mode with the GBC BIOS): The tables were derived on this core with this boot (CGB_MODE|GBA_FLAG, cgb_boot.bin), so the numbers are exact here; GSE boots with gambatte's fresh clock (RTC day 0, running) = the primary tables' state.",
+    "    RTC state: halt-days260 (HALTED, 256-279 days, no carry; first boot only). This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512.",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    "    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.",
+    " 2. Power on (Ctrl+R hard reset on GSE). Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    "    Hold window: START down between 0.00 s and 5.94 s after the boot starts (frames 0-355); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 452, 7.57 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 457 = A down 1829..1832 frames after the visible menu box (aim 1830.5 = 30.648 s (1830.5 frames)).",
+    "    The beep is 200.0 ms (11.95 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 55785,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 457,
+    "implied": 200,
+    "newCorrection": 200,
+    "candidateBins": [
+     457
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 55785 ($D9E9): route target (target set psr-gs-old-55785); the published protocol for it is a community multi-step script, not this single-tap methodology.",
+     "  You hit bin 457 exactly (aimed 457; state halt-days260).",
+     "  This attempt implies a correction of 200.0 ms (used 200.0 ms).",
+     "  Correction updated to 200.0 ms (1 sample, menu anchor).",
+     "  Methodology: silver/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gse/menu": {
+     "samples": [
+      {
+       "tid": 55785,
+       "lid": null,
+       "aimed_bin": 457,
+       "hit_bin": 457,
+       "aimed": 1834.5,
+       "hit": 1834.5,
+       "correction_used_ms": 200,
+       "implied_ms": 200,
+       "state": "halt-days260",
+       "methodology": "silver/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "silver",
+    "platform": "gbc",
+    "state": "days0",
+    "anchor": "poweron",
+    "bin": 300,
+    "correctionMs": 100,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 4
+   },
+   "methodologyId": "silver/gbc/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 30027,
+    "lid": 59781,
+    "sid": null,
+    "offsets": [
+     1205,
+     1208
+    ],
+    "visible": [
+     1201,
+     1204
+    ],
+    "aim": 1206.5,
+    "aimV": 1202.5,
+    "aimS": 20.13310432434082,
+    "afterPowerOnS": 27.700807571411133
+   },
+   "describeBin": "bin 300 (A down 1201..1204 frames after the visible menu box, aim 1202.5 = 20.133 s (1202.5 frames)) -> TID 30027 ($754B), Lucky ID 59781 ($E985)   methodology silver/gbc/hold-start-v1",
+   "schedule": {
+    "anchor": "poweron",
+    "tA": 27.60080757141113,
+    "holdLo": 0,
+    "holdHi": 5.943660736083984,
+    "menu": 7.5677032470703125,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     23.60080757141113,
+     24.60080757141113,
+     25.60080757141113,
+     26.60080757141113
+    ],
+    "duration": 27.75080757141113,
+    "cues": [
+     {
+      "t": 0,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-start",
+      "kind": "hold"
+     },
+     {
+      "t": 2.971830368041992,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-centre",
+      "kind": "hold"
+     },
+     {
+      "t": 7.5677032470703125,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu",
+      "kind": "menu"
+     },
+     {
+      "t": 7.647703247070313,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu-2",
+      "kind": "menu"
+     },
+     {
+      "t": 23.60080757141113,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 24.60080757141113,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 25.60080757141113,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 26.60080757141113,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 27.60080757141113,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 300,
+    "aimOffset": 1206.5,
+    "aimV": 1202.5,
+    "aWindow": [
+     27.67569351196289,
+     27.742664337158203
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "silver/gbc/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: silver/gbc/hold-start-v1   RTC state: days0",
+    "  hold START window   0.000 - 5.944 s   (low beeps at the start and the middle)",
+    "  menu box visible    7.568 s   (double blip: release START)",
+    "  count-in beeps      23.601, 24.601, 25.601, 26.601",
+    "  A cue (long beep)   27.601 s   = aim 1202.5 frames after the visible menu (20.133 s (1202.5 frames)), from your anchor minus correction 100.0 ms (5.97 frames)",
+    "  A window (bin 300) 27.676 - 27.743 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Silver (English) on Game Boy Color, target bin 300 -> TID 30027 ($754B), Lucky ID 59781 ($E985))",
+    "    Methodology: silver/gbc/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (Game Boy Color): Emulator-derived (CGB boot ROM, no GBA flag).",
+    "    RTC state: days0 (0-139 days, no carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Press the ANCHOR button (or Space) at the SAME instant you flip the power on.",
+    " 3. Two low beeps mark the START-hold window (0.00 s and 2.97 s after your anchor): HOLD START on the first low beep and keep holding.",
+    "    Hold START before switching the console on (or at any rate before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears.",
+    " 4. A double blip at 7.57 s marks when the NEW GAME / OPTION menu box should appear (visible on frame 452 of the boot): release START as it appears.",
+    "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
+    " 5. Then 4 short beeps 1.0 s apart and one long high beep. On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 300 = A down 1201..1204 frames after the visible menu box (aim 1202.5) = 27.701 s (1654.5 frames) after your anchor.",
+    "    The beep is 100.0 ms (5.97 frames) early for the audio delay (this anchor's correction).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 35919,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 304,
+    "implied": 367.88330078125,
+    "newCorrection": 367.88330078125,
+    "candidateBins": [
+     304
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 35919 ($8C4F): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, glitchless-lid-01001).",
+     "  You hit bin 304 (A down 1217..1220 frames after the visible menu), aimed 300: 16.0 frames late (267.9 ms; state days0).",
+     "  This attempt implies a correction of 367.9 ms (used 100.0 ms).",
+     "  Correction updated to 367.9 ms (1 sample, poweron anchor).",
+     "  Methodology: silver/gbc/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gbc/poweron": {
+     "samples": [
+      {
+       "tid": 35919,
+       "lid": null,
+       "aimed_bin": 300,
+       "hit_bin": 304,
+       "aimed": 1206.5,
+       "hit": 1222.5,
+       "correction_used_ms": 100,
+       "implied_ms": 367.88330078125,
+       "state": "days0",
+       "methodology": "silver/gbc/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "silver",
+    "platform": "dmg",
+    "methodology": "silver/dmg/late-start-v1",
+    "state": "days512",
+    "anchor": "menu",
+    "bin": 250,
+    "correctionMs": 150,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": -2
+   },
+   "methodologyId": "silver/dmg/late-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 36797,
+    "lid": 11793,
+    "sid": null,
+    "offsets": [
+     1005,
+     1008
+    ],
+    "visible": [
+     1001,
+     1004
+    ],
+    "aim": 1006.5,
+    "aimV": 1002.5,
+    "aimS": 16.784563064575195,
+    "afterPowerOnS": 27.3826961517334
+   },
+   "describeBin": "bin 250 (A down 1001..1004 frames after the visible menu box, aim 1002.5 = 16.785 s (1002.5 frames)) -> TID 36797 ($8FBD), Lucky ID 11793 ($2E11)   methodology silver/dmg/late-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 16.634563064575197,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     12.634563064575197,
+     13.634563064575197,
+     14.634563064575197,
+     15.634563064575197
+    ],
+    "duration": 16.784563064575195,
+    "cues": [
+     {
+      "t": 12.634563064575197,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 13.634563064575197,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 14.634563064575197,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 15.634563064575197,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 16.634563064575197,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 250,
+    "aimOffset": 1006.5,
+    "aimV": 1002.5,
+    "aWindow": [
+     16.759449005126953,
+     16.826419830322266
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "silver/dmg/late-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: silver/dmg/late-start-v1   RTC state: days512",
+    "  count-in beeps      12.635, 13.635, 14.635, 15.635",
+    "  A cue (long beep)   16.635 s   = aim 1002.5 frames after the visible menu (16.785 s (1002.5 frames)) minus correction 150.0 ms (8.96 frames)",
+    "  A window (bin 250) 16.759 - 16.826 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Silver (English) on Original Game Boy (DMG), target bin 250 -> TID 36797 ($8FBD), Lucky ID 11793 ($2E11))",
+    "    Methodology: silver/dmg/late-start-v1   (press START during the copyright text, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (Original Game Boy (DMG)): Emulator-derived (DMG boot ROM). Choose the hold-start or the late-start methodology by when START went down (family note).",
+    "    RTC state: days512 (0-139 days (mod 512) + carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Power on. Two protocols, two tables: 'hold-start' = START down before the boot logo ends (hold frames 0-347: hold it before switching on); 'late-start' = START first pressed while the copyright text is on screen (frames 435-536; the white gap 348-434 also belongs to this table). The 347/348 boundary is 14 frames after the boot logo vanishes (334), so 'press START when the logo disappears' lands on either side: never cue that.",
+    "    Hold window: START down between 5.83 s and 9.12 s after the boot starts (frames 348-545); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 633, 10.60 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 250 = A down 1001..1004 frames after the visible menu box (aim 1002.5 = 16.785 s (1002.5 frames)).",
+    "    The beep is 150.0 ms (8.96 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 56290,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 248,
+    "implied": 16.058349609375,
+    "newCorrection": 16.058349609375,
+    "candidateBins": [
+     248
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 56290 ($DBE2): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, glitchless-lid-01001).",
+     "  You hit bin 248 (A down 993..996 frames after the visible menu), aimed 250: 8.0 frames early (133.9 ms; state days512).",
+     "  This attempt implies a correction of 16.1 ms (used 150.0 ms).",
+     "  Correction updated to 16.1 ms (1 sample, menu anchor).",
+     "  Methodology: silver/dmg/late-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "dmg/menu": {
+     "samples": [
+      {
+       "tid": 56290,
+       "lid": null,
+       "aimed_bin": 250,
+       "hit_bin": 248,
+       "aimed": 1006.5,
+       "hit": 998.5,
+       "correction_used_ms": 150,
+       "implied_ms": 16.058349609375,
+       "state": "days512",
+       "methodology": "silver/dmg/late-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "silver",
+    "platform": "gba",
+    "state": "days450",
+    "anchor": "menu",
+    "bin": 2,
+    "correctionMs": 30,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 3
+   },
+   "methodologyId": "silver/gbp/hold-start-v1",
+   "reachable": false,
+   "outcomeState": "days450",
+   "binInfo": {
+    "tid": 20759,
+    "lid": 36069,
+    "sid": null,
+    "offsets": [
+     13,
+     16
+    ],
+    "visible": [
+     9,
+     12
+    ],
+    "aim": 14.5,
+    "aimV": 10.5,
+    "aimS": 0.1757984161376953,
+    "afterPowerOnS": 7.743501663208008
+   },
+   "describeBin": "bin 2 (A down 9..12 frames after the visible menu box, aim 10.5 = 0.176 s (10.5 frames)) -> TID 20759 ($5117), Lucky ID 36069 ($8CE5)   [RTC state days450: first boot only]   methodology silver/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 0.1457984161376953,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 4,
+    "countInTimes": [],
+    "duration": 0.2957984161376953,
+    "cues": [
+     {
+      "t": 0.1457984161376953,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 2,
+    "aimOffset": 14.5,
+    "aimV": 10.5,
+    "aWindow": [
+     0.15068435668945312,
+     0.21765518188476562
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "silver/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: silver/gbp/hold-start-v1   RTC state: days450",
+    "  A cue (long beep)   0.146 s   = aim 10.5 frames after the visible menu (0.176 s (10.5 frames)) minus correction 30.0 ms (1.79 frames)",
+    "  A window (bin 2) 0.151 - 0.218 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Silver (English) on GBA, GBA SP or GBA HD, target bin 2 -> TID 20759 ($5117), Lucky ID 36069 ($8CE5))",
+    "    Methodology: silver/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GBA, GBA SP or GBA HD): Same silicon and boot ROM as the GBP path. The power-on anchor is INFERRED: the harness's frame 0 includes gambatte's 485808-sample (13.8-frame) GBA->CGB stall and a real GBA's power-on-to-CGB-boot delay is not measured, so use the menu anchor until a calibration sample settles the offset.",
+    "    RTC state: days450 (420-511 days, no carry; first boot only). This is a FIRST-BOOT-ONLY state: the next boot of the same cartridge is days0 or days512.",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Power on. Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    "    Hold window: START down between 0.00 s and 5.94 s after the boot starts (frames 0-355); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 452, 7.57 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 2 = A down 9..12 frames after the visible menu box (aim 10.5 = 0.176 s (10.5 frames)).",
+    "    The beep is 30.0 ms (1.79 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 41881,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 5,
+    "implied": 230.9124755859375,
+    "newCorrection": 230.9124755859375,
+    "candidateBins": [
+     5
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 41881 ($A399): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, glitchless-lid-01001).",
+     "  You hit bin 5 (A down 21..24 frames after the visible menu), aimed 2: 12.0 frames late (200.9 ms; state days450).",
+     "  This attempt implies a correction of 230.9 ms (used 30.0 ms).",
+     "  Correction updated to 230.9 ms (1 sample, menu anchor).",
+     "  Methodology: silver/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gba/menu": {
+     "samples": [
+      {
+       "tid": 41881,
+       "lid": null,
+       "aimed_bin": 2,
+       "hit_bin": 5,
+       "aimed": 14.5,
+       "hit": 26.5,
+       "correction_used_ms": 30,
+       "implied_ms": 230.9124755859375,
+       "state": "days450",
+       "methodology": "silver/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "silver",
+    "platform": "gbp",
+    "state": "days0",
+    "anchor": "menu",
+    "bin": 599,
+    "correctionMs": 200,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 0
+   },
+   "methodologyId": "silver/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binError": "bin 599 is outside 0..598"
+  },
+  {
+   "input": {
+    "game": "silver",
+    "platform": "gse",
+    "state": "days0",
+    "anchor": "reset",
+    "bin": 0,
+    "correctionMs": -30,
+    "beeps": 0,
+    "spacingS": 1,
+    "deltaBins": 5
+   },
+   "methodologyId": "silver/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 3776,
+    "lid": 2509,
+    "sid": null,
+    "offsets": [
+     1,
+     8
+    ],
+    "visible": [
+     -3,
+     4
+    ],
+    "aim": 4.5,
+    "aimV": 0.5,
+    "aimS": 0.008371353149414062,
+    "afterPowerOnS": 7.576074600219727
+   },
+   "describeBin": "bin 0 (A down -3..4 frames after the visible menu box, aim 0.5 = 0.008 s (0.5 frames)) -> TID 3776 ($0EC0), Lucky ID 02509 ($09CD)   methodology silver/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "reset",
+    "tA": 9.781258134841918,
+    "holdLo": 2.175183534622193,
+    "holdHi": 8.118844270706177,
+    "menu": 9.742886781692505,
+    "droppedCountIn": 0,
+    "countInTimes": [],
+    "duration": 9.931258134841919,
+    "cues": [
+     {
+      "t": 2.175183534622193,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-start",
+      "kind": "hold"
+     },
+     {
+      "t": 5.147013902664185,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-centre",
+      "kind": "hold"
+     },
+     {
+      "t": 9.742886781692505,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu",
+      "kind": "menu"
+     },
+     {
+      "t": 9.781258134841918,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     },
+     {
+      "t": 9.822886781692505,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu-2",
+      "kind": "menu"
+     }
+    ],
+    "bin": 0,
+    "aimOffset": 4.5,
+    "aimV": 0.5,
+    "aWindow": [
+     9.69265866279602,
+     9.826600313186646
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "silver/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: silver/gbp/hold-start-v1   RTC state: days0",
+    "  hold START window   2.175 - 8.119 s   (low beeps at the start and the middle)",
+    "  menu box visible    9.743 s   (double blip: release START)",
+    "  A cue (long beep)   9.781 s   = aim 0.5 frames after the visible menu (0.008 s (0.5 frames)), from your anchor minus correction -30.0 ms (-1.79 frames)",
+    "  A window (bin 0) 9.693 - 9.827 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Silver (English) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS, target bin 0 -> TID 3776 ($0EC0), Lucky ID 02509 ($09CD))",
+    "    Methodology: silver/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GSE or gambatte-speedrun in GBP mode with the GBC BIOS): The tables were derived on this core with this boot (CGB_MODE|GBA_FLAG, cgb_boot.bin), so the numbers are exact here; GSE boots with gambatte's fresh clock (RTC day 0, running) = the primary tables' state.",
+    "    RTC state: days0 (0-139 days, no carry; recurs boot after boot)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    "    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.",
+    " 2. Press the ANCHOR button (or Space) at the SAME instant you press Ctrl+R (hard reset) (2.175 s of fade and stall are added to every time below).",
+    " 3. Two low beeps mark the START-hold window (2.18 s and 5.15 s after your anchor): HOLD START on the first low beep and keep holding.",
+    "    Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    " 4. A double blip at 9.74 s marks when the NEW GAME / OPTION menu box should appear (visible on frame 452 of the boot): release START as it appears.",
+    "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
+    " 5. Then 0 short beeps 1.0 s apart and one long high beep. On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 0 = A down -3..4 frames after the visible menu box (aim 0.5) = 9.751 s (582.4 frames) after your anchor.",
+    "    The beep is -30.0 ms (-1.79 frames) early for the audio delay (this anchor's correction).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 39062,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 5,
+    "implied": 338.33953857421875,
+    "newCorrection": 338.33953857421875,
+    "candidateBins": [
+     5
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 39062 ($9896): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, glitchless-lid-01001).",
+     "  You hit bin 5 (A down 21..24 frames after the visible menu), aimed 0: 22.0 frames late (368.3 ms; state days0).",
+     "  This attempt implies a correction of 338.3 ms (used -30.0 ms).",
+     "  Correction updated to 338.3 ms (1 sample, reset anchor).",
+     "  Methodology: silver/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gse/reset": {
+     "samples": [
+      {
+       "tid": 39062,
+       "lid": null,
+       "aimed_bin": 0,
+       "hit_bin": 5,
+       "aimed": 4.5,
+       "hit": 26.5,
+       "correction_used_ms": -30,
+       "implied_ms": 338.33953857421875,
+       "state": "days0",
+       "methodology": "silver/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "crystal",
+    "platform": "gse",
+    "state": "days0",
+    "anchor": "menu",
+    "bin": 300,
+    "correctionMs": 200,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": -5
+   },
+   "methodologyId": "crystal/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 51667,
+    "lid": 17415,
+    "sid": 57547,
+    "offsets": [
+     1206,
+     1209
+    ],
+    "visible": [
+     1202,
+     1205
+    ],
+    "aim": 1207.5,
+    "aimV": 1203.5,
+    "aimS": 20.14984703063965,
+    "afterPowerOnS": 28.956510543823242
+   },
+   "describeBin": "bin 300 (A down 1202..1205 frames after the visible menu box, aim 1203.5 = 20.150 s (1203.5 frames)) -> TID 51667 ($C9D3), Lucky ID 17415 ($4407), Secret ID 57547 ($E0CB)   methodology crystal/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 19.94984703063965,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     15.94984703063965,
+     16.94984703063965,
+     17.94984703063965,
+     18.94984703063965
+    ],
+    "duration": 20.099847030639648,
+    "cues": [
+     {
+      "t": 15.94984703063965,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 16.94984703063965,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 17.94984703063965,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 18.94984703063965,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 19.94984703063965,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 300,
+    "aimOffset": 1207.5,
+    "aimV": 1203.5,
+    "aWindow": [
+     20.124732971191406,
+     20.19170379638672
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "crystal/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: crystal/gbp/hold-start-v1   RTC state: days0",
+    "  count-in beeps      15.950, 16.950, 17.950, 18.950",
+    "  A cue (long beep)   19.950 s   = aim 1203.5 frames after the visible menu (20.150 s (1203.5 frames)) minus correction 200.0 ms (11.95 frames)",
+    "  A window (bin 300) 20.125 - 20.192 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Crystal (English) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS, target bin 300 -> TID 51667 ($C9D3), Lucky ID 17415 ($4407), Secret ID 57547 ($E0CB))",
+    "    Methodology: crystal/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GSE or gambatte-speedrun in GBP mode with the GBC BIOS): The tables were derived on this core with this boot (CGB_MODE|GBA_FLAG, cgb_boot.bin), so the numbers are exact here; GSE boots with gambatte's fresh clock (RTC day 0, running) = the primary tables' state.",
+    "    RTC state: days0 (any clock: Crystal is immune to the RTC)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    "    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.",
+    " 2. Power on (Ctrl+R hard reset on GSE). Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    "    Hold window: START down between 0.00 s and 6.81 s after the boot starts (frames 0-407); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 526, 8.81 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 300 = A down 1202..1205 frames after the visible menu box (aim 1203.5 = 20.150 s (1203.5 frames)).",
+    "    The beep is 200.0 ms (11.95 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 34484,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 295,
+    "implied": -134.8541259765625,
+    "newCorrection": -134.8541259765625,
+    "candidateBins": [
+     295
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 34484 ($86B4): not a route target (accepted by none of: glitchless-lid-01001, crystal-26fb-186f).",
+     "  You hit bin 295 (A down 1182..1185 frames after the visible menu), aimed 300: 20.0 frames early (334.9 ms; state days0).",
+     "  This attempt implies a correction of -134.9 ms (used 200.0 ms).",
+     "  Correction updated to -134.9 ms (1 sample, menu anchor).",
+     "  Methodology: crystal/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gse/menu": {
+     "samples": [
+      {
+       "tid": 34484,
+       "lid": null,
+       "aimed_bin": 300,
+       "hit_bin": 295,
+       "aimed": 1207.5,
+       "hit": 1187.5,
+       "correction_used_ms": 200,
+       "implied_ms": -134.8541259765625,
+       "state": "days0",
+       "methodology": "crystal/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "crystal",
+    "platform": "gbc",
+    "state": "days0",
+    "anchor": "poweron",
+    "bin": 598,
+    "correctionMs": 350,
+    "beeps": 5,
+    "spacingS": 2,
+    "deltaBins": -20
+   },
+   "methodologyId": "crystal/gbc/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 24577,
+    "lid": 11322,
+    "sid": 61000,
+    "offsets": [
+     2398,
+     2399
+    ],
+    "visible": [
+     2394,
+     2395
+    ],
+    "aim": 2398.5,
+    "aimV": 2394.5,
+    "aimS": 40.090410232543945,
+    "afterPowerOnS": 48.89707374572754
+   },
+   "describeBin": "bin 598 (A down 2394..2395 frames after the visible menu box, aim 2394.5 = 40.090 s (2394.5 frames)) -> TID 24577 ($6001), Lucky ID 11322 ($2C3A), Secret ID 61000 ($EE48)   methodology crystal/gbc/hold-start-v1",
+   "schedule": {
+    "anchor": "poweron",
+    "tA": 48.54707374572754,
+    "holdLo": 0,
+    "holdHi": 6.814281463623047,
+    "menu": 8.806663513183594,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     38.54707374572754,
+     40.54707374572754,
+     42.54707374572754,
+     44.54707374572754,
+     46.54707374572754
+    ],
+    "duration": 48.697073745727536,
+    "cues": [
+     {
+      "t": 0,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-start",
+      "kind": "hold"
+     },
+     {
+      "t": 3.4071407318115234,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-centre",
+      "kind": "hold"
+     },
+     {
+      "t": 8.806663513183594,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu",
+      "kind": "menu"
+     },
+     {
+      "t": 8.886663513183594,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu-2",
+      "kind": "menu"
+     },
+     {
+      "t": 38.54707374572754,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-5",
+      "kind": "count"
+     },
+     {
+      "t": 40.54707374572754,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-4",
+      "kind": "count"
+     },
+     {
+      "t": 42.54707374572754,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-3",
+      "kind": "count"
+     },
+     {
+      "t": 44.54707374572754,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-2",
+      "kind": "count"
+     },
+     {
+      "t": 46.54707374572754,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 48.54707374572754,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 598,
+    "aimOffset": 2398.5,
+    "aimV": 2394.5,
+    "aWindow": [
+     48.888702392578125,
+     48.92218780517578
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "crystal/gbc/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: crystal/gbc/hold-start-v1   RTC state: days0",
+    "  hold START window   0.000 - 6.814 s   (low beeps at the start and the middle)",
+    "  menu box visible    8.807 s   (double blip: release START)",
+    "  count-in beeps      38.547, 40.547, 42.547, 44.547, 46.547",
+    "  A cue (long beep)   48.547 s   = aim 2394.5 frames after the visible menu (40.090 s (2394.5 frames)), from your anchor minus correction 350.0 ms (20.90 frames)",
+    "  A window (bin 598) 48.889 - 48.922 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Crystal (English) on Game Boy Color, target bin 598 -> TID 24577 ($6001), Lucky ID 11322 ($2C3A), Secret ID 61000 ($EE48))",
+    "    Methodology: crystal/gbc/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (Game Boy Color): Emulator-derived (CGB boot ROM, no GBA flag).",
+    "    RTC state: days0 (any clock: Crystal is immune to the RTC)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Press the ANCHOR button (or Space) at the SAME instant you flip the power on.",
+    " 3. Two low beeps mark the START-hold window (0.00 s and 3.41 s after your anchor): HOLD START on the first low beep and keep holding.",
+    "    Hold START before switching the console on (or at any rate before the copyright text ends) and keep it held until the NEW GAME / OPTION menu box appears.",
+    " 4. A double blip at 8.81 s marks when the NEW GAME / OPTION menu box should appear (visible on frame 526 of the boot): release START as it appears.",
+    "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
+    " 5. Then 5 short beeps 2.0 s apart and one long high beep. On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 598 = A down 2394..2395 frames after the visible menu box (aim 2394.5) = 48.897 s (2920.5 frames) after your anchor.",
+    "    The beep is 350.0 ms (20.90 frames) early for the audio delay (this anchor's correction).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 3280,
+   "outcome": {
+    "added": false,
+    "refused": "outlier",
+    "hitBin": 578,
+    "implied": -972.6737976074219,
+    "newCorrection": null,
+    "candidateBins": [
+     578
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 3280 ($0CD0): not a route target (accepted by none of: glitchless-lid-01001, crystal-26fb-186f).",
+     "  You hit bin 578 (A down 2314..2317 frames after the visible menu), aimed 598: 79.0 frames early (1322.7 ms; state days0).",
+     "  This attempt implies a correction of -972.7 ms (used 350.0 ms).",
+     "  That is more than 60 frames (15 bins, 1.0 s) from the aim: NOT added to the calibration (poweron anchor).",
+     "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
+     "  of a different attempt. If it really was this attempt, tick 'force' and record again."
+    ]
+   },
+   "store": {}
+  },
+  {
+   "input": {
+    "game": "crystal",
+    "platform": "gbp",
+    "state": "days0",
+    "anchor": "menu",
+    "bin": 1,
+    "correctionMs": 50,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 0
+   },
+   "methodologyId": "crystal/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 247,
+    "lid": 58386,
+    "sid": 12864,
+    "offsets": [
+     10,
+     13
+    ],
+    "visible": [
+     6,
+     9
+    ],
+    "aim": 11.5,
+    "aimV": 7.5,
+    "aimS": 0.12557029724121094,
+    "afterPowerOnS": 8.932233810424805
+   },
+   "describeBin": "bin 1 (A down 6..9 frames after the visible menu box, aim 7.5 = 0.126 s (7.5 frames)) -> TID 247 ($00F7), Lucky ID 58386 ($E412), Secret ID 12864 ($3240)   methodology crystal/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "menu",
+    "tA": 0.07557029724121093,
+    "holdLo": null,
+    "holdHi": null,
+    "menu": null,
+    "droppedCountIn": 4,
+    "countInTimes": [],
+    "duration": 0.22557029724121092,
+    "cues": [
+     {
+      "t": 0.07557029724121093,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 1,
+    "aimOffset": 11.5,
+    "aimV": 7.5,
+    "aWindow": [
+     0.10045623779296875,
+     0.16742706298828125
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "crystal/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: crystal/gbp/hold-start-v1   RTC state: days0",
+    "  A cue (long beep)   0.076 s   = aim 7.5 frames after the visible menu (0.126 s (7.5 frames)) minus correction 50.0 ms (2.99 frames)",
+    "  A window (bin 1) 0.100 - 0.167 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Crystal (English) on GameCube Game Boy Player, target bin 1 -> TID 247 ($00F7), Lucky ID 58386 ($E412), Secret ID 12864 ($3240))",
+    "    Methodology: crystal/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GameCube Game Boy Player): Same boot as the derivation (CGB boot ROM + GBA flag). No Gen 2 hardware sample exists; the community's Gold/Silver script manips are done on this console, which is consistent with, but not a test of, these tables.",
+    "    RTC state: days0 (any clock: Crystal is immune to the RTC)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    " 2. Power on. Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    "    Hold window: START down between 0.00 s and 6.81 s after the boot starts (frames 0-407); anywhere inside it gives the same menu frame.",
+    " 3. Keep START held until the NEW GAME / OPTION menu box appears (visible on frame 526, 8.81 s after the boot starts).",
+    "    The INSTANT you see the box, press the ANCHOR button (or Space) and release START.",
+    " 4. You will hear 4 short beeps 1.0 s apart, then one long high beep (the screen flashes with each).",
+    "    On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 1 = A down 6..9 frames after the visible menu box (aim 7.5 = 0.126 s (7.5 frames)).",
+    "    The beep is 50.0 ms (2.99 frames) early to cover your reaction to the menu plus the audio delay (the correction; calibration tunes it).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 247,
+   "outcome": {
+    "added": true,
+    "refused": null,
+    "hitBin": 1,
+    "implied": 50,
+    "newCorrection": 50,
+    "candidateBins": [
+     1
+    ],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 247 ($00F7): not a route target (accepted by none of: glitchless-lid-01001, crystal-26fb-186f).",
+     "  You hit bin 1 exactly (aimed 1; state days0).",
+     "  This attempt implies a correction of 50.0 ms (used 50.0 ms).",
+     "  Correction updated to 50.0 ms (1 sample, menu anchor).",
+     "  Methodology: crystal/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+     "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+    ]
+   },
+   "store": {
+    "gbp/menu": {
+     "samples": [
+      {
+       "tid": 247,
+       "lid": null,
+       "aimed_bin": 1,
+       "hit_bin": 1,
+       "aimed": 11.5,
+       "hit": 11.5,
+       "correction_used_ms": 50,
+       "implied_ms": 50,
+       "state": "days0",
+       "methodology": "crystal/gbp/hold-start-v1",
+       "attempt": "a1",
+       "player": "winforms",
+       "when": "2026-09-03 00:00:00",
+       "mode": "run"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "input": {
+    "game": "crystal",
+    "platform": "gse",
+    "state": "days0",
+    "anchor": "reset",
+    "bin": 400,
+    "correctionMs": 100,
+    "beeps": 1,
+    "spacingS": 3,
+    "deltaBins": 400
+   },
+   "methodologyId": "crystal/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 12041,
+    "lid": 4973,
+    "sid": 3269,
+    "offsets": [
+     1606,
+     1609
+    ],
+    "visible": [
+     1602,
+     1605
+    ],
+    "aim": 1607.5,
+    "aimV": 1603.5,
+    "aimS": 26.8469295501709,
+    "afterPowerOnS": 35.65359306335449
+   },
+   "describeBin": "bin 400 (A down 1602..1605 frames after the visible menu box, aim 1603.5 = 26.847 s (1603.5 frames)) -> TID 12041 ($2F09), Lucky ID 04973 ($136D), Secret ID 3269 ($0CC5)   methodology crystal/gbp/hold-start-v1",
+   "schedule": {
+    "anchor": "reset",
+    "tA": 37.72877659797668,
+    "holdLo": 2.175183534622193,
+    "holdHi": 8.98946499824524,
+    "menu": 10.981847047805786,
+    "droppedCountIn": 0,
+    "countInTimes": [
+     34.72877659797668
+    ],
+    "duration": 37.87877659797668,
+    "cues": [
+     {
+      "t": 2.175183534622193,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-start",
+      "kind": "hold"
+     },
+     {
+      "t": 5.582324266433716,
+      "freq": 660,
+      "ms": 80,
+      "label": "hold-centre",
+      "kind": "hold"
+     },
+     {
+      "t": 10.981847047805786,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu",
+      "kind": "menu"
+     },
+     {
+      "t": 11.061847047805786,
+      "freq": 990,
+      "ms": 40,
+      "label": "menu-2",
+      "kind": "menu"
+     },
+     {
+      "t": 34.72877659797668,
+      "freq": 880,
+      "ms": 60,
+      "label": "count-1",
+      "kind": "count"
+     },
+     {
+      "t": 37.72877659797668,
+      "freq": 1320,
+      "ms": 150,
+      "label": "A",
+      "kind": "A"
+     }
+    ],
+    "bin": 400,
+    "aimOffset": 1607.5,
+    "aimV": 1603.5,
+    "aWindow": [
+     37.80366253852844,
+     37.870633363723755
+    ],
+    "tapMs": [
+     66.9708251953125,
+     133.941650390625
+    ],
+    "rollSettleS": 0.35,
+    "methodology": "crystal/gbp/hold-start-v1"
+   },
+   "scheduleLines": [
+    "SCHEDULE (seconds after your anchor):",
+    "  Methodology: crystal/gbp/hold-start-v1   RTC state: days0",
+    "  hold START window   2.175 - 8.989 s   (low beeps at the start and the middle)",
+    "  menu box visible    10.982 s   (double blip: release START)",
+    "  count-in beeps      34.729",
+    "  A cue (long beep)   37.729 s   = aim 1603.5 frames after the visible menu (26.847 s (1603.5 frames)), from your anchor minus correction 100.0 ms (5.97 frames)",
+    "  A window (bin 400) 37.804 - 37.871 s   (A down inside it, before the correction)",
+    "  tap 67-134 ms, then nothing for 0.35 s"
+   ],
+   "protocolLines": [
+    "PROTOCOL  (Pokemon Crystal (English) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS, target bin 400 -> TID 12041 ($2F09), Lucky ID 04973 ($136D), Secret ID 3269 ($0CC5))",
+    "    Methodology: crystal/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+    "    status: emulator-derived, community-script cross-validated on GBP, no hardware sample",
+    "    Predictions are valid only under this methodology. The steps below ARE the methodology: any other input pattern",
+    "    (a longer tap, START still down at the roll, a second press, a CONTINUE menu, a community script) gives",
+    "    a different, deterministic result that this table does not cover.",
+    "    NOTE: No hardware sample exists for any Gen 2 configuration: every table is emulator-derived (pokemon-speedrunning/gambatte-core with the real boot ROMs, community-script cross-validated on GBP). On a console the first attempts are a transfer test; on GSE / gambatte-speedrun in GBP mode the numbers are exact.",
+    "    NOTE (GSE or gambatte-speedrun in GBP mode with the GBC BIOS): The tables were derived on this core with this boot (CGB_MODE|GBA_FLAG, cgb_boot.bin), so the numbers are exact here; GSE boots with gambatte's fresh clock (RTC day 0, running) = the primary tables' state.",
+    "    RTC state: days0 (any clock: Crystal is immune to the RTC)",
+    "",
+    " 1. Clear the save data: on the title screen hold UP + B + SELECT, confirm, then power fully OFF. The menu must",
+    "    show NEW GAME with no CONTINUE (a CONTINUE menu makes the attempt invalid), and the Lucky ID column applies",
+    "    only to the FIRST New Game after the clear.",
+    "    On GSE: keep a ROM copy with no .sav beside it, or NEW GAME silently becomes CONTINUE.",
+    " 2. Press the ANCHOR button (or Space) at the SAME instant you press Ctrl+R (hard reset) (2.175 s of fade and stall are added to every time below).",
+    " 3. Two low beeps mark the START-hold window (2.18 s and 5.58 s after your anchor): HOLD START on the first low beep and keep holding.",
+    "    Hold START before the copyright text ends (frames 243-347 after power-on, 4.07-5.81 s) and keep it held until the NEW GAME / OPTION menu box appears; any START-down frame 0-355 (Crystal 0-407) opens the menu on the same frame.",
+    " 4. A double blip at 10.98 s marks when the NEW GAME / OPTION menu box should appear (visible on frame 526 of the boot): release START as it appears.",
+    "    If the box appears far from the blip, START was held outside the window: the attempt is no good, reset and try again.",
+    " 5. Then 1 short beeps 3.0 s apart and one long high beep. On the long high beep tap A ONCE for 4-8 frames (67-134 ms), then press NOTHING for 0.35 s (until the New Game roll is over).",
+    "    Target: bin 400 = A down 1602..1605 frames after the visible menu box (aim 1603.5) = 37.829 s (2259.4 frames) after your anchor.",
+    "    The beep is 100.0 ms (5.97 frames) early for the audio delay (this anchor's correction).",
+    " 6. Afterwards type the Trainer ID you got below (the Trainer Card, or a Pokemon's status screen IDNo) and, once you have seen it, the Lucky ID (the Radio Tower lottery screen; first New Game after the clear only).",
+    "    Each answer sharpens the correction; a typed Lucky ID also settles which bin and state you hit."
+   ],
+   "typedTid": 0,
+   "outcome": {
+    "added": false,
+    "refused": null,
+    "hitBin": null,
+    "implied": null,
+    "newCorrection": null,
+    "candidateBins": [],
+    "elsewhere": [],
+    "lines": [
+     "You got TID 0 ($0000): not a route target (accepted by none of: glitchless-lid-01001, crystal-26fb-186f).",
+     "  Those IDs are in no GSE or gambatte-speedrun in GBP mode with the GBC BIOS table in scope (the one Crystal table), so nothing can be learned from this attempt.",
+     "  Usual causes: START held outside the window, the save was not cleared (CONTINUE menu), a tap longer than 8 frames",
+     "  or START still down at the roll, another console family, or the press was later than bin 598.",
+     "  Correction unchanged."
+    ]
+   },
+   "store": {}
+  },
+  {
+   "input": {
+    "game": "gold",
+    "platform": "gse",
+    "state": "days0",
+    "anchor": "menu",
+    "bin": 0,
+    "correctionMs": 200,
+    "beeps": 4,
+    "spacingS": 1,
+    "deltaBins": 0
+   },
+   "methodologyId": "gold/gbp/hold-start-v1",
+   "reachable": true,
+   "outcomeState": null,
+   "binInfo": {
+    "tid": 51711,
+    "lid": 61092,
+    "sid": null,
+    "offsets": [
+     1,
+     8
+    ],
+    "visible": [
+     -3,
+     4
+    ],
+    "aim": 4.5,
+    "aimV": 0.5,
+    "aimS": 0.008371353149414062,
+    "afterPowerOnS": 7.54258918762207
+   },
+   "describeBin": "bin 0 (A down -3..4 frames after the visible menu box, aim 0.5 = 0.008 s (0.5 frames)) -> TID 51711 ($C9FF), Lucky ID 61092 ($EEA4)   methodology gold/gbp/hold-start-v1",
+   "scheduleError": "the A cue would be due before the anchor (bin 0, correction 200 ms)"
+  }
+ ],
+ "guards": {
+  "first": {
+   "added": true,
+   "refused": null,
+   "hitBin": 302,
+   "implied": 333.941650390625,
+   "newCorrection": 333.941650390625,
+   "candidateBins": [
+    302
+   ],
+   "elsewhere": [],
+   "lines": [
+    "You got TID 4652 ($122C): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+    "  You hit bin 302 (A down 1209..1212 frames after the visible menu), aimed 300: 8.0 frames late (133.9 ms; state days0).",
+    "  This attempt implies a correction of 333.9 ms (used 200.0 ms).",
+    "  Correction updated to 333.9 ms (1 sample, menu anchor).",
+    "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+    "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+   ]
+  },
+  "duplicate": {
+   "added": false,
+   "refused": "duplicate",
+   "hitBin": 302,
+   "implied": 333.941650390625,
+   "newCorrection": null,
+   "candidateBins": [
+    302
+   ],
+   "elsewhere": [],
+   "lines": [
+    "You got TID 4652 ($122C): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+    "  You hit bin 302 (A down 1209..1212 frames after the visible menu), aimed 300: 8.0 frames late (133.9 ms; state days0).",
+    "  This attempt implies a correction of 333.9 ms (used 200.0 ms).",
+    "  Looks like the same attempt entered twice (same Trainer ID and the same aim): not added (menu anchor).",
+    "  Tick 'force' if it really was a new attempt."
+   ]
+  },
+  "forced": {
+   "added": true,
+   "refused": null,
+   "hitBin": 302,
+   "implied": 333.941650390625,
+   "newCorrection": 333.941650390625,
+   "candidateBins": [
+    302
+   ],
+   "elsewhere": [],
+   "lines": [
+    "You got TID 4652 ($122C): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+    "  You hit bin 302 (A down 1209..1212 frames after the visible menu), aimed 300: 8.0 frames late (133.9 ms; state days0).",
+    "  This attempt implies a correction of 333.9 ms (used 200.0 ms).",
+    "  Correction updated to 333.9 ms (2 samples, menu anchor).",
+    "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+    "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+   ]
+  },
+  "edge": {
+   "added": true,
+   "refused": null,
+   "hitBin": 315,
+   "implied": 1204.5623779296875,
+   "newCorrection": 624.1485595703125,
+   "candidateBins": [
+    315
+   ],
+   "elsewhere": [],
+   "lines": [
+    "You got TID 60904 ($EDE8): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+    "  You hit bin 315 (A down 1261..1264 frames after the visible menu), aimed 300: 60.0 frames late (1004.6 ms; state days0).",
+    "  This attempt implies a correction of 1204.6 ms (used 200.0 ms).",
+    "  Correction updated to 624.1 ms (3 samples, menu anchor).",
+    "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+    "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+   ]
+  },
+  "outlier": {
+   "added": false,
+   "refused": "outlier",
+   "hitBin": 316,
+   "implied": 1271.533203125,
+   "newCorrection": null,
+   "candidateBins": [
+    316
+   ],
+   "elsewhere": [],
+   "lines": [
+    "You got TID 13798 ($35E6): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+    "  You hit bin 316 (A down 1265..1268 frames after the visible menu), aimed 300: 64.0 frames late (1071.5 ms; state days0).",
+    "  This attempt implies a correction of 1271.5 ms (used 200.0 ms).",
+    "  That is more than 60 frames (15 bins, 1.0 s) from the aim: NOT added to the calibration (menu anchor).",
+    "  Usual causes: START held outside the window (the table does not apply to that attempt), a mistyped ID, or the ID",
+    "  of a different attempt. If it really was this attempt, tick 'force' and record again."
+   ]
+  },
+  "outlierForced": {
+   "added": true,
+   "refused": null,
+   "hitBin": 316,
+   "implied": 1271.533203125,
+   "newCorrection": 785.9947204589844,
+   "candidateBins": [
+    316
+   ],
+   "elsewhere": [],
+   "lines": [
+    "You got TID 13798 ($35E6): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+    "  You hit bin 316 (A down 1265..1268 frames after the visible menu), aimed 300: 64.0 frames late (1071.5 ms; state days0).",
+    "  This attempt implies a correction of 1271.5 ms (used 200.0 ms).",
+    "  Correction updated to 786.0 ms (4 samples, menu anchor).",
+    "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+    "  Mode: RUN (recorded with the sample; only samples made in this mode are averaged, from this mode's own store)."
+   ]
+  },
+  "practiceIntoSameStore": {
+   "added": true,
+   "refused": null,
+   "hitBin": 310,
+   "implied": 869.708251953125,
+   "newCorrection": 869.708251953125,
+   "candidateBins": [
+    310
+   ],
+   "elsewhere": [],
+   "lines": [
+    "You got TID 21790 ($551E): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001).",
+    "  You hit bin 310 (A down 1241..1244 frames after the visible menu), aimed 300: 40.0 frames late (669.7 ms; state days0).",
+    "  This attempt implies a correction of 869.7 ms (used 200.0 ms).",
+    "  Correction updated to 869.7 ms (1 sample, menu anchor).",
+    "  Methodology: gold/gbp/hold-start-v1 (recorded with the sample; only samples under it are averaged).",
+    "  Mode: PRACTICE / HUNT (recorded with the sample; only samples made in this mode are averaged, from this mode's own store).",
+    "  NOTE: 4 stored samples for gse/menu ignored: recorded in RUN mode, not PRACTICE / HUNT. Samples are never mixed across modes: a practice-derived correction is never in force in a run."
+   ]
+  },
+  "store": {
+   "gse/menu": {
+    "samples": [
+     {
+      "tid": 4652,
+      "lid": null,
+      "aimed_bin": 300,
+      "hit_bin": 302,
+      "aimed": 1206.5,
+      "hit": 1214.5,
+      "correction_used_ms": 200,
+      "implied_ms": 333.941650390625,
+      "state": "days0",
+      "methodology": "gold/gbp/hold-start-v1",
+      "attempt": "a1",
+      "player": "winforms",
+      "when": "2026-09-03 00:00:00",
+      "mode": "run"
+     },
+     {
+      "tid": 4652,
+      "lid": null,
+      "aimed_bin": 300,
+      "hit_bin": 302,
+      "aimed": 1206.5,
+      "hit": 1214.5,
+      "correction_used_ms": 200,
+      "implied_ms": 333.941650390625,
+      "state": "days0",
+      "methodology": "gold/gbp/hold-start-v1",
+      "attempt": "a1",
+      "player": "winforms",
+      "when": "2026-09-03 00:00:00",
+      "mode": "run"
+     },
+     {
+      "tid": 60904,
+      "lid": null,
+      "aimed_bin": 300,
+      "hit_bin": 315,
+      "aimed": 1206.5,
+      "hit": 1266.5,
+      "correction_used_ms": 200,
+      "implied_ms": 1204.5623779296875,
+      "state": "days0",
+      "methodology": "gold/gbp/hold-start-v1",
+      "attempt": "a2",
+      "player": "winforms",
+      "when": "2026-09-03 00:00:00",
+      "mode": "run"
+     },
+     {
+      "tid": 13798,
+      "lid": null,
+      "aimed_bin": 300,
+      "hit_bin": 316,
+      "aimed": 1206.5,
+      "hit": 1270.5,
+      "correction_used_ms": 200,
+      "implied_ms": 1271.533203125,
+      "state": "days0",
+      "methodology": "gold/gbp/hold-start-v1",
+      "attempt": "a3",
+      "player": "winforms",
+      "when": "2026-09-03 00:00:00",
+      "mode": "run"
+     },
+     {
+      "tid": 21790,
+      "lid": null,
+      "aimed_bin": 300,
+      "hit_bin": 310,
+      "aimed": 1206.5,
+      "hit": 1246.5,
+      "correction_used_ms": 200,
+      "implied_ms": 869.708251953125,
+      "state": "days0",
+      "methodology": "gold/gbp/hold-start-v1",
+      "attempt": "p1",
+      "player": "winforms",
+      "when": "2026-09-03 00:00:00",
+      "mode": "practice"
+     }
+    ]
+   }
+  },
+  "runSamples": 4,
+  "practiceSamples": 1,
+  "runCorrection": 785.9947204589844,
+  "practiceCorrection": 869.708251953125,
+  "runIgnoredLines": [
+   "NOTE: 1 stored sample for gse/menu ignored: recorded in PRACTICE / HUNT mode, not RUN. Samples are never mixed across modes: a practice-derived correction is never in force in a run."
+  ],
+  "practiceIgnoredLines": [
+   "NOTE: 4 stored samples for gse/menu ignored: recorded in RUN mode, not PRACTICE / HUNT. Samples are never mixed across modes: a practice-derived correction is never in force in a run."
+  ],
+  "runStats": [
+   "GSE or gambatte-speedrun in GBP mode with the GBC BIOS / menu anchor  (methodology gold/gbp/hold-start-v1, RUN mode)",
+   "  n 4   mean 786.0 ms (the correction in force)   sd 522.7 ms (31.22 frames)   robust sd (MAD x 1.4826) 645.4 ms   range 333.9..1271.5 ms",
+   "  P(hit) about 1 % (90 % range 0-2 %, n = 4: rough, aim not yet centred) -> about 78.3 attempts per hit   (the frame-level figure: the bin is 4 frames wide, so landing inside it is easier than this)",
+   "  drift: none (too few samples (4; drift needs 6))",
+   "  recommendation [anchor]: the spread (522.7 ms) is wider than a frame: P(hit) 1 %. Run 'train' to measure the press alone: a tight press means the ENTER is the spread (use the menu anchor, or both anchors with --dual-anchor); a wide press means practice. sd 12.4 ms would give 50 %.",
+   "  2026-09-03 00:00:00  aimed bin 300  hit bin 302  used 200.0 ms  implied 333.9 ms  TID 4652 ($122C)  state days0",
+   "  2026-09-03 00:00:00  aimed bin 300  hit bin 302  used 200.0 ms  implied 333.9 ms  TID 4652 ($122C)  state days0",
+   "  2026-09-03 00:00:00  aimed bin 300  hit bin 315  used 200.0 ms  implied 1204.6 ms  TID 60904 ($EDE8)  state days0",
+   "  2026-09-03 00:00:00  aimed bin 300  hit bin 316  used 200.0 ms  implied 1271.5 ms  TID 13798 ($35E6)  state days0"
+  ],
+  "hitSummary": "P(hit) with your current sd: about 1 % (90 % range 0-2 %, n = 4: rough, aim not yet centred; menu anchor, sd 522.7 ms = 31.22 frames over 4 attempts) -> about 78.3 attempts per hit",
+  "droppedHitBin": 316,
+  "afterDrop": {
+   "run": 3,
+   "practice": 1
+  },
+  "afterClear": {
+   "removed": 3,
+   "kept": 1,
+   "practice": 1
+  },
+  "storeKeys": {
+   "run": "shinySolution.gen2tid.calibration",
+   "practice": "shinySolution.gen2tid.calibration.practice"
+  },
+  "elsewhere": {
+   "added": false,
+   "refused": null,
+   "hitBin": null,
+   "implied": null,
+   "newCorrection": null,
+   "candidateBins": [],
+   "elsewhere": [
+    "gold/gbp/halt-days200/392"
+   ],
+   "lines": [
+    "You got TID 28499 ($6F53) with Lucky ID 01001 ($03E9): route target (target set glitchless-lid-01001); the published protocol for it is a community multi-step script, not this single-tap methodology.",
+    "  Those IDs are in no GSE or gambatte-speedrun in GBP mode with the GBC BIOS table in scope (the two-state prior (days0, days512)), so nothing can be learned from this attempt.",
+    "  Usual causes: START held outside the window, the save was not cleared (CONTINUE menu), a tap longer than 8 frames",
+    "  or START still down at the roll, another console family, or the press was later than bin 598.",
+    "  They ARE produced on this platform in another RTC state: gold/gbp/halt-days200 bin 392 (first boot only). That is a different table (the clock, not your timing), so the correction is unchanged; pick that state above if it is this cartridge's."
+   ]
+  },
+  "invertAll": [
+   "TID 28499 ($6F53) + Lucky ID 01001 ($03E9) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS (Pokemon Gold (English)), scope: every RTC state on platform gbp: route target (target set glitchless-lid-01001); the published protocol for it is a community multi-step script, not this single-tap methodology",
+   "  Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+   "  status: emulator-derived, community-script cross-validated on GBP, no hardware sample; GSE or gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact",
+   "  Predictions are valid only under this methodology.",
+   "  gold/gbp/halt-days200 bin 392: A down 1569..1572 frames after the visible menu box (26.294 s (1570.5 frames)) -> TID 28499 ($6F53), LID 01001 ($03E9); halted clock   [first boot only]",
+   "  one candidate: the bin and the state are settled.",
+   "Ambiguity over this scope (18 distinct tables, 10782 (table, bin) entries): 9967 distinct TIDs, 769 with more than one candidate (1584 entries = 14.7 %, max 5), 2 (TID, LID) pair collisions (5B8C/F885, 8F57/D882)."
+  ],
+  "invertPrior": [
+   "TID 20322 ($4F62) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS (Pokemon Gold (English)), scope: the two-state prior (days0, days512) on platform gbp: not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001)",
+   "  Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+   "  status: emulator-derived, community-script cross-validated on GBP, no hardware sample; GSE or gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact",
+   "  Predictions are valid only under this methodology.",
+   "  gold/gbp/days0 bin 300: A down 1201..1204 frames after the visible menu box (20.133 s (1202.5 frames)) -> TID 20322 ($4F62), LID 61052 ($EE7C); running clock",
+   "  one candidate: the bin and the state are settled.",
+   "Ambiguity over this scope (2 distinct tables, 1198 (table, bin) entries): 1184 distinct TIDs, 14 with more than one candidate (28 entries = 2.3 %, max 2), 0 (TID, LID) pair collisions."
+  ],
+  "verifyConsistent": [
+   "TID 20322 ($4F62) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS (Pokemon Gold (English)): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001)",
+   "  Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+   "  status: emulator-derived, community-script cross-validated on GBP, no hardware sample; GSE or gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact",
+   "  Predictions are valid only under this methodology.",
+   "  Valid only if:",
+   "    - Pokemon Gold (English) booted on GBA silicon booted with the CGB boot ROM and the GBA flag: GameCube Game Boy Player, GBA / GBA SP / GBA HD, GSE or gambatte-speedrun in GBP mode with the GBC BIOS (cgb_boot.bin 2304 B sha1 1293d68bf9643bc4f36954c1e80e38f39864528d, CGB_MODE|GBA_FLAG|READONLY_SAV).",
+   "    - The save is cleared (Up+B+Select on the title: EmptyAllSRAMBanks): the menu shows NEW GAME with no CONTINUE; for the Lucky ID column this must be the FIRST New Game after the clear (a later New Game returns the earlier Lucky ID unchanged).",
+   "    - START goes down inside START-down frames 0-355 after power-on and stays held until the NEW GAME / OPTION menu box appears; the menu detector fires on frame 446 and the box is visible on 450 whatever the START frame inside the window.",
+   "    - START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
+   "    - The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
+   "    - The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+   "    - The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
+   "    - Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover.",
+   "  measured VISIBLE menu box -> A press: 20.130 s = offset 1206.3 (20.130 s x 59.7275 fps + 4) -> bin 300; scope every RTC state of platform gbp",
+   "  the tables produce them at bin 300",
+   "  nearest bin 300 is 0 bins from the measurement (tolerance +-1 bin): CONSISTENT",
+   "  (no press-to-visible lag is known for Gen 2: no hardware sample exists; measure the press itself, from the button overlay or a hand cam)",
+   "  (this checks timing against the tables only, and only under the methodology above; it says nothing else about the run)"
+  ],
+  "verifyInconsistent": [
+   "TID 20322 ($4F62) on GSE or gambatte-speedrun in GBP mode with the GBC BIOS (Pokemon Gold (English)): not a route target (accepted by none of: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001)",
+   "  Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+   "  status: emulator-derived, community-script cross-validated on GBP, no hardware sample; GSE or gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact",
+   "  Predictions are valid only under this methodology.",
+   "  Valid only if:",
+   "    - Pokemon Gold (English) booted on GBA silicon booted with the CGB boot ROM and the GBA flag: GameCube Game Boy Player, GBA / GBA SP / GBA HD, GSE or gambatte-speedrun in GBP mode with the GBC BIOS (cgb_boot.bin 2304 B sha1 1293d68bf9643bc4f36954c1e80e38f39864528d, CGB_MODE|GBA_FLAG|READONLY_SAV).",
+   "    - The save is cleared (Up+B+Select on the title: EmptyAllSRAMBanks): the menu shows NEW GAME with no CONTINUE; for the Lucky ID column this must be the FIRST New Game after the clear (a later New Game returns the earlier Lucky ID unchanged).",
+   "    - START goes down inside START-down frames 0-355 after power-on and stays held until the NEW GAME / OPTION menu box appears; the menu detector fires on frame 446 and the box is visible on 450 whatever the START frame inside the window.",
+   "    - START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
+   "    - The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
+   "    - The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+   "    - The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
+   "    - Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover.",
+   "  measured VISIBLE menu box -> A press: 22.130 s = offset 1325.8 (22.130 s x 59.7275 fps + 4) -> bin 330; scope every RTC state of platform gbp",
+   "  the tables produce them at bin 300",
+   "  nearest bin 300 is -30 bins from the measurement (tolerance +-1 bin): INCONSISTENT",
+   "  (no press-to-visible lag is known for Gen 2: no hardware sample exists; measure the press itself, from the button overlay or a hand cam)",
+   "  (this checks timing against the tables only, and only under the methodology above; it says nothing else about the run)"
+  ],
+  "targetSetLines": [
+   "Target sets in force: psr-gs-any-09705, psr-gs-old-55785, psr-gold-nsc-d900, glitchless-lid-01001",
+   "  - PSR Gold/Silver Any% backup-collision route: 'Manip TID to 09705' ($25E9) [psr-gs-any-09705: TID $25E9 (9705)]",
+   "      protocol: community-script; route: the Trainer ID is executed as code through the Coin Case ACE collision (community; the byte mechanism is not traced here)",
+   "      provenance: EMPIRICAL: pokemon-speedrunning/speedrun-routes docs/gen-2/gold-silver/main-any/gold-silver-backup-collision-route/README.md:6-11 ('Manip TID to 09705', Gold offsets 13750/22750 pastebin ZF4QX7Ya, Silver 14100/23350 pastebin HEXruHKq). The scripts reproduce in the harness (Gold: gold_gfwait_wait112(opt)_backout3_newgame, START held in the 687-706 plateau, W = 448 -> 25E9 and all 13 published neighbours BDAA F0CA CA28 9BA1 7E10 C5FD 25E9 62EE 8A22 627E 32F2 D398 4869 for W = 424..472 step 4; Silver: silver_intro0_backout3_wait52_backout5_newgame, 707-726 plateau, W = 216 -> 25E9 and its 13 neighbours), on GBP with RTC day 0 (logs/psr_gold_reproduction.txt, psr_silver_reproduction.txt).",
+   "      note: NOT reachable by the single-press methodologies in RTC state days0 (logs/analysis_primaries.txt): those values come from the multi-step scripts (buffered backouts to the title and an OPTION in/out), which are a different input stream.",
+   "      single-press hits over every RTC state of its games: none",
+   "  - older Gold/Silver Any% route: TID 55785 ($D9E9) [psr-gs-old-55785: TID $D9E9 (55785)]",
+   "      protocol: community-script; route: the older collision route (Gold without collision: pastebin VDWfuung, linked from docs/gen-2/gold-silver/main-any/silver-no-collision-route/README.md:3)",
+   "      provenance: RNG Solution docs/ALL_GENERATIONS_FEASIBILITY.md section 3 row Gold/Silver ('older 55785'); the derivation folder's analyse.py searched every primary for D9E9 (none). The route's input sequence is not reproduced in the harness.",
+   "      note: NOT reachable by the single-press methodologies in RTC state days0; community script protocol, input sequence unknown.",
+   "      single-press hits over every RTC state of its games: silver/gbp/halt-days260 bin 457 (TID $D9E9, LID $7805, first boot only); silver/gbp/halt-days850 bin 457 (TID $D9E9, LID $7805, first boot only)",
+   "  - PSR Gold NSC: TID $D900 (55552) with LID $D3EC (54252) [psr-gold-nsc-d900: TID $D900 + LID $D3EC]",
+   "      protocol: community-script; route: gold_gfwait_backout4_wait337(setopt)_backout10_newgame: TID = 0xD900 (55552), LID = 0xD3EC (54252), Offset (wait) 43.297, offset (wait GBI) 42.720, Offset (NG) 58.32; adjacent framerules -3 32656, -2 62051, -1 65433, 0 55552, 1 14846, 2 02669",
+   "      provenance: EMPIRICAL: docs/gen-2/gold-silver/catext/nsc/README.md:3-11 (verbatim above). Not reproduced in the harness.",
+   "      note: NOT reachable by the single-press methodologies in RTC state days0; community script protocol.",
+   "      single-press hits over every RTC state of its games: none",
+   "  - Gold/Silver/Crystal Any% Glitchless LID manip: Lucky ID 01001 ($03E9) = Kenya's OT ID wins the lottery [glitchless-lid-01001: Lucky ID $03E9 (01001)]",
+   "      protocol: community-script; route: LID 01001 equals Kenya's fixed OT ID (pokegold engine/pokemon/move_mon.asm:1 'DEF RANDY_OT_ID EQU 01001'), so the Radio Tower lottery pays the Master Ball; the TID 6F49 is a by-product listed alongside; the LID must survive to the Radio Tower special (Sunday condition, lid_rules)",
+   "      provenance: EMPIRICAL: docs/gen-2/gold-silver/main-glitchless/resources/lid-frames.md TARGET row 0x6F49 (28489) / 0x03E9 (01001) with six early / six late neighbours; script gold_gfskip_backout3_wait216(opt)_backout1_newgame (hold from power-on, W = 864) reproduces the pair and its twelve neighbours in the harness (13,132-boot search, logs/psr_gold_lidframes_reproduction.txt). The Crystal glitchless route (docs/gen-2/crystal/main-glitchless/README.md:5,13) links its own 'LID Manip' video and 'Start Second 0' timer; its script is not reproduced.",
+   "      note: NOT reachable by the single-press methodologies in RTC state days0 (LID 03E9 absent from every primary); community script protocol. A single-press hit in some other table would give the LID but not the published TID.",
+   "      single-press hits over every RTC state of its games: gold/gbp/halt-days200 bin 392 (TID $6F53, LID $03E9, first boot only); gold/gbc/halt-days200 bin 392 (TID $6F53, LID $03E9, first boot only); gold/gbc/halt-days260 bin 392 (TID $6EB8, LID $03E9, first boot only); gold/gbc/halt-days850 bin 392 (TID $6EB8, LID $03E9, first boot only); silver/gbp/days200 bin 287 (TID $6F7A, LID $03E9, first boot only); silver/gbc/days260 bin 287 (TID $6F85, LID $03E9, first boot only); silver/dmg/days450 bin 477 (TID $6167, LID $03E9, first boot only); silver/dmg-latestart/days450 bin 477 (TID $6167, LID $03E9, first boot only)",
+   "The published route IDs for Pokemon Gold (English) (psr-gs-any-09705: TID $25E9 (9705); psr-gs-old-55785: TID $D9E9 (55785); psr-gold-nsc-d900: TID $D900 + LID $D3EC; glitchless-lid-01001: Lucky ID $03E9 (01001)) are NOT produced by this single-tap methodology in RTC state days0: they need their community multi-step scripts (target sets of protocol community-script), which are not tabulated here. Where a single tap gives one of them in some other RTC state, the row below says so and names the state, which is first-boot only."
+  ],
+  "reachabilityLines": [
+   "RTC state (Pokemon Gold (English)): the MBC3 clock's day counter and halt bit select the table. Only days0 and days512 recur boot after boot: after the first boot no other state remains.",
+   "  A 140-511-day bracket (days200, days260, days300, days450, days700, days780, days850, days1000) lasts ONE boot: the day counter is written back mod 140 by FixDays/SetClock on this boot, so the next boot is in 0-139.",
+   "  A halted clock (halt-days0, halt-days200, halt-days260, halt-days300, halt-days450, halt-days512, halt-days700, halt-days780, halt-days850, halt-days1000) is a cartridge whose clock was halted and has not been booted since: StartRTC, called at the end of StartClock on every boot (home/init.asm:123 -> engine/rtc/rtc.asm StartClock -> StartRTC: res B_RAMB_RTC_DH_HALT), clears the halt bit unconditionally.",
+   "  So a prediction in a bracket or halted state is first-boot only, and a typed outcome from a later boot is inverted under the two-state prior (days0, days512).",
+   "  STRUCTURAL (home/time.asm:110-113, SetClock :205-250, SaveRTC rtc.asm:76-89): the day counter is days since the battery went in (or the last write-back); FixDays writes it back mod 140, so brackets 140-511 are single-boot transients; the carry bit is written back unchanged and cleared only by SaveRTC on a save. A runner who resets repeatedly is, after the first boot, in one of two states only: days0 (the primary table) or days512 (carry, < 140 days). GSE and the community bruteforcer boot with gambatte's fresh clock (0 days, running) = days0.",
+   "  Dead battery: unmodelled: what a real MBC3's registers read after power loss (halt bit, carry, garbage day count, or nothing) is hardware behaviour the harness does not model; no bracket can be assigned a priori. If the halt bit reads set it is in the halted family; if only the carry, in the days512 family; otherwise in a day bracket; which one can only come from a typed TID (inversion)."
+  ],
+  "methodologyLines": [
+   "Methodology: gold/gbp/hold-start-v1   (hold START from power-on, release it at the menu, one 4-8-frame A tap on NEW GAME; v1, 2026-09-03)",
+   "status: emulator-derived, community-script cross-validated on GBP, no hardware sample; GSE or gambatte-speedrun in GBP mode with the GBC BIOS: emulator-exact",
+   "Predictions are valid only under this methodology.",
+   "Valid only if:",
+   "  - Pokemon Gold (English) booted on GBA silicon booted with the CGB boot ROM and the GBA flag: GameCube Game Boy Player, GBA / GBA SP / GBA HD, GSE or gambatte-speedrun in GBP mode with the GBC BIOS (cgb_boot.bin 2304 B sha1 1293d68bf9643bc4f36954c1e80e38f39864528d, CGB_MODE|GBA_FLAG|READONLY_SAV).",
+   "  - The save is cleared (Up+B+Select on the title: EmptyAllSRAMBanks): the menu shows NEW GAME with no CONTINUE; for the Lucky ID column this must be the FIRST New Game after the clear (a later New Game returns the earlier Lucky ID unchanged).",
+   "  - START goes down inside START-down frames 0-355 after power-on and stays held until the NEW GAME / OPTION menu box appears; the menu detector fires on frame 446 and the box is visible on 450 whatever the START frame inside the window.",
+   "  - START is released before the A tap; one A tap of 4-8 frames (67-134 ms) on NEW GAME is the only timed input; nothing else is pressed until the New Game roll is over (about 0.35 s after the tap).",
+   "  - The A tap's bin: offset == 0 -> dropped (NOROLL); offsets 1..8 -> bin 0; else bin = (offset - 5) // 4; bin 598 = offsets 2397-2399 (offset = frames after the detector at which A goes down).",
+   "  - The MBC3 RTC is running (halt bit clear) with a day counter of 0-139 days and no carry at the moment StartClock reads it (~1.5-2 s after power-on): RTC state days0 = this methodology's table. Other day brackets, the carry bit and a halted clock select the other tables of the same methodology (rtc_tables); a dead-battery cartridge's register state is unmodelled.",
+   "  - The day brackets 140-511 (days200/260/300/450 and, with the carry bit, days700/780/850/1000) apply to ONE boot only: FixDays writes the day counter back mod 140 through SetClock (pokegold home/time.asm:61-120, :205-250), so the next boot of the same cartridge is in days0, or days512 if the carry bit was set (written back unchanged, cleared only by SaveRTC on a save); SetClock clears the halt bit and StartRTC (the end of StartClock, run on every boot from home/init.asm:123) clears it unconditionally, so a halted cartridge is halted for its FIRST boot only, whatever its day count. A cartridge booted at least once since its battery went in is therefore in days0 or days512 (rtc.states[*].reachable_after_first_boot; the engine's two-state prior); GSE and the community bruteforcer boot with gambatte's fresh clock = days0.",
+   "  - Any other input pattern (a longer tap, START still down at the roll, a second press, the community multi-step scripts, a CONTINUE menu) gives a different deterministic result that this methodology does not cover."
+  ],
+  "stateOptions": [
+   "days0|days0: 0-139 days, no carry",
+   "days200|days200: 140-255 days, no carry   [first boot only]",
+   "days260|days260: 256-279 days, no carry   [first boot only]",
+   "days300|days300: 280-419 days, no carry   [first boot only]",
+   "days450|days450: 420-511 days, no carry   [first boot only]",
+   "days512|days512: 0-139 days (mod 512) + carry",
+   "days700|days700: 140-255 days (mod 512) + carry   [first boot only]",
+   "days780|days780: 256-279 days (mod 512) + carry   [first boot only]",
+   "days850|days850: 280-419 days (mod 512) + carry   [first boot only]",
+   "days1000|days1000: 420-511 days (mod 512) + carry   [first boot only]",
+   "halt-days0|halt-days0: HALTED, 0-139 days, no carry   [first boot only]",
+   "halt-days200|halt-days200: HALTED, 140-255 days, no carry   [first boot only]",
+   "halt-days260|halt-days260: HALTED, 256-279 days, no carry   [first boot only]",
+   "halt-days300|halt-days300: HALTED, 280-419 days, no carry   [first boot only]",
+   "halt-days450|halt-days450: HALTED, 420-511 days, no carry   [first boot only]",
+   "halt-days512|halt-days512: HALTED, 0-139 days (mod 512) + carry   [first boot only]",
+   "halt-days700|halt-days700: HALTED, 140-255 days (mod 512) + carry   [first boot only]",
+   "halt-days780|halt-days780: HALTED, 256-279 days (mod 512) + carry   [first boot only]",
+   "halt-days850|halt-days850: HALTED, 280-419 days (mod 512) + carry   [first boot only]",
+   "halt-days1000|halt-days1000: HALTED, 420-511 days (mod 512) + carry   [first boot only]"
+  ]
+ }
+}

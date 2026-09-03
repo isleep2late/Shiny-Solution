@@ -16,7 +16,7 @@ void Check<T>(string label, T actual, T expected)
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> | --generators <generators-vectors.json> [cross-out.json] | --check-timer-vectors <timer-vectors.json> | --emit-timer-parity <out.json> [count] [seed] | --gen5 <gen5-vectors.json> | --emit-gen5-random <out.json> | --mode-wall <mode-wall-fixture.json> | --gen2tid <gen2tid-vectors.json> <repo-root> | --seedtime4 <seedtime4-vectors.json> | --seedtime4-cross <inputs.json> <out.json>");
+    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> | --generators <generators-vectors.json> [cross-out.json] | --check-timer-vectors <timer-vectors.json> | --emit-timer-parity <out.json> [count] [seed] | --gen5 <gen5-vectors.json> | --emit-gen5-random <out.json> | --mode-wall <mode-wall-fixture.json> | --gen2tid <gen2tid-vectors.json> <repo-root> | --gen2tid-panel <gen2tid-panel-vectors.json> | --seedtime4 <seedtime4-vectors.json> | --seedtime4-cross <inputs.json> <out.json>");
     return 2;
 }
 
@@ -28,6 +28,16 @@ if (args[0] == "--mode-wall")
         return 2;
     }
     return ModeWallChecks.Run(args[1]);
+}
+
+if (args[0] == "--gen2tid-panel")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --gen2tid-panel <gen2tid-panel-vectors.json>");
+        return 2;
+    }
+    return Gen2TidPanelChecks.Run(args[1]);
 }
 
 if (args[0] == "--gen2tid")

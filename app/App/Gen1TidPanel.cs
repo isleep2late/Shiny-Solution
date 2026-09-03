@@ -653,77 +653,79 @@ public sealed class Gen1TidPanel : UserControl
         });
     }
 
-    // One schedule playing: the pre-rendered buffer starts at the anchor click; the UI timer
-    // announces each cue as its time passes, flashes the display and counts down to the A cue.
-    sealed class CuePlayer
+}
+
+// One schedule playing: the pre-rendered buffer starts at the anchor click; the UI timer
+// announces each cue as its time passes, flashes the display and counts down to the A cue.
+// Shared by the Gen 1 and Gen 2 TID panels (each owns one player; a schedule of either runs on it).
+sealed class CuePlayer
+{
+    Stopwatch? _watch;
+    System.Windows.Forms.Timer? _ui;
+    BeepPlayer.RenderedSchedule? _rendered;
+    Schedule? _sched;
+    Label? _display;
+    TextBox? _log;
+    Func<Cue, string>? _announce;
+    Action? _onDone;
+    int _announced;
+    double _flashUntil = -1;
+    Color _base;
+    public bool Running { get; private set; }
+    public Action<string>? Flash { get; set; }
+
+    public void Start(Schedule sched, BeepPlayer.RenderedSchedule rendered, Label display, TextBox log, Func<Cue, string> announce, Action? onDone)
     {
-        Stopwatch? _watch;
-        System.Windows.Forms.Timer? _ui;
-        BeepPlayer.RenderedSchedule? _rendered;
-        Schedule? _sched;
-        Label? _display;
-        TextBox? _log;
-        Func<Cue, string>? _announce;
-        Action? _onDone;
-        int _announced;
-        double _flashUntil = -1;
-        Color _base;
-        public bool Running { get; private set; }
-        public Action<string>? Flash { get; set; }
+        if (Running) return;
+        Running = true;
+        _sched = sched; _rendered = rendered; _display = display; _log = log; _announce = announce; _onDone = onDone; _announced = 0;
+        _base = display.BackColor;
+        log.Text = "anchor at " + DateTime.Now.ToString("HH:mm:ss") + "  [" + AppMode.Label + " mode]" + Environment.NewLine;
+        _watch = Stopwatch.StartNew();
+        rendered.Play();
+        _ui = new System.Windows.Forms.Timer { Interval = 15 };
+        _ui.Tick += (_, _) => Tick();
+        _ui.Start();
+    }
 
-        public void Start(Schedule sched, BeepPlayer.RenderedSchedule rendered, Label display, TextBox log, Func<Cue, string> announce, Action? onDone)
+    void Tick()
+    {
+        if (!Running || _watch is null || _sched is null || _display is null || _log is null) return;
+        double elapsed = _watch.Elapsed.TotalSeconds;
+        while (_announced < _sched.Cues.Count && _sched.Cues[_announced].T <= elapsed)
         {
-            if (Running) return;
-            Running = true;
-            _sched = sched; _rendered = rendered; _display = display; _log = log; _announce = announce; _onDone = onDone; _announced = 0;
-            _base = display.BackColor;
-            log.Text = "anchor at " + DateTime.Now.ToString("HH:mm:ss") + "  [" + AppMode.Label + " mode]" + Environment.NewLine;
-            _watch = Stopwatch.StartNew();
-            rendered.Play();
-            _ui = new System.Windows.Forms.Timer { Interval = 15 };
-            _ui.Tick += (_, _) => Tick();
-            _ui.Start();
+            var c = _sched.Cues[_announced++];
+            string text = _announce?.Invoke(c) ?? c.Label;
+            if (text != "") _log.AppendText($"  {Gen1Tid.PyFixed(c.T, 3)}  {text}{Environment.NewLine}");
+            bool big = c.Kind == "A" || c.Kind == "abeat";
+            _display.BackColor = big ? Color.Gold : c.Kind == "hold" ? Color.LightSkyBlue : c.Kind == "menu" ? Color.LightGreen : c.Kind is "reset" or "power" ? Color.Salmon : Color.LightGoldenrodYellow;
+            _flashUntil = elapsed + (big ? 0.22 : 0.09);
         }
+        if (_flashUntil >= 0 && elapsed > _flashUntil) { _display.BackColor = _base; _flashUntil = -1; }
+        if (_sched.TA is double tA)
+        {
+            double left = tA - elapsed;
+            _display.Text = left > 0 ? $"A in {Gen1Tid.PyFixed(left, 3)} s" : "A!";
+            _display.ForeColor = left > 0 && left < 4.5 ? Color.DarkOrange : SystemColors.ControlText;
+        }
+        else _display.Text = $"{Gen1Tid.PyFixed(elapsed, 1)} s";
+        if (elapsed > _sched.Duration + 0.3) Stop(true);
+    }
 
-        void Tick()
+    public void Stop(bool done)
+    {
+        if (!Running) return;
+        Running = false;
+        _ui?.Stop();
+        _ui = null;
+        _rendered?.Stop();
+        if (_display is not null)
         {
-            if (!Running || _watch is null || _sched is null || _display is null || _log is null) return;
-            double elapsed = _watch.Elapsed.TotalSeconds;
-            while (_announced < _sched.Cues.Count && _sched.Cues[_announced].T <= elapsed)
-            {
-                var c = _sched.Cues[_announced++];
-                string text = _announce?.Invoke(c) ?? c.Label;
-                if (text != "") _log.AppendText($"  {Gen1Tid.PyFixed(c.T, 3)}  {text}{Environment.NewLine}");
-                bool big = c.Kind == "A" || c.Kind == "abeat";
-                _display.BackColor = big ? Color.Gold : c.Kind == "hold" ? Color.LightSkyBlue : c.Kind == "menu" ? Color.LightGreen : c.Kind is "reset" or "power" ? Color.Salmon : Color.LightGoldenrodYellow;
-                _flashUntil = elapsed + (big ? 0.22 : 0.09);
-            }
-            if (_flashUntil >= 0 && elapsed > _flashUntil) { _display.BackColor = _base; _flashUntil = -1; }
-            if (_sched.TA is double tA)
-            {
-                double left = tA - elapsed;
-                _display.Text = left > 0 ? $"A in {Gen1Tid.PyFixed(left, 3)} s" : "A!";
-                _display.ForeColor = left > 0 && left < 4.5 ? Color.DarkOrange : SystemColors.ControlText;
-            }
-            else _display.Text = $"{Gen1Tid.PyFixed(elapsed, 1)} s";
-            if (elapsed > _sched.Duration + 0.3) Stop(true);
+            _display.BackColor = _base;
+            _display.ForeColor = SystemColors.ControlText;
+            _display.Text = done ? "done" : "cancelled";
         }
-
-        public void Stop(bool done)
-        {
-            if (!Running) return;
-            Running = false;
-            _ui?.Stop();
-            _ui = null;
-            _rendered?.Stop();
-            if (_display is not null)
-            {
-                _display.BackColor = _base;
-                _display.ForeColor = SystemColors.ControlText;
-                _display.Text = done ? "done" : "cancelled";
-            }
-            if (done) _onDone?.Invoke();
-            else _log?.AppendText("  stopped" + Environment.NewLine);
-        }
+        if (done) _onDone?.Invoke();
+        else _log?.AppendText("  stopped" + Environment.NewLine);
     }
 }
