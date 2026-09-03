@@ -10,13 +10,16 @@ dotnet run --project app/Tests -c Release -- tests/vectors.json
 # against the same vectors the JS suite checks (tests/gen1tid-vectors.json, emitted by RNG Solution's Python).
 dotnet run --project app/Tests -c Release --no-build -- --gen1tid tests/gen1tid-vectors.json .
 
-# Negative control: a corrupted vector must FAIL, and is shown failing.
+# Negative control: a corrupted vector (a table TID, a P(hit), and an error case renamed to another exception
+# class) must FAIL, and is shown failing.
 corrupted=$(mktemp --suffix=.json)
 python3 - tests/gen1tid-vectors.json "$corrupted" <<'PY'
 import json, sys
 v = json.load(open(sys.argv[1]))
 v["tables"][0]["samples"][3][1] += 1
 v["jitter"]["hitProbability"][9]["p"] += 1e-6
+assert v["parseTid"][6]["error"] == "ValueError", "negative control setup: parseTid[6] is not the ValueError case"
+v["parseTid"][6]["error"] = "OutlierSample"
 json.dump(v, open(sys.argv[2], "w"))
 PY
 if dotnet run --project app/Tests -c Release --no-build -- --gen1tid "$corrupted" . > "$corrupted.out" 2>&1; then
@@ -25,6 +28,6 @@ if dotnet run --project app/Tests -c Release --no-build -- --gen1tid "$corrupted
   exit 1
 else
   echo "negative control (corrupted gen1tid vectors, C#): FAILED as required ->"
-  grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /'
+  grep -E '^FAIL|failure' "$corrupted.out" | head -4 | sed 's/^/      /'
 fi
 rm -f "$corrupted" "$corrupted.out"

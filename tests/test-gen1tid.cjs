@@ -2,7 +2,8 @@
 // every function of the Gen 1 Trainer ID cue model, the reset metronome, verify, the Gen 3
 // typed-TID -> SID model and the press-jitter model. Integers and strings must match exactly;
 // floats to 1e-9 (relative above |1|); "NaN" / "Infinity" sentinels must be reproduced; a
-// case recorded as {"error": ...} must throw.
+// case recorded as {"error": ...} must throw the error class the Python's maps to (ERROR_NAMES).
+// A null "sets" in a vector means the game's own target sets (the engine has no default).
 const fs = require("fs");
 const path = require("path");
 const G = require(path.join(__dirname, "..", "core", "gen1tid.js"));
@@ -53,13 +54,19 @@ function check(label, expected, actual) {
   if (!same(expected, actual, label)) mismatch(label, expected, actual);
 }
 
-// A case with {error} must throw; one with {result} must return it.
+// Python exception -> the JS error name the engine must throw (a TypeError from a bug is not a refusal).
+const ERROR_NAMES = { ValueError: "ValueError", TargetSetError: "ValueError", KeyError: "ValueError", OutlierSample: "OutlierSample", DuplicateSample: "DuplicateSample" };
+
+// A case with {error} must throw the mapped error class; one with {result} must return it.
 function checkCase(label, c, fn) {
   checks++;
   let got, threw = null;
   try { got = fn(); } catch (e) { threw = e; }
   if ("error" in c) {
-    if (!threw) mismatch(label, { error: c.error }, got);
+    const want = ERROR_NAMES[c.error];
+    if (!want) mismatch(label, { error: c.error }, "no JS error class is mapped for this Python exception");
+    else if (!threw) mismatch(label, { error: c.error }, got);
+    else if (threw.name !== want) mismatch(label, { error: c.error, name: want }, `threw ${threw.name}: ${threw.message}`);
   } else if (threw) {
     mismatch(label, c.result, `threw ${threw.name}: ${threw.message}`);
   } else if (!same(c.result, got, label)) {
@@ -69,7 +76,7 @@ function checkCase(label, c, fn) {
 
 const tables = {};
 for (const id of Object.keys(DATA.methodologies)) tables[id] = G.tableFor(DATA, id);
-const sets = (game, keys) => (keys === null || keys === undefined ? null : G.targetSetsFor(DATA, game, keys));
+const sets = (game, keys) => G.targetSetsFor(DATA, game, keys === null || keys === undefined ? null : keys);
 
 // ---- constants -----------------------------------------------------------------
 {
@@ -137,6 +144,11 @@ for (const c of V.poweronSchedule) {
     checkCase(`schedule reset via model ${c.methodology} ${c.offset}/${c.correctionMs}`, c,
       () => G.schedule(c.anchor, c.offset, c.correctionMs, { family: timing, beeps: c.beeps, spacingS: c.spacingS, resetModel: DATA.reset_models["gbp-fade"] }));
   }
+  // With the methodology record the engine itself refuses an anchor the methodology does not list (the DMG
+  // methodologies have no reset anchor), so the reset delay can always come from the model.
+  checkCase(`schedule ${c.anchor} under methodology ${c.methodology} ${c.offset}/${c.correctionMs}/${c.beeps}/${c.spacingS}`, c,
+    () => G.schedule(c.anchor, c.offset, c.correctionMs, { family: timing, methodology: DATA.methodologies[c.methodology], beeps: c.beeps, spacingS: c.spacingS,
+      resetModel: DATA.reset_models["gbp-fade"] }));
 }
 for (const c of V.resetAnchorExtra) checkCase(`resetAnchorExtra ${c.model}`, c, () => G.resetAnchorExtraSeconds(DATA.reset_models[c.model]));
 
@@ -332,6 +344,104 @@ for (const c of V.verify) {
     check(`recommendation ${JSON.stringify(c.values)} press ${c.pressSdMs} robust ${c.robust}`, [c.code, c.text],
       G.recommendation(st, G.drift(c.values), G.FRAME_MS, c.pressSdMs, c.robust));
   }
+}
+
+// ---- API boundary (JS only: the Python and C# are typed at the CLI / compiler) --------------
+// What a form field or a careless caller can hand the engine must be refused with a ValueError,
+// never computed: 80 + "358" is "80358". Numeric strings are converted like Number().
+{
+  const red = G.targetSetsFor(DATA, "red");
+  const tab = tables["red/gba/hold-start-v1"];
+  const refuses = (label, fn) => {
+    checks++;
+    let e = null;
+    try { fn(); } catch (x) { e = x; }
+    if (!e || e.name !== "ValueError") mismatch(label, "throws ValueError", e ? `threw ${e.name}: ${e.message}` : "no throw");
+  };
+  check("numeric string offset and correction are converted", G.schedule("menu", 358, 200).tA, G.schedule("menu", "358", "200").tA);
+  check("numeric string implied correction", 233.48541259765625, G.impliedCorrection("200", "360", "358"));
+  check("numeric string sd", G.hitProbability(5), G.hitProbability("5"));
+  check("numeric string Trainer ID verdict", "RUN", G.verdict("16387", red));
+  check("numeric string sidAt", 19578, G.sidAt("45231", "0"));
+  check("no sets in force means nothing is route-valid", "no", G.verdict(0x4003, []));
+  check("Yellow has no set accepting $4027", "no", G.verdict(0x4027, G.targetSetsFor(DATA, "yellow")));
+  check("Yellow route-valid targets under its sets", [], G.routeValidTargets(tables["yellow/gba/hold-start-v1"], G.targetSetsFor(DATA, "yellow")));
+  for (const bad of ["", " ", "abc", "$4003", NaN, Infinity, -Infinity, null, undefined, true, {}, [], 358n, 358.5, -1]) {
+    refuses(`schedule offset ${typeof bad === "bigint" ? bad + "n" : JSON.stringify(bad) ?? String(bad)}`, () => G.schedule("menu", bad, 200));
+  }
+  for (const bad of ["", "abc", NaN, Infinity, null, undefined, true, 200n]) {
+    refuses(`schedule correction ${typeof bad === "bigint" ? bad + "n" : JSON.stringify(bad) ?? String(bad)}`, () => G.schedule("menu", 358, bad));
+  }
+  refuses("schedule beeps 2.5", () => G.schedule("menu", 358, 200, { beeps: 2.5 }));
+  refuses("schedule beeps 'x'", () => G.schedule("menu", 358, 200, { beeps: "x" }));
+  refuses("schedule spacing 'x'", () => G.schedule("menu", 358, 200, { spacingS: "x" }));
+  refuses("schedule spacing NaN", () => G.schedule("menu", 358, 200, { spacingS: NaN }));
+  refuses("poweron offset '358x'", () => G.schedule("poweron", "358x", 200, { family: G.timingFor(DATA, "red/gba/hold-start-v1") }));
+  refuses("poweron family missing", () => G.schedule("poweron", 358, 200, {}));
+  refuses("reset extra 'x'", () => G.schedule("reset", 358, 200, { family: G.timingFor(DATA, "red/gba/hold-start-v1"), resetExtraS: "x" }));
+  refuses("reset on a methodology without the anchor", () => G.schedule("reset", 358, 100, { family: G.timingFor(DATA, "red/dmg/hold-start-v1"),
+    methodology: DATA.methodologies["red/dmg/hold-start-v1"], resetModel: DATA.reset_models["gbp-fade"] }));
+  refuses("targetSeconds NaN", () => G.targetSeconds(NaN));
+  refuses("targetSeconds 358.5", () => G.targetSeconds(358.5));
+  refuses("verdict without sets", () => G.verdict(0x4003));
+  refuses("verdict with null sets", () => G.verdict(0x4003, null));
+  refuses("verdict with a non-array", () => G.verdict(0x4003, red[0]));
+  refuses("verdict 16387.7", () => G.verdict(16387.7, red));
+  refuses("verdict 65536", () => G.verdict(65536, red));
+  refuses("verdict -1", () => G.verdict(-1, red));
+  refuses("verdictText without sets", () => G.verdictText(0x4003));
+  refuses("setsAccepting without sets", () => G.setsAccepting(0x4003));
+  refuses("routeValidTargets without sets", () => G.routeValidTargets(tab));
+  refuses("verify without sets", () => G.verify(tab, 0x4003, 7.35));
+  refuses("verify tid 70000", () => G.verify(tab, 70000, 7.35, 3, 0, red));
+  refuses("verify seconds 'x'", () => G.verify(tab, 0x4003, "x", 3, 0, red));
+  refuses("verify seconds NaN", () => G.verify(tab, 0x4003, NaN, 3, 0, red));
+  refuses("verify negative tolerance", () => G.verify(tab, 0x4003, 7.35, -1, 0, red));
+  refuses("invert 65536", () => G.invert(tab, 65536));
+  refuses("formatTid 65536", () => G.formatTid(65536));
+  refuses("impliedCorrection 'abc'", () => G.impliedCorrection("abc", 360, 358));
+  refuses("impliedCorrection hit 360.5", () => G.impliedCorrection(200, 360.5, 358));
+  refuses("impliedCorrection hit -1", () => G.impliedCorrection(200, -1, 358));
+  refuses("makeSample tid 70000", () => G.makeSample(70000, 358, 358, 200));
+  refuses("makeSample correction NaN", () => G.makeSample(0x4003, 358, 358, NaN));
+  refuses("meanCorrection default 'x'", () => G.meanCorrection([], "x"));
+  refuses("meanCorrection default undefined", () => G.meanCorrection([]));
+  refuses("resetSchedule empty order", () => G.resetSchedule(200, [], 1));
+  refuses("resetSchedule one action", () => G.resetSchedule(200, ["RESET"], 1));
+  refuses("resetSchedule order not strings", () => G.resetSchedule(200, [1, 2], 1));
+  refuses("resetSchedule interval 'abc'", () => G.resetSchedule("abc", ["RESET", "A"], 1));
+  refuses("resetSchedule pairs 1.5", () => G.resetSchedule(200, ["RESET", "A"], 1.5));
+  refuses("resetSchedule cadence NaN", () => G.resetSchedule(200, ["RESET", "A"], 1, NaN));
+  refuses("resetInterval adjust 'x'", () => G.resetInterval(DATA.reset_models["gbp-fade"], "route", null, "x"));
+  refuses("hitProbability 'abc'", () => G.hitProbability("abc"));
+  refuses("hitProbability true", () => G.hitProbability(true));
+  refuses("hitProbability frame NaN", () => G.hitProbability(5, NaN));
+  refuses("hitProbabilityQuantised bias 'x'", () => G.hitProbabilityQuantised(5, G.FRAME_MS, "x"));
+  refuses("chi2Cdf k 2.5", () => G.chi2Cdf(1, 2.5));
+  refuses("chi2Quantile k 0", () => G.chi2Quantile(0.5, 0));
+  refuses("sdInterval n 'x'", () => G.sdInterval(20, "x"));
+  refuses("expectedAttempts 'x'", () => G.expectedAttempts("x"));
+  refuses("anchorCueTime NaN", () => G.anchorCueTime(NaN, 33, 100));
+  refuses("sidAt 65536", () => G.sidAt(65536, 0));
+  refuses("sidAt -1", () => G.sidAt(-1, 0));
+  refuses("sidAt k -1", () => G.sidAt(0x4003, -1));
+  refuses("sidAt k 1.5", () => G.sidAt(0x4003, 1.5));
+  refuses("sidCandidates kMax 'x'", () => G.sidCandidates(0x4003, 0, "x"));
+  refuses("kForSid sid 65536", () => G.kForSid(0x4003, 65536, 10));
+  refuses("tsv sid 70000", () => G.tsv(0x4003, 70000));
+  refuses("psv 2^32", () => G.psv(4294967296));
+  refuses("shinyXor pid -1", () => G.shinyXor(0x4003, 0, -1));
+  refuses("lcrngJump state 2^32", () => G.lcrngJump(4294967296, 1));
+  refuses("lcrngJump advances 1.5", () => G.lcrngJump(1, 1.5));
+  refuses("filterCandidates pid 2^32", () => G.filterCandidates(G.sidCandidates(0x4003, 0, 2), 0x4003, [4294967296], [], null));
+  refuses("filterCandidates tsv 8192", () => G.filterCandidates(G.sidCandidates(0x4003, 0, 2), 0x4003, [], [], 8192));
+  refuses("cueWindow 'a'", () => G.cueWindow("a", 9, 30));
+  refuses("cueWindow presses 1.5", () => G.cueWindow(1693, 1.5, 30));
+  refuses("gbaFramesToSeconds 'x'", () => G.gbaFramesToSeconds("x"));
+  refuses("targetSetsFor unknown game", () => G.targetSetsFor(DATA, "gold"));
+  refuses("decodeTable without tids_hex", () => G.decodeTable({}));
+  check("sdInterval keeps NaN for n < 2", { lo: "NaN", hi: "NaN" }, G.sdInterval(NaN, 1));
+  check("hitProbability propagates a NaN sd", true, Number.isNaN(G.hitProbability(NaN)));
 }
 
 if (failures > 0) {

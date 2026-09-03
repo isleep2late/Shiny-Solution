@@ -6,7 +6,8 @@ using ShinySolution.Core;
 // app/Core/Gen1Tid.cs against tests/gen1tid-vectors.json, the vectors emitted by RNG Solution's
 // Python (tests/emit_vectors.py): the same cases tests/test-gen1tid.cjs checks in JS. Integers
 // and strings exact, floats to 1e-9 (relative above |1|), "NaN" / "Infinity" sentinels
-// reproduced, {"error": ...} cases must throw.
+// reproduced, {"error": ...} cases must throw the exception type the Python's maps to
+// (ErrorTypes). A null "sets" in a vector means the game's own target sets (there is no default).
 static class Gen1TidChecks
 {
     const double Tol = 1e-9;
@@ -70,7 +71,14 @@ static class Gen1TidChecks
 
     static void Check(string label, object? expected, object? actual) => Check(label, ToJson(expected), actual);
 
-    // A case with "error" must throw; one with "result" must return it.
+    // Python exception -> the exact C# type the engine must throw (an InvalidOperationException from a bug is not a refusal).
+    static readonly Dictionary<string, Type> ErrorTypes = new()
+    {
+        ["ValueError"] = typeof(ArgumentException), ["TargetSetError"] = typeof(ArgumentException), ["KeyError"] = typeof(ArgumentException),
+        ["OutlierSample"] = typeof(OutlierSampleException), ["DuplicateSample"] = typeof(DuplicateSampleException)
+    };
+
+    // A case with "error" must throw the mapped type; one with "result" must return it.
     static void CheckCase(string label, JsonElement c, Func<object?> fn)
     {
         checks++;
@@ -80,7 +88,10 @@ static class Gen1TidChecks
         bool wantsError = c.TryGetProperty("error", out var err);
         if (wantsError)
         {
-            if (threw is null) Mismatch(label, $"error {err.GetString()}", ToJson(got).GetRawText());
+            string name = err.GetString() ?? "";
+            if (!ErrorTypes.TryGetValue(name, out var want)) Mismatch(label, $"error {name}", "no C# exception type is mapped for this Python exception");
+            else if (threw is null) Mismatch(label, $"error {name}", ToJson(got).GetRawText());
+            else if (threw.GetType() != want) Mismatch(label, $"error {name} ({want.Name})", $"threw {threw.GetType().Name}: {threw.Message}");
         }
         else if (threw is not null)
         {
@@ -92,6 +103,16 @@ static class Gen1TidChecks
             if (!Same(c.GetProperty("result"), a)) Mismatch(label, c.GetProperty("result").GetRawText(), a.GetRawText());
         }
     }
+
+    // A C#-only refusal: the call must throw exactly ArgumentException.
+    static void Refuses(string label, Func<object?> fn)
+    {
+        checks++;
+        try { var got = fn(); Mismatch(label, "throws ArgumentException", ToJson(got).GetRawText()); }
+        catch (Exception ex) { if (ex.GetType() != typeof(ArgumentException)) Mismatch(label, "throws ArgumentException", $"threw {ex.GetType().Name}: {ex.Message}"); }
+    }
+
+    static string Sha1Hex(byte[] bytes) => Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(bytes));
 
     static double D(JsonElement e) => e.ValueKind == JsonValueKind.String ? e.GetString() switch
     {
@@ -134,13 +155,15 @@ static class Gen1TidChecks
         var DATA = Gen1TidData.LoadEmbedded();
         var SID = Gen3SidData.LoadEmbedded();
 
-        // The embedded copies must be the repo files (the exe's data cannot go stale silently).
-        var fileGen1 = Gen1TidData.LoadFile(Path.Combine(repoRoot, "core", "data", "gen1-tid.json"));
-        var fileSid = Gen3SidData.LoadFile(Path.Combine(repoRoot, "core", "data", "gen3-sid.json"));
-        Check("embedded gen1-tid.json equals the repo file", fileGen1.Root, DATA.Root);
-        Check("embedded gen3-sid.json equals the repo file", fileSid.Root, SID.Root);
+        // The embedded copies must be the repo files byte for byte (a parsed comparison would let a float drift below the
+        // tolerance through). Load() prefers a copy beside the exe: say which one the app would read.
+        Console.WriteLine($"Gen1TidData.Load() would read {Gen1TidData.LoadSource()}");
+        Check("embedded gen1-tid.json is byte-identical to the repo file",
+            Sha1Hex(File.ReadAllBytes(Path.Combine(repoRoot, "core", "data", "gen1-tid.json"))), Sha1Hex(Gen1TidData.EmbeddedBytes(Gen1TidData.EmbeddedName)));
+        Check("embedded gen3-sid.json is byte-identical to the repo file",
+            Sha1Hex(File.ReadAllBytes(Path.Combine(repoRoot, "core", "data", "gen3-sid.json"))), Sha1Hex(Gen1TidData.EmbeddedBytes(Gen3SidData.EmbeddedName)));
 
-        List<TargetSet>? Sets(string game, JsonElement keys) => keys.ValueKind == JsonValueKind.Null ? null : DATA.TargetSetsFor(game, SA(keys));
+        List<TargetSet> Sets(string game, JsonElement keys) => keys.ValueKind == JsonValueKind.Null ? DATA.TargetSetsFor(game) : DATA.TargetSetsFor(game, SA(keys));
 
         // ---- constants -------------------------------------------------------------
         {
@@ -225,6 +248,10 @@ static class Gen1TidChecks
             if (anchor == "reset" && extra is not null)
                 CheckCase($"schedule reset via model {id} {o}/{corr}", c,
                     () => Sched(Gen1Tid.BuildSchedule(anchor, timing, o, corr, beeps, sp, Gen1Tid.ResetAnchorExtraSeconds(DATA.ResetModel("gbp-fade")))));
+            // With the methodology record the engine itself refuses an anchor the methodology does not list (the DMG
+            // methodologies have no reset anchor), so the reset delay can always come from the model.
+            CheckCase($"schedule {anchor} under methodology {id} {o}/{corr}/{beeps}/{sp}", c,
+                () => Sched(Gen1Tid.BuildSchedule(anchor, timing, o, corr, beeps, sp, Gen1Tid.ResetAnchorExtraSeconds(DATA.ResetModel("gbp-fade")), DATA.Methodology(id))));
         }
         foreach (var c in P(V, "resetAnchorExtra").EnumerateArray())
             CheckCase($"resetAnchorExtra {S(P(c, "model"))}", c, () => Gen1Tid.ResetAnchorExtraSeconds(DATA.ResetModel(S(P(c, "model")))));
@@ -247,12 +274,12 @@ static class Gen1TidChecks
                 Check(label, new object[] { S(P(c, "verdict")), S(P(c, "text")), SA(P(c, "accepting")) },
                     new object[] { Gen1Tid.Verdict(tid, s), Gen1Tid.VerdictTextFor(tid, s), Gen1Tid.SetsAccepting(tid, s).Select(x => x.Key).ToArray() });
                 if (c.TryGetProperty("perSet", out var per))
-                    Check(label + " per set", per, s!.ToDictionary(x => x.Key, x => new { accepts = x.Accepts(tid), trap = x.Trap(tid) }));
+                    Check(label + " per set", per, s.ToDictionary(x => x.Key, x => new { accepts = x.Accepts(tid), trap = x.Trap(tid) }));
             }
             foreach (var g in P(ts, "defaultSets").EnumerateObject())
                 Check($"default sets {g.Name}", g.Value, DATA.TargetSetsFor(g.Name).Select(s => s.Key).ToArray());
             foreach (var c in P(ts, "errors").EnumerateArray())
-                CheckCase($"targetSetsFor {S(P(c, "game"))} {P(c, "keys").GetRawText()}", c, () => DATA.TargetSetsFor(S(P(c, "game")), SA(P(c, "keys"))));
+                CheckCase($"targetSetsFor {S(P(c, "game"))} {P(c, "keys").GetRawText()}", c, () => DATA.TargetSetsFor(S(P(c, "game")), SAN(P(c, "keys"))));
         }
         foreach (var c in P(V, "invert").EnumerateArray())
         {
@@ -528,6 +555,42 @@ static class Gen1TidChecks
                 Check($"recommendation {P(c, "values").GetRawText()} press {P(c, "pressSdMs").GetRawText()} robust {P(c, "robust").GetBoolean()}",
                     new[] { S(P(c, "code")), S(P(c, "text")) }, new[] { code, text });
             }
+        }
+
+        // ---- C# only: what the vectors cannot say ----------------------------------------
+        {
+            var red = DATA.TargetSetsFor("red");
+            var redTable = DATA.Methodology("red/gba/hold-start-v1").Table;
+            var padded = Gen1Tid.DecodeTable("40030000", 2);
+            Check("DecodeTable pads below offset_min with NoTid, not $0000", new[] { Gen1Tid.NoTid, Gen1Tid.NoTid, 0x4003, 0 }, padded);
+            Check("Invert skips the padding", new[] { 3 }, Gen1Tid.Invert(padded, 0));
+            Check("RouteValidTargets skips the padding", new[] { new[] { 2, 0x4003 } }, Gen1Tid.RouteValidTargets(padded, red).Select(x => new[] { x.Offset, x.Tid }).ToArray());
+            Check("no sets in force means nothing is route-valid", "no", Gen1Tid.Verdict(0x4003, Array.Empty<TargetSet>()));
+            Check("Yellow has no set accepting $4027", "no", Gen1Tid.Verdict(0x4027, DATA.TargetSetsFor("yellow")));
+            Check("Yellow route-valid targets under its sets", Array.Empty<int[]>(), Gen1Tid.RouteValidTargets(DATA.Methodology("yellow/gba/hold-start-v1").Table, DATA.TargetSetsFor("yellow")).Select(x => new[] { x.Offset, x.Tid }).ToArray());
+            Refuses("Verdict without sets", () => Gen1Tid.Verdict(0x4003, null));
+            Refuses("VerdictTextFor without sets", () => Gen1Tid.VerdictTextFor(0x4003, null));
+            Refuses("SetsAccepting without sets", () => Gen1Tid.SetsAccepting(0x4003, null));
+            Refuses("RouteValidTargets without sets", () => Gen1Tid.RouteValidTargets(redTable, null));
+            Refuses("Verify without sets", () => Gen1Tid.Verify(redTable, 0x4003, 7.35));
+            Refuses("Verify tid 70000", () => Gen1Tid.Verify(redTable, 70000, 7.35, 3, 0.0, red));
+            Refuses("Verify NaN seconds", () => Gen1Tid.Verify(redTable, 0x4003, double.NaN, 3, 0.0, red));
+            Refuses("Verdict 65536", () => Gen1Tid.Verdict(65536, red));
+            Refuses("Verdict -1", () => Gen1Tid.Verdict(-1, red));
+            Refuses("Invert 65536", () => Gen1Tid.Invert(redTable, 65536));
+            Refuses("SidAt 65536", () => Gen1Tid.SidAt(65536, 0));
+            Refuses("SidAt -1", () => Gen1Tid.SidAt(-1, 0));
+            Refuses("SidAt k -1", () => Gen1Tid.SidAt(0x4003, -1));
+            Refuses("KForSid sid 65536", () => Gen1Tid.KForSid(0x4003, 65536, 10));
+            Refuses("ResetSchedule empty order", () => Gen1Tid.ResetSchedule(200, Array.Empty<string>(), 1));
+            Refuses("ResetSchedule one action", () => Gen1Tid.ResetSchedule(200, new[] { "RESET" }, 1));
+            Refuses("ResetSchedule NaN interval", () => Gen1Tid.ResetSchedule(double.NaN, new[] { "RESET", "A" }, 1));
+            Refuses("TargetSetsFor unknown game", () => DATA.TargetSetsFor("gold"));
+            Refuses("DecodeTable negative offset_min", () => Gen1Tid.DecodeTable("4003", -1));
+            Refuses("reset on a methodology without the anchor", () => Gen1Tid.BuildSchedule("reset", DATA.Methodology("red/dmg/hold-start-v1").Timing, 358, 100, 4, 1.0,
+                Gen1Tid.ResetAnchorExtraSeconds(DATA.ResetModel("gbp-fade")), DATA.Methodology("red/dmg/hold-start-v1")));
+            Check("ParseTid takes any number of leading zeros", 0x4003, Gen1Tid.ParseTid("$0000000000004003"));
+            Refuses("ParseTid 20 digits over the range", () => Gen1Tid.ParseTid("99999999999999999999"));
         }
 
         if (failures > 0)

@@ -16,14 +16,16 @@ fi
 # Python (tests/emit_vectors.py there; the committed copy is gen1tid-vectors.json).
 node test-gen1tid.cjs gen1tid-vectors.json
 
-# Negative control: a corrupted vector (one table TID bumped by 1, one P(hit) moved by 1e-6) must FAIL,
-# and is shown failing, so a passing suite means the checks can bite.
+# Negative control: a corrupted vector (one table TID bumped by 1, one P(hit) moved by 1e-6, one error case
+# renamed to another exception class) must FAIL, and is shown failing, so a passing suite means the checks can bite.
 corrupted=$(mktemp --suffix=.json)
 node -e '
 const fs = require("fs");
 const v = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
 v.tables[0].samples[3][1] += 1;
 v.jitter.hitProbability[9].p += 1e-6;
+if (v.parseTid[6].error !== "ValueError") { console.error("negative control setup: parseTid[6] is not the ValueError case"); process.exit(1); }
+v.parseTid[6].error = "OutlierSample";
 fs.writeFileSync(process.argv[2], JSON.stringify(v));
 ' gen1tid-vectors.json "$corrupted"
 if node test-gen1tid.cjs "$corrupted" > "$corrupted.out" 2>&1; then
@@ -32,7 +34,7 @@ if node test-gen1tid.cjs "$corrupted" > "$corrupted.out" 2>&1; then
   exit 1
 else
   echo "negative control (corrupted gen1tid vectors): FAILED as required ->"
-  grep -E '^FAIL|failure' "$corrupted.out" | head -3 | sed 's/^/      /'
+  grep -E '^FAIL|failure' "$corrupted.out" | head -4 | sed 's/^/      /'
 fi
 rm -f "$corrupted" "$corrupted.out"
 

@@ -5,6 +5,11 @@
 // the oracle (tests/gen1tid-vectors.json, emitted by RNG Solution tests/emit_vectors.py).
 // Pure functions: no I/O, no DOM. Data (tables, families, reset models, target sets, SID
 // models) is passed in from core/data/gen1-tid.json and core/data/gen3-sid.json.
+// Every number that reaches the arithmetic is checked at the boundary (checkNumber / checkInt):
+// a form field hands over strings, and 80 + "358" is "80358", not a press frame. Numeric strings
+// are converted; anything else (NaN, infinities, booleans, BigInts, objects, blanks) is refused
+// with a ValueError. Target sets are never defaulted: every verdict takes the sets in force
+// for the game (targetSetsFor(data, game)).
 // Calibration sample records keep their snake_case keys: they are the on-disk config
 // format shared by every head.
 (function (root, factory) {
@@ -33,6 +38,43 @@
 
   function isNil(x) { return x === null || x === undefined; }
   function fail(msg) { var e = new Error(msg); e.name = "ValueError"; throw e; }
+
+  function describeValue(x) {
+    if (typeof x === "string") return JSON.stringify(x);
+    if (typeof x === "bigint") return x + "n";
+    if (x === null) return "null";
+    if (x === undefined) return "undefined";
+    if (typeof x === "object") return Array.isArray(x) ? "an array" : "an object";
+    return "" + x;
+  }
+  // A real number (NaN allowed: a statistic of fewer than two samples is NaN and must propagate).
+  function checkReal(x, what) {
+    var v = x;
+    if (typeof v === "string" && v.trim() !== "") {
+      v = Number(v);
+      if (v !== v) fail(what + " must be a number (got " + describeValue(x) + ")");
+    }
+    if (typeof v !== "number") fail(what + " must be a number (got " + describeValue(x) + ")");
+    return v;
+  }
+  // A finite number.
+  function checkNumber(x, what) {
+    var v = checkReal(x, what);
+    if (v !== v || v === Infinity || v === -Infinity) fail(what + " must be a finite number (got " + describeValue(x) + ")");
+    return v;
+  }
+  // A whole number, optionally bounded (inclusive).
+  function checkInt(x, what, lo, hi) {
+    var v = checkNumber(x, what);
+    if (Math.floor(v) !== v) fail(what + " must be a whole number (got " + v + ")");
+    if (!isNil(lo) && v < lo) fail(what + " must be " + lo + " or more (got " + v + ")");
+    if (!isNil(hi) && v > hi) fail(what + " must be at most " + hi + " (got " + v + ")");
+    return v;
+  }
+  function checkTid(tid) { return checkInt(tid, "a Trainer ID", 0, 0xFFFF); }
+  function checkSid(sid) { return checkInt(sid, "a Secret ID", 0, 0xFFFF); }
+  function checkPid(pid) { return checkInt(pid, "a PID", 0, 0xFFFFFFFF); }
+  function checkOffset(offset) { return checkInt(offset, "a table offset", 0); }
 
   // Python's "%.Nf": correctly rounded from the exact binary value, ties to even. JS toFixed
   // rounds exact ties towards +infinity, so exact ties (a value with .25 / .75 style fractions
@@ -101,12 +143,14 @@
     return best;
   }
 
-  function targetSeconds(offset) { return framesToSeconds(MENU_TO_TABLE_FRAMES + offset); }
-  function pressFrameFromMenu(offset) { return MENU_TO_TABLE_FRAMES + offset; }
-  function cueDelaySeconds(offset, correctionMs) { return targetSeconds(offset) - correctionMs / 1000.0; }
+  function targetSeconds(offset) { return framesToSeconds(MENU_TO_TABLE_FRAMES + checkOffset(offset)); }
+  function pressFrameFromMenu(offset) { return MENU_TO_TABLE_FRAMES + checkOffset(offset); }
+  function cueDelaySeconds(offset, correctionMs) { return targetSeconds(offset) - checkNumber(correctionMs, "the correction (ms)") / 1000.0; }
 
   function countInCues(tA, beeps, spacingS, notBefore) {
     if (isNil(notBefore)) notBefore = 0.0;
+    spacingS = checkNumber(spacingS, "the count-in spacing (s)");
+    beeps = checkInt(beeps, "the count-in beeps");
     if (!(spacingS > 0)) fail("count-in spacing must be positive (got " + spacingS + " s)");
     if (beeps < 0) fail("count-in beeps must be 0 or more");
     var cues = [], dropped = 0;
@@ -135,9 +179,13 @@
     if (isNil(spacingS)) spacingS = 1.0;
     if (isNil(extraS)) extraS = 0.0;
     if (isNil(anchor)) anchor = ANCHOR_POWERON;
-    var holdLo = framesToSeconds(family.hold_lo_frame) + extraS;
-    var holdHi = framesToSeconds(family.hold_hi_frame) + extraS;
-    var menu = framesToSeconds(family.menu_frame) + extraS;
+    if (!family || typeof family !== "object") fail("the " + anchor + " anchor needs the family's boot timing");
+    offset = checkOffset(offset);
+    correctionMs = checkNumber(correctionMs, "the correction (ms)");
+    extraS = checkNumber(extraS, "the reset delay (s)");
+    var holdLo = framesToSeconds(checkNumber(family.hold_lo_frame, "hold_lo_frame")) + extraS;
+    var holdHi = framesToSeconds(checkNumber(family.hold_hi_frame, "hold_hi_frame")) + extraS;
+    var menu = framesToSeconds(checkNumber(family.menu_frame, "menu_frame")) + extraS;
     var tA = menu + targetSeconds(offset) - correctionMs / 1000.0;
     if (tA <= menu) fail("the A cue would be due before the menu (offset " + offset + ", correction " + correctionMs + " ms)");
     var cues = [
@@ -160,11 +208,18 @@
 
   // schedule(anchor, offset, correctionMs, options): options.family (the timing block; needed
   // for the power-on and reset anchors), options.beeps, options.spacingS, options.resetExtraS
-  // (or options.resetModel, from which it is computed).
+  // (or options.resetModel, from which it is computed), options.methodology (the gen1-tid.json
+  // record: an anchor it does not list is refused, as RNG Solution's cue --anchor refuses it).
   function schedule(anchor, offset, correctionMs, options) {
     var o = options || {};
     var beeps = isNil(o.beeps) ? 4 : o.beeps;
     var spacing = isNil(o.spacingS) ? 1.0 : o.spacingS;
+    if (o.methodology) {
+      var allowed = o.methodology.anchors || [];
+      if (allowed.indexOf(anchor) === -1) {
+        fail("this methodology has no " + JSON.stringify(anchor) + " anchor (its anchors: " + allowed.join(", ") + ")");
+      }
+    }
     if (anchor === ANCHOR_MENU) return menuSchedule(offset, correctionMs, beeps, spacing);
     if (anchor === ANCHOR_POWERON) {
       if (!o.family) fail("the power-on anchor needs the family's boot timing");
@@ -199,7 +254,7 @@
     return v;
   }
 
-  function formatTid(tid) { return tid + " ($" + hex(tid, 4) + ")"; }
+  function formatTid(tid) { tid = checkTid(tid); return tid + " ($" + hex(tid, 4) + ")"; }
 
   // A named acceptance set of Trainer IDs (platforms.json / gen1-tid.json "target_sets").
   function makeTargetSet(key, spec) {
@@ -225,13 +280,14 @@
     return ts;
   }
   function setAccepts(ts, tid) {
+    tid = checkTid(tid);
     if (ts.kind === "list") return ts.tids.indexOf(tid) !== -1;
     if ((tid >> 8) !== ts.hi) return false;
     var lo = tid & 0xFF;
     for (var i = 0; i < ts.loRanges.length; i++) if (ts.loRanges[i][0] <= lo && lo <= ts.loRanges[i][1]) return true;
     return false;
   }
-  function setTrap(ts, tid) { return ts.kind === "sled" && (tid >> 8) === ts.hi && !setAccepts(ts, tid); }
+  function setTrap(ts, tid) { tid = checkTid(tid); return ts.kind === "sled" && (tid >> 8) === ts.hi && !setAccepts(ts, tid); }
   function setDescribe(ts) {
     if (ts.kind === "list") {
       return ts.key + ": " + ts.tids.map(function (t) { return "$" + hex(t, 4) + " (" + t + ")"; }).join(", ");
@@ -240,16 +296,24 @@
       ts.loRanges.map(function (r) { return "$" + hex(r[0], 2) + "-$" + hex(r[1], 2); }).join(" or ");
   }
 
-  // The owner's $40xx sled: the v0.1 default when no sets are given.
+  // The owner's $40xx sled as a set object (Red and Blue list it; Yellow does not). It is NOT a
+  // default: a verdict with no sets is an error, so a $40xx Trainer ID on Yellow, where no set
+  // accepts it, is "no" and never "RUN".
   var SLED_40XX = makeTargetSet("sled-40xx", { kind: "sled", hi: "40", lo_ranges: [["00", "38"], ["3A", "5C"]],
     name: "$40xx bank-$1D sled (Red / Blue Any% save corruption)" });
 
-  function setsOrDefault(sets) { return isNil(sets) ? [SLED_40XX] : sets.slice(); }
-  function setsAccepting(tid, sets) { return setsOrDefault(sets).filter(function (s) { return setAccepts(s, tid); }); }
+  function requireSets(sets) {
+    if (isNil(sets)) fail("target sets are required: pass targetSetsFor(data, game)");
+    if (!Array.isArray(sets)) fail("target sets must be an array of target set objects (got " + describeValue(sets) + ")");
+    return sets.slice();
+  }
+  function setsAccepting(tid, sets) { return requireSets(sets).filter(function (s) { return setAccepts(s, tid); }); }
 
   function verdict(tid, sets) {
-    if (setsAccepting(tid, sets).length) return "RUN";
-    if (setsOrDefault(sets).some(function (s) { return setTrap(s, tid); })) return "40!";
+    var all = requireSets(sets);
+    tid = checkTid(tid);
+    if (all.some(function (s) { return setAccepts(s, tid); })) return "RUN";
+    if (all.some(function (s) { return setTrap(s, tid); })) return "40!";
     return "no";
   }
 
@@ -265,7 +329,7 @@
       return "route-valid for Any% save corruption (target set " + setsAccepting(tid, sets).map(function (s) { return s.key; }).join(", ") + ")";
     }
     if (v === "40!" && (tid & 0xFF) === 0x39) return "$4039 is the one hole inside the sled (excluded by the route rule): not usable";
-    if (v === "no" && !isNil(sets)) return "not route-valid (accepted by none of: " + setsOrDefault(sets).map(function (s) { return s.key; }).join(", ") + ")";
+    if (v === "no") return "not route-valid (accepted by none of: " + sets.map(function (s) { return s.key; }).join(", ") + ")";
     return VERDICT_TEXT[v];
   }
 
@@ -281,22 +345,27 @@
     return out;
   }
   function decodeTable(tableData) {
+    if (!tableData || typeof tableData.tids_hex !== "string") fail("table_data needs a tids_hex string");
     var s = tableData.tids_hex, out = [];
-    for (var i = 0; i < tableData.offset_min; i++) out.push(null);
+    var offsetMin = isNil(tableData.offset_min) ? 0 : checkInt(tableData.offset_min, "offset_min", 0);
+    for (var i = 0; i < offsetMin; i++) out.push(null);
     for (var j = 0; j + 4 <= s.length; j += 4) out.push(parseInt(s.substr(j, 4), 16));
     return out;
   }
 
   function routeValidTargets(table, sets) {
-    return tableEntries(table).filter(function (e) { return verdict(e[1], sets) === "RUN"; });
+    var all = requireSets(sets);
+    return tableEntries(table).filter(function (e) { return verdict(e[1], all) === "RUN"; });
   }
 
   function invert(table, tid) {
+    tid = checkTid(tid);
     return tableEntries(table).filter(function (e) { return e[1] === tid; }).map(function (e) { return e[0]; });
   }
 
   function nearestOffset(offsets, guess) {
     if (!offsets || !offsets.length) return null;
+    guess = checkNumber(guess, "the guessed offset");
     var best = null;
     for (var i = 0; i < offsets.length; i++) {
       var o = offsets[i];
@@ -306,20 +375,20 @@
   }
 
   // ---- Calibration ---------------------------------------------------------------
-  function errorFrames(hitOffset, aimedOffset) { return hitOffset - aimedOffset; }
+  function errorFrames(hitOffset, aimedOffset) { return checkOffset(hitOffset) - checkOffset(aimedOffset); }
   function isOutlier(hitOffset, aimedOffset) { return Math.abs(errorFrames(hitOffset, aimedOffset)) > OUTLIER_FRAMES; }
   function impliedCorrection(correctionUsedMs, hitOffset, aimedOffset) {
-    return correctionUsedMs + framesToMs(errorFrames(hitOffset, aimedOffset));
+    return checkNumber(correctionUsedMs, "the correction used (ms)") + framesToMs(errorFrames(hitOffset, aimedOffset));
   }
 
   // opts: attempt (a tag unique to one cue playback), note, player, methodology
   function makeSample(tid, aimedOffset, hitOffset, correctionUsedMs, opts) {
     var o = opts || {};
     return {
-      tid: Math.trunc(tid),
-      aimed: Math.trunc(aimedOffset),
-      hit: Math.trunc(hitOffset),
-      correction_used_ms: Number(correctionUsedMs),
+      tid: checkTid(tid),
+      aimed: checkOffset(aimedOffset),
+      hit: checkOffset(hitOffset),
+      correction_used_ms: checkNumber(correctionUsedMs, "the correction used (ms)"),
       implied_ms: impliedCorrection(correctionUsedMs, hitOffset, aimedOffset),
       attempt: isNil(o.attempt) ? null : o.attempt,
       note: isNil(o.note) ? "" : o.note,
@@ -381,7 +450,7 @@
   }
 
   function meanCorrection(samples, defaultMs) {
-    if (!samples.length) return Number(defaultMs);
+    if (!samples.length) return checkNumber(defaultMs, "the default correction (ms)");
     return mean(samples.map(function (s) { return s.implied_ms; }));
   }
 
@@ -402,6 +471,8 @@
   function resetInterval(model, path, fadeFrames, adjustFrames) {
     if (isNil(path)) path = "route";
     if (isNil(adjustFrames)) adjustFrames = 0.0;
+    adjustFrames = checkNumber(adjustFrames, "the adjust (frames)");
+    if (!isNil(fadeFrames)) fadeFrames = checkNumber(fadeFrames, "the fade (frames)");
     var p = model.paths[path];
     if (!p) fail("no reset path " + JSON.stringify(path));
     var c1Max = p.c1_max_frames, p1Min = p.p1_min_frames, c1Mean = p.c1_mean_frames, p1Mean = p.p1_mean_frames;
@@ -426,7 +497,7 @@
       physLo = c1Max + 1.0 - r; physHi = p1Min - r;
       consLo = c1Max + 1.0 - rMin; consHi = p1Min - rMax;
     }
-    var a = Number(adjustFrames);
+    var a = adjustFrames;
     var out = {
       order: model.order.slice(),
       boundaryLoFrames: lo + a, boundaryHiFrames: hi + a,
@@ -453,6 +524,13 @@
     if (isNil(pairs)) pairs = 15;
     if (isNil(cadenceS)) cadenceS = 2.0;
     if (isNil(leadS)) leadS = 1.0;
+    intervalMs = checkNumber(intervalMs, "the interval (ms)");
+    pairs = checkInt(pairs, "pairs");
+    cadenceS = checkNumber(cadenceS, "the cadence (s)");
+    leadS = checkNumber(leadS, "the lead-in (s)");
+    if (!Array.isArray(order) || order.length !== 2 || typeof order[0] !== "string" || typeof order[1] !== "string" || !order[0] || !order[1]) {
+      fail("order must be the reset's two actions in order (for example [\"RESET\", \"A\"])");
+    }
     if (pairs < 1) fail("pairs must be 1 or more");
     if (intervalMs <= 0) fail("the interval must be positive");
     if (cadenceS * 1000.0 < intervalMs + 100.0) fail("cadence (" + cadenceS + " s) must be at least the interval (" + intervalMs + " ms) plus 100 ms");
@@ -473,6 +551,12 @@
   function verify(table, tid, menuToPressS, toleranceFrames, visibleLagFrames, sets) {
     if (isNil(toleranceFrames)) toleranceFrames = 3;
     if (isNil(visibleLagFrames)) visibleLagFrames = 0.0;
+    var all = requireSets(sets);
+    tid = checkTid(tid);
+    menuToPressS = checkNumber(menuToPressS, "the menu-to-press time (s)");
+    toleranceFrames = checkNumber(toleranceFrames, "the tolerance (frames)");
+    if (toleranceFrames < 0) fail("the tolerance cannot be negative");
+    visibleLagFrames = checkNumber(visibleLagFrames, "the visible lag (frames)");
     var predicted = secondsToFrames(menuToPressS) - visibleLagFrames - MENU_TO_TABLE_FRAMES;
     var offsets = invert(table, tid);
     var best = nearestOffset(offsets, predicted);
@@ -484,7 +568,7 @@
       differenceFrames: diff,
       consistent: best !== null && Math.abs(diff) <= toleranceFrames,
       inTable: offsets.length > 0,
-      verdict: verdict(tid, sets),
+      verdict: verdict(tid, all),
       visibleLagFrames: visibleLagFrames
     };
   }
@@ -493,26 +577,31 @@
   var GBA_FPS = core.GBA_FPS;
   var TEXT_SPEEDS = ["slow", "mid", "fast"];
 
-  function lcrngNext(x) { return core.next(x >>> 0); }
+  function checkState(x) { return checkInt(x, "an LCRNG state", 0, 0xFFFFFFFF); }
+  function lcrngNext(x) { return core.next(checkState(x) >>> 0); }
   function lcrngJump(x, n) {
+    x = checkState(x);
+    n = checkInt(n, "advances");
     if (n < 0) fail("advances must be 0 or more");
     return core.jump(x >>> 0, n);
   }
   function hi16(x) { return (x >>> 16) & 0xFFFF; }
-  function tsv(tid, sid) { return ((tid ^ sid) & 0xFFFF) >>> 3; }
-  function psv(pid) { return (((pid >>> 16) ^ (pid & 0xFFFF)) & 0xFFFF) >>> 3; }
-  function shinyXor(tid, sid, pid) { return (tid ^ sid ^ (pid >>> 16) ^ (pid & 0xFFFF)) & 0xFFFF; }
+  function tsv(tid, sid) { return ((checkTid(tid) ^ checkSid(sid)) & 0xFFFF) >>> 3; }
+  function psv(pid) { pid = checkPid(pid); return (((pid >>> 16) ^ (pid & 0xFFFF)) & 0xFFFF) >>> 3; }
+  function shinyXor(tid, sid, pid) { pid = checkPid(pid); return (checkTid(tid) ^ checkSid(sid) ^ (pid >>> 16) ^ (pid & 0xFFFF)) & 0xFFFF; }
   function isShiny(tid, sid, pid) { return shinyXor(tid, sid, pid) < 8; }
   function shinySidsForPid(tid, pid) {
+    tid = checkTid(tid); pid = checkPid(pid);
     var base = (tid ^ (pid >>> 16) ^ (pid & 0xFFFF)) & 0xFFFF, out = [];
     for (var x = 0; x < 8; x++) out.push(base ^ x);
     return out.sort(function (a, b) { return a - b; });
   }
 
-  function sidAt(tid, k) { return hi16(lcrngJump(tid & 0xFFFF, k + 1)); }
+  function sidAt(tid, k) { return hi16(lcrngJump(checkTid(tid), checkInt(k, "k (VBlanks after the seed)", 0) + 1)); }
 
   function sidCandidates(tid, kMin, kMax) {
-    if (!(tid >= 0 && tid <= 0xFFFF)) fail("a Trainer ID is 0..65535");
+    tid = checkTid(tid);
+    kMin = checkInt(kMin, "k_min"); kMax = checkInt(kMax, "k_max");
     if (kMin < 0 || kMax < kMin) fail("need 0 <= k_min <= k_max (got " + kMin + ", " + kMax + ")");
     var out = [], x = lcrngJump(tid, kMin);
     for (var k = kMin; k <= kMax; k++) {
@@ -525,7 +614,8 @@
 
   function kForSid(tid, sid, kMax) {
     if (isNil(kMax)) kMax = 200000;
-    var out = [], x = tid & 0xFFFF;
+    tid = checkTid(tid); sid = checkSid(sid); kMax = checkInt(kMax, "k_max", 0);
+    var out = [], x = tid;
     for (var k = 0; k <= kMax; k++) {
       x = lcrngNext(x);
       if (hi16(x) === sid) out.push(k);
@@ -534,7 +624,10 @@
   }
 
   function filterCandidates(cands, tid, shinyPids, nonshinyPids, tsvValue) {
-    shinyPids = shinyPids || []; nonshinyPids = nonshinyPids || [];
+    tid = checkTid(tid);
+    shinyPids = (shinyPids || []).map(function (p) { return checkPid(p); });
+    nonshinyPids = (nonshinyPids || []).map(function (p) { return checkPid(p); });
+    if (!isNil(tsvValue)) tsvValue = checkInt(tsvValue, "a TSV", 0, 8191);
     var kept = [], why = {};
     cands.forEach(function (c) {
       var reason = null, i;
@@ -634,11 +727,13 @@
   function cueWindow(kFixedValue, presses, marginFrames, earlyFrames, lateFrames) {
     if (isNil(earlyFrames)) earlyFrames = 6;
     if (isNil(lateFrames)) lateFrames = 20;
-    var kExp = kFixedValue + presses * marginFrames;
+    earlyFrames = checkNumber(earlyFrames, "the early allowance (frames)");
+    lateFrames = checkNumber(lateFrames, "the late allowance (frames)");
+    var kExp = checkInt(kFixedValue, "k_fixed", 0) + checkInt(presses, "presses", 0) * checkNumber(marginFrames, "the margin (frames)");
     return { kExpected: kExp, kMin: kExp - earlyFrames, kMax: kExp + lateFrames };
   }
 
-  function gbaFramesToSeconds(frames) { return frames / GBA_FPS; }
+  function gbaFramesToSeconds(frames) { return checkNumber(frames, "frames") / GBA_FPS; }
 
   // ---- The runner's press jitter (rngsolution/jitter.py) -------------------------
   var MAD_TO_SD = 1.482602218505602;
@@ -756,6 +851,9 @@
   function hitProbability(sdMs, frameMs, biasMs) {
     if (isNil(frameMs)) frameMs = FRAME_MS;
     if (isNil(biasMs)) biasMs = 0.0;
+    sdMs = checkReal(sdMs, "the standard deviation (ms)");
+    frameMs = checkNumber(frameMs, "the frame length (ms)");
+    biasMs = checkNumber(biasMs, "the bias (ms)");
     if (frameMs <= 0) fail("the frame length must be positive");
     if (sdMs < 0) fail("the standard deviation cannot be negative");
     var half = frameMs / 2.0;
@@ -766,6 +864,9 @@
   function hitProbabilityQuantised(sdMs, frameMs, biasMs, phase) {
     if (isNil(frameMs)) frameMs = FRAME_MS;
     if (isNil(biasMs)) biasMs = 0.0;
+    sdMs = checkReal(sdMs, "the standard deviation (ms)");
+    frameMs = checkNumber(frameMs, "the frame length (ms)");
+    biasMs = checkNumber(biasMs, "the bias (ms)");
     if (frameMs <= 0) fail("the frame length must be positive");
     if (sdMs < 0) fail("the standard deviation cannot be negative");
     if (!isNil(phase)) {
@@ -809,11 +910,16 @@
   }
 
   function chi2Cdf(x, k) {
+    x = checkReal(x, "x");
+    k = checkInt(k, "degrees of freedom");
     if (k <= 0) fail("degrees of freedom must be positive");
     return regularisedGammaP(k / 2.0, x / 2.0);
   }
 
   function chi2Quantile(p, k) {
+    p = checkReal(p, "p");
+    k = checkInt(k, "degrees of freedom");
+    if (k <= 0) fail("degrees of freedom must be positive");
     if (!(0 < p && p < 1)) fail("p must be in (0, 1)");
     var lo = 0.0, hi = Math.max(10.0, 4.0 * k);
     while (chi2Cdf(hi, k) < p) hi *= 2.0;
@@ -826,6 +932,9 @@
 
   function sdInterval(sdMs, n, conf) {
     if (isNil(conf)) conf = SD_INTERVAL_CONF;
+    sdMs = checkReal(sdMs, "the standard deviation (ms)");
+    n = checkInt(n, "n");
+    conf = checkNumber(conf, "the confidence");
     if (n < 2 || sdMs !== sdMs) return { lo: NaN, hi: NaN };
     var k = n - 1;
     return {
@@ -838,6 +947,7 @@
     if (isNil(frameMs)) frameMs = FRAME_MS;
     if (isNil(conf)) conf = SD_INTERVAL_CONF;
     if (isNil(centred)) centred = true;
+    frameMs = checkNumber(frameMs, "the frame length (ms)");
     var iv = sdInterval(sdMs, n, conf);
     if (iv.lo !== iv.lo) return [NaN, NaN];
     var f = centred ? hitProbability : hitProbabilityQuantised;
@@ -846,15 +956,17 @@
 
   function hitProbabilityHeadline(sdMs, n, frameMs) {
     if (isNil(frameMs)) frameMs = FRAME_MS;
+    n = checkInt(n, "n");
     if (n < SMALL_N) return { p: hitProbabilityQuantised(sdMs, frameMs), centred: false };
     return { p: hitProbability(sdMs, frameMs), centred: true };
   }
 
-  function expectedAttempts(p) { return p <= 0 ? Infinity : 1.0 / p; }
+  function expectedAttempts(p) { p = checkReal(p, "P(hit)"); return p <= 0 ? Infinity : 1.0 / p; }
 
   function sdForProbability(p, frameMs, biasMs) {
     if (isNil(frameMs)) frameMs = FRAME_MS;
     if (isNil(biasMs)) biasMs = 0.0;
+    p = checkReal(p, "p");
     if (!(0 < p && p <= 1)) fail("p must be in (0, 1]");
     if (hitProbability(0.0, frameMs, biasMs) <= p) return 0.0;
     var lo = 0.0, hi = frameMs;
@@ -973,8 +1085,12 @@
     };
   }
 
-  function anchorCueTime(enterT, delayS, correctionMs) { return enterT + delayS - correctionMs / 1000.0; }
-  function correctionUsedFor(delayS, enterT, cueT) { return (delayS - (cueT - enterT)) * 1000.0; }
+  function anchorCueTime(enterT, delayS, correctionMs) {
+    return checkNumber(enterT, "the anchor time (s)") + checkNumber(delayS, "the cue delay (s)") - checkNumber(correctionMs, "the correction (ms)") / 1000.0;
+  }
+  function correctionUsedFor(delayS, enterT, cueT) {
+    return (checkNumber(delayS, "the cue delay (s)") - (checkNumber(cueT, "the cue time (s)") - checkNumber(enterT, "the anchor time (s)"))) * 1000.0;
+  }
 
   function recommendation(stats, driftResult, frameMs, pressSdMs, robust) {
     if (isNil(frameMs)) frameMs = FRAME_MS;
@@ -1016,7 +1132,9 @@
   function tableFor(data, id) { return decodeTable(methodology(data, id).table_data); }
   function timingFor(data, id) { return methodology(data, id).timing; }
   function targetSetsFor(data, gameKey, keys) {
-    var g = data.games[gameKey] || {};
+    var games = data.games || {};
+    if (!Object.prototype.hasOwnProperty.call(games, gameKey)) fail("no game " + JSON.stringify(gameKey) + " in the data (choose from " + Object.keys(games).join(", ") + ")");
+    var g = games[gameKey];
     var all = data.target_sets || {};
     var wanted = keys && keys.length ? keys.slice() : (g.default_target_sets || g.target_sets || []).slice();
     return wanted.map(function (k) {
@@ -1034,6 +1152,7 @@
     VERDICT_TEXT: VERDICT_TEXT, SLED_40XX: SLED_40XX, GBA_FPS: GBA_FPS, TEXT_SPEEDS: TEXT_SPEEDS,
     MAD_TO_SD: MAD_TO_SD, MIN_ANCHOR_SD_MS: MIN_ANCHOR_SD_MS, DRIFT_TAIL: DRIFT_TAIL, DRIFT_THRESHOLD_MS: DRIFT_THRESHOLD_MS,
     WELCH_STRONG_T: WELCH_STRONG_T, SD_INTERVAL_CONF: SD_INTERVAL_CONF, SMALL_N: SMALL_N,
+    checkReal: checkReal, checkNumber: checkNumber, checkInt: checkInt, checkTid: checkTid, checkSid: checkSid, checkPid: checkPid, checkOffset: checkOffset,
     framesToSeconds: framesToSeconds, secondsToFrames: secondsToFrames, framesToMs: framesToMs, msToFrames: msToFrames,
     targetSeconds: targetSeconds, pressFrameFromMenu: pressFrameFromMenu, cueDelaySeconds: cueDelaySeconds, countInCues: countInCues,
     menuSchedule: menuSchedule, poweronSchedule: poweronSchedule, resetAnchorExtraSeconds: resetAnchorExtraSeconds, schedule: schedule,

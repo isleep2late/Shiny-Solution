@@ -9,8 +9,8 @@ the Hackmons Hub mobile screen, Linux/macOS desktop builds, and a terminal front
 where the games allow it, and a self-calibrating assistant everywhere else.
 
 Every mechanic is verified line-by-line against the pret decompilations
-([docs/FACTS.md](docs/FACTS.md)); every port is checked bit-for-bit against an independent
-oracle (`tests/`). Step-by-step instructions are in [USAGE.md](USAGE.md) and in the desktop
+([docs/FACTS.md](docs/FACTS.md)); every port is checked against an independent oracle
+(`tests/`: integers, strings and error classes exact, floats to 1e-9 relative). Step-by-step instructions are in [USAGE.md](USAGE.md) and in the desktop
 app's Help tab.
 
 ## What each generation gets
@@ -62,7 +62,7 @@ RNG Solution's registry and tables and embedded in every head.
 | `electron/` | Linux AppImage/tar.gz and macOS dmg/zip of the web toolset (`build.sh`, the `build-desktop` workflow). |
 | [RNG Solution](https://github.com/isleep2late/RNG-Solution) | The terminal front end: the same TARGET flow, the press trainer, dual-anchor fusion, `stats`, `verify`, `reset`, `sid`, and the practice-only PREDICT mode. It reads this repository's `core/data` in place of its own registry and CSVs with `--data-dir <Shiny Solution checkout>` (or `SHINY_SOLUTION_DATA`), so every head runs over one file. |
 | `lua/shiny-solution.lua`, `lua/shiny-solution-gb.lua` | The Gen 3 mGBA auto-manip script and the Gen 1/2 hunt bot (also usable standalone). |
-| `core/gen1tid.js` + `app/Core/Gen1Tid.cs` | The Gen 1 Trainer ID engine (cue schedules for the menu / power-on / reset anchors, target sets and verdicts, inversion, calibration with the 60-frame outlier and duplicate guards, the reset metronome, verify, the runner's press-jitter model: P(hit), drift, fusion) and the Gen 3 typed-TID -> SID model, ported from RNG Solution's Python and checked bit-for-bit against the vectors it emits (`tests/gen1tid-vectors.json`, 1,825 cases). |
+| `core/gen1tid.js` + `app/Core/Gen1Tid.cs` | The Gen 1 Trainer ID engine (cue schedules for the menu / power-on / reset anchors, target sets and verdicts, inversion, calibration with the 60-frame outlier and duplicate guards, the reset metronome, verify, the runner's press-jitter model: P(hit), drift, fusion) and the Gen 3 typed-TID -> SID model, ported from RNG Solution's Python and checked against the vectors it emits (`tests/gen1tid-vectors.json`, about 1,840 cases: integers, strings and error classes exact, floats to 1e-9 relative). Target sets are never defaulted (a verdict needs the game's sets), and every number is checked at the JS boundary. |
 | `core/rng.js` + `core/gen4.js` + `core/gen12.js` + `app/Core/` | The Gen 3 LCRNG / Method 1, Gen 4 seed / MT19937 / timer and Gen 1-2 DV engines, parity-tested between JS and C#. |
 | `docs/FACTS.md` | Every mechanic used, with decompilation citations and the hardware validation record. |
 | `tests/` | The test suites (below). |

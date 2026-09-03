@@ -294,7 +294,8 @@ public static class Gen1Tid
         ["no"] = "not route-valid (the route needs $4000-$4038 or $403A-$405C)"
     };
 
-    // The owner's $40xx sled: the v0.1 default when no sets are given.
+    // The owner's $40xx sled as a set object (Red and Blue list it; Yellow does not). It is NOT a default: a
+    // verdict with no sets is an error, so a $40xx Trainer ID on Yellow, where no set accepts it, is "no", never "RUN".
     public static readonly TargetSet Sled40xx = TargetSet.Sled("sled-40xx", "$40xx bank-$1D sled (Red / Blue Any% save corruption)", 0x40,
         new[] { (0x00, 0x38), (0x3A, 0x5C) });
 
@@ -386,9 +387,12 @@ public static class Gen1Tid
         return FramesToSeconds(fadeMean + model.StallFrames!.Value);
     }
 
+    // methodology (the gen1-tid.json record) refuses an anchor it does not list, as RNG Solution's cue --anchor does.
     public static Schedule BuildSchedule(string anchor, Gen1Timing? family, int offset, double correctionMs, int beeps = 4, double spacingS = 1.0,
-        double? resetExtraS = null)
+        double? resetExtraS = null, Gen1Methodology? methodology = null)
     {
+        if (methodology is not null && !methodology.Anchors.Contains(anchor))
+            throw new ArgumentException($"this methodology has no '{anchor}' anchor (its anchors: {string.Join(", ", methodology.Anchors)})");
         if (anchor == AnchorMenu) return MenuSchedule(offset, correctionMs, beeps, spacingS);
         if (anchor == AnchorPoweron)
         {
@@ -405,12 +409,19 @@ public static class Gen1Tid
     }
 
     // ---- Trainer IDs -------------------------------------------------------------
+    // ASCII digits only (the Python and JS use the same rule), any length: leading zeros are not a cap, and a value
+    // past 2^32 is reported by the caller's range check.
     static long ParseDigits(string s, int radix)
     {
         bool ok = s.Length > 0 && s.All(ch => radix == 16 ? Uri.IsHexDigit(ch) : char.IsAsciiDigit(ch));
         if (!ok) throw new ArgumentException($"invalid literal '{s}'");
-        if (s.Length > 12) throw new ArgumentException($"invalid literal '{s}'");
-        return Convert.ToInt64(s, radix);
+        long v = 0;
+        foreach (char ch in s)
+        {
+            v = v * radix + Convert.ToInt32(ch.ToString(), 16);
+            if (v > 0xFFFFFFFFL) return long.MaxValue;
+        }
+        return v;
     }
 
     public static int ParseTid(string text)
@@ -428,46 +439,62 @@ public static class Gen1Tid
 
     public static string FormatTid(int tid) => $"{tid} (${tid:X4})";
 
-    static IReadOnlyList<TargetSet> SetsOrDefault(IReadOnlyList<TargetSet>? sets) => sets ?? new[] { Sled40xx };
+    // The sets in force are never defaulted: a null list is an error, not the $40xx sled.
+    static IReadOnlyList<TargetSet> RequireSets(IReadOnlyList<TargetSet>? sets)
+        => sets ?? throw new ArgumentException("target sets are required: pass Gen1TidData.TargetSetsFor(game)");
+    static int CheckTid(int tid) => tid is >= 0 and <= 0xFFFF ? tid : throw new ArgumentException($"a Trainer ID is 0..65535 (got {tid})");
 
-    public static List<TargetSet> SetsAccepting(int tid, IReadOnlyList<TargetSet>? sets = null)
-        => SetsOrDefault(sets).Where(s => s.Accepts(tid)).ToList();
-
-    public static string Verdict(int tid, IReadOnlyList<TargetSet>? sets = null)
+    public static List<TargetSet> SetsAccepting(int tid, IReadOnlyList<TargetSet>? sets)
     {
-        if (SetsAccepting(tid, sets).Count > 0) return "RUN";
-        if (SetsOrDefault(sets).Any(s => s.Trap(tid))) return "40!";
+        var all = RequireSets(sets);
+        CheckTid(tid);
+        return all.Where(s => s.Accepts(tid)).ToList();
+    }
+
+    public static string Verdict(int tid, IReadOnlyList<TargetSet>? sets)
+    {
+        var all = RequireSets(sets);
+        CheckTid(tid);
+        if (all.Any(s => s.Accepts(tid))) return "RUN";
+        if (all.Any(s => s.Trap(tid))) return "40!";
         return "no";
     }
 
-    public static string VerdictTextFor(int tid, IReadOnlyList<TargetSet>? sets = null)
+    public static string VerdictTextFor(int tid, IReadOnlyList<TargetSet>? sets)
     {
         string v = Verdict(tid, sets);
         if (v == "RUN") return "route-valid for Any% save corruption (target set " + string.Join(", ", SetsAccepting(tid, sets).Select(s => s.Key)) + ")";
         if (v == "40!" && (tid & 0xFF) == 0x39) return "$4039 is the one hole inside the sled (excluded by the route rule): not usable";
-        if (v == "no" && sets is not null) return "not route-valid (accepted by none of: " + string.Join(", ", sets.Select(s => s.Key)) + ")";
+        if (v == "no") return "not route-valid (accepted by none of: " + string.Join(", ", sets!.Select(s => s.Key)) + ")";
         return VerdictText[v];
     }
 
-    // Tables are dense arrays indexed by offset (gen1-tid.json table_data decoded).
+    // Tables are dense arrays indexed by offset (gen1-tid.json table_data decoded). Offsets below offset_min hold
+    // NoTid, never a Trainer ID ($0000 is a real one: Blue GBA offset 1913), and every scan skips them.
+    public const int NoTid = -1;
+
     public static int[] DecodeTable(string tidsHex, int offsetMin = 0)
     {
+        if (offsetMin < 0) throw new ArgumentException("offset_min must be 0 or more");
         var out_ = new int[offsetMin + tidsHex.Length / 4];
+        for (int i = 0; i < offsetMin; i++) out_[i] = NoTid;
         for (int i = 0; i + 4 <= tidsHex.Length; i += 4) out_[offsetMin + i / 4] = Convert.ToInt32(tidsHex.Substring(i, 4), 16);
         return out_;
     }
 
-    public static List<(int Offset, int Tid)> RouteValidTargets(int[] table, IReadOnlyList<TargetSet>? sets = null)
+    public static List<(int Offset, int Tid)> RouteValidTargets(int[] table, IReadOnlyList<TargetSet>? sets)
     {
+        var all = RequireSets(sets);
         var out_ = new List<(int, int)>();
-        for (int o = 0; o < table.Length; o++) if (Verdict(table[o], sets) == "RUN") out_.Add((o, table[o]));
+        for (int o = 0; o < table.Length; o++) if (table[o] != NoTid && Verdict(table[o], all) == "RUN") out_.Add((o, table[o]));
         return out_;
     }
 
     public static int[] Invert(int[] table, int tid)
     {
+        CheckTid(tid);
         var out_ = new List<int>();
-        for (int o = 0; o < table.Length; o++) if (table[o] == tid) out_.Add(o);
+        for (int o = 0; o < table.Length; o++) if (table[o] != NoTid && table[o] == tid) out_.Add(o);
         return out_.ToArray();
     }
 
@@ -603,6 +630,9 @@ public static class Gen1Tid
 
     public static Schedule ResetSchedule(double intervalMs, IReadOnlyList<string> order, int pairs = 15, double cadenceS = 2.0, double leadS = 1.0)
     {
+        if (order is null || order.Count != 2 || string.IsNullOrEmpty(order[0]) || string.IsNullOrEmpty(order[1]))
+            throw new ArgumentException("order must be the reset's two actions in order (for example RESET, A)");
+        if (double.IsNaN(intervalMs) || double.IsNaN(cadenceS) || double.IsNaN(leadS)) throw new ArgumentException("the interval, cadence and lead-in must be numbers");
         if (pairs < 1) throw new ArgumentException("pairs must be 1 or more");
         if (intervalMs <= 0) throw new ArgumentException("the interval must be positive");
         if (cadenceS * 1000.0 < intervalMs + 100.0)
@@ -622,9 +652,14 @@ public static class Gen1Tid
     }
 
     // ---- Verification (moderators; human-measured input) ---------------------------
+    // sets stays last (callers pass it positionally) but is required: null is an error, not the $40xx sled.
     public static VerifyResult Verify(int[] table, int tid, double menuToPressS, int toleranceFrames = 3, double visibleLagFrames = 0.0,
         IReadOnlyList<TargetSet>? sets = null)
     {
+        var all = RequireSets(sets);
+        CheckTid(tid);
+        if (double.IsNaN(menuToPressS) || double.IsInfinity(menuToPressS)) throw new ArgumentException("the menu-to-press time must be a finite number of seconds");
+        if (toleranceFrames < 0) throw new ArgumentException("the tolerance cannot be negative");
         double predicted = SecondsToFrames(menuToPressS) - visibleLagFrames - MenuToTableFrames;
         var offsets = Invert(table, tid);
         int? best = NearestOffset(offsets, predicted);
@@ -633,7 +668,7 @@ public static class Gen1Tid
         {
             PredictedOffset = predicted, Offsets = offsets, Nearest = best, DifferenceFrames = diff,
             Consistent = best is not null && Math.Abs(diff!.Value) <= toleranceFrames, InTable = offsets.Length > 0,
-            Verdict = Verdict(tid, sets), VisibleLagFrames = visibleLagFrames
+            Verdict = Verdict(tid, all), VisibleLagFrames = visibleLagFrames
         };
     }
 
@@ -657,7 +692,12 @@ public static class Gen1Tid
         return Enumerable.Range(0, 8).Select(x => b ^ x).OrderBy(x => x).ToArray();
     }
 
-    public static int SidAt(int tid, long k) => Hi16(LcrngJump((uint)(tid & 0xFFFF), k + 1));
+    public static int SidAt(int tid, long k)
+    {
+        CheckTid(tid);
+        if (k < 0) throw new ArgumentException("k (VBlanks after the seed) must be 0 or more");
+        return Hi16(LcrngJump((uint)tid, k + 1));
+    }
 
     public static List<SidCandidate> SidCandidates(int tid, long kMin, long kMax)
     {
@@ -676,8 +716,10 @@ public static class Gen1Tid
 
     public static List<int> KForSid(int tid, int sid, int kMax = 200000)
     {
+        CheckTid(tid);
+        if (sid < 0 || sid > 0xFFFF) throw new ArgumentException($"a Secret ID is 0..65535 (got {sid})");
         var out_ = new List<int>();
-        uint x = (uint)(tid & 0xFFFF);
+        uint x = (uint)tid;
         for (int k = 0; k <= kMax; k++)
         {
             x = LcrngNext(x);
@@ -1214,15 +1256,34 @@ public sealed class Gen1TidData
 
     public static string DefaultFileName => "gen1-tid.json";
 
+    public const string EmbeddedName = "data.gen1-tid";
+
     public static Gen1TidData Load()
     {
         string beside = Path.Combine(AppContext.BaseDirectory, DefaultFileName);
         return File.Exists(beside) ? LoadFile(beside) : LoadEmbedded();
     }
 
+    // Which copy Load() reads: a gen1-tid.json beside the executable, else the embedded resource.
+    public static string LoadSource()
+    {
+        string beside = Path.Combine(AppContext.BaseDirectory, DefaultFileName);
+        return File.Exists(beside) ? beside : "the embedded resource " + EmbeddedName;
+    }
+
     public static Gen1TidData LoadFile(string path) => new(JsonDocument.Parse(File.ReadAllText(path)).RootElement.Clone());
 
-    public static Gen1TidData LoadEmbedded() => new(ParseEmbedded("data.gen1-tid"));
+    public static Gen1TidData LoadEmbedded() => new(ParseEmbedded(EmbeddedName));
+
+    // The exact bytes of an embedded data file (the tests compare them with the repo file).
+    public static byte[] EmbeddedBytes(string logicalName)
+    {
+        using var stream = typeof(Gen1TidData).Assembly.GetManifestResourceStream(logicalName)
+            ?? throw new FileNotFoundException($"embedded resource {logicalName} is missing");
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        return ms.ToArray();
+    }
 
     internal static JsonElement ParseEmbedded(string logicalName)
     {
@@ -1278,7 +1339,8 @@ public sealed class Gen1TidData
     {
         var all = Root.GetProperty("target_sets");
         var games = Root.GetProperty("games");
-        JsonElement g = games.TryGetProperty(gameKey, out var ge) ? ge : default;
+        if (!games.TryGetProperty(gameKey, out var g))
+            throw new ArgumentException($"no game '{gameKey}' in the data (choose from {string.Join(", ", games.EnumerateObject().Select(x => x.Name))})");
         List<string> wanted;
         if (keys is { Count: > 0 }) wanted = keys.ToList();
         else if (g.ValueKind == JsonValueKind.Object && g.TryGetProperty("default_target_sets", out var d) && d.GetArrayLength() > 0)
@@ -1314,7 +1376,8 @@ public sealed class Gen3SidData
     }
 
     public static Gen3SidData LoadFile(string path) => new(JsonDocument.Parse(File.ReadAllText(path)).RootElement.Clone());
-    public static Gen3SidData LoadEmbedded() => new(Gen1TidData.ParseEmbedded("data.gen3-sid"));
+    public const string EmbeddedName = "data.gen3-sid";
+    public static Gen3SidData LoadEmbedded() => new(Gen1TidData.ParseEmbedded(EmbeddedName));
 
     public IEnumerable<string> MethodologyIds => Root.GetProperty("methodologies").EnumerateObject().Select(x => x.Name);
 
