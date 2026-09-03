@@ -27,7 +27,7 @@ function rndInt(n) { return rnd() % n; }
 
 const v = {
   source: {
-    module: "core/seedtime4.js + app/Core/SeedTime4.cs (Shiny Solution, rng-solution-phase5-seedtime)",
+    module: "core/seedtime4.js + app/Core/SeedTime4.cs",
     pokefinder: "PokeFinder Test/Gen4/seedtotime4.json, Test/Gen4/id4.json, Test/RNG/lcrngreverse.json (GPL-3; ids kept)",
     pkhex: "PKHeX.Core/Legality/RNG/Algorithms/LCRNGReversal.cs, LCRNGReversalSkip.cs (return convention of ivsToSeeds/pidToSeeds)",
     gate: "RNG_GUIDE_DESIGN.md:791 (7B0448D1 -> frame 0) and :956 (7B0459CB -> frame 3)",
