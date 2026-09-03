@@ -16,8 +16,18 @@ void Check<T>(string label, T actual, T expected)
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json>");
+    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root>");
     return 2;
+}
+
+if (args[0] == "--gen1tid")
+{
+    if (args.Length < 3)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --gen1tid <gen1tid-vectors.json> <repo-root>");
+        return 2;
+    }
+    return Gen1TidChecks.Run(args[1], args[2]);
 }
 
 if (args[0] == "--emit-gen4-vectors")
