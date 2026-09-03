@@ -371,7 +371,7 @@ has been validated on a DS by us (the Phase 8 gate, a DS Lite calibration sessio
 writeup Initial Frame.md, `next()`). The inverse step is `s * 0xDEDCEDAE9638806D +
 0x9B1AE6E9A384E6F9` (`:271`, `BWRNGR`). Two outputs: the high 32 bits (`:248-251`) and the
 bounded draw `((s >> 32) * max) >> 32` (`:261-264`), which every table roll, the needle draw
-and the TID/SID draw use. Jump-ahead by squaring (`:104-116` table, `:206-217`). Vectors:
+and the TID/SID draw use. Jump-ahead by squaring (`:36-49` table, `:200-211`). Vectors:
 `Test/RNG/lcrng64.json` (`next`, `advance`, `jump`; forward and reverse), all reproduced.
 
 ## The boot seed: SHA-1 over a 16-word message
@@ -392,11 +392,11 @@ constructor and `:336-363` setters; writeup "Overall"):
 | 13, 14, 15 | `0x80000000`, 0, `0x1a0`: standard SHA-1 padding for a 416-bit message | `SHA1.cpp:189-191` |
 
 Digest to seed: after the 80 rounds (round constants `0x5a827999`, `0x6ed9eba1`, `0x8f1bbcdc`,
-`0xca62c1d6` at `SHA1.cpp:124,136,148,160`; initial state `:307-311`) take `h0 = 0x67452301 + a`
+`0xca62c1d6` at `SHA1.cpp:124,136,148,160`; initial state `:307-311`) take `h0 = b + 0x67452301 (register rotation; `:298-299`)`
 and `h1 = 0xefcdab89 + b` (`:298-299`), form `raw = bswap(h1) << 32 | bswap(h0)` (`:301`),
 and **step it once**: `seed = raw * 0x5D588B656C078965 + 0x269EC3` (`:302`). That stepped value
 is what PokeFinder and the community call the initial seed and what every advance count
-below starts from. PokeFinder precomputes the first eight rounds per (date, Timer0)
+below starts from. PokeFinder precomputes the first nine `section1Calc` calls (PokeFinder's own comment says eight) per (date, Timer0)
 (`:304-334`); this port runs all 80 rounds per seed and is verified against the same vectors.
 
 Worked example (writeup "Example"; identical to PokeFinder `Test/RNG/sha1.json` "White 1"):
@@ -473,6 +473,7 @@ date and clock minute (`Core/Gen5/Searchers/IDSearcher5.cpp:63-90`). Validators:
 - **Seed** (`:243`): equality.
 
 ## Open items (not ported, or ported with a known discrepancy)
+- The writeup says the PM bit applies when the hour is "greater than 12"; PokeFinder (`SHA1.cpp:103,359`) and this port use >= 12, which the 12:00:00 vectors encode and which matches the DS RTC's 24-hour PM flag (hours 12-23). The code is right; the prose is loose, like the weekday prose above.
 
 - **+2 / +10 vs the writeup's rounds.** RNGWriteups `Initial Frame.md` gives the new-game count
   as `1 + (2 or 3) table passes` for both BW and BW2 (`initial_frame_bw(prng, rounds)`,
