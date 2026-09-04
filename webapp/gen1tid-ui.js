@@ -28,10 +28,14 @@
   // verified_evidence_in_repo). The flat claim is only printed when the three derivations are a
   // fixture shipped in RNG Solution; Red's three cold boots are part of the original tidderive
   // sweep, whose logs are in neither repository, so Red's verified targets get the qualified tag.
-  var FIXTURE_PREFIX = "tests/fixtures/";
-  var VERIFIED_TAG = "[3x cold-boot verified]";
-  var VERIFIED_OFF_REPO_TAG = "[3x cold-boot verified off-repository: no derivation fixture here]";
-  var ONE_DERIVATION_TAG = "[extended sweep, one derivation]";
+  // The DECISION itself now lives in the engine (core/gen1tid.js derivationTag), not here: this tab
+  // is one of three heads that render it, and the third - the website's page.tsx - reimplemented it
+  // from list membership and reimplemented the bug with it. tools/sync-shiny-core.sh copies the
+  // engine to the website, so all three now call the same function.
+  var FIXTURE_PREFIX = G.FIXTURE_PREFIX;
+  var VERIFIED_TAG = G.VERIFIED_TAG;
+  var VERIFIED_OFF_REPO_TAG = G.VERIFIED_OFF_REPO_TAG;
+  var ONE_DERIVATION_TAG = G.ONE_DERIVATION_TAG;
   var SID_GAMES = ["emerald", "firered", "leafgreen"];
   var DEFAULT_GAME = "red";
   var LEAD_S = 0.02;          // the buffer is started this long after the anchor, with the same offset into the buffer
@@ -146,13 +150,9 @@
     var inForce = targetSetKeys(plat);
     return (plat.game.target_sets || []).filter(function (k) { return inForce.indexOf(k) === -1; });
   }
-  function verifiedEvidenceInRepo(plat) { return plat.verifiedEvidence.indexOf(FIXTURE_PREFIX) === 0; }
-  function verifiedTag(plat) { return verifiedEvidenceInRepo(plat) ? VERIFIED_TAG : VERIFIED_OFF_REPO_TAG; }
-  function derivationTag(plat, offset) {
-    if (G.verdict(plat.table[offset], plat.targetSets) !== "RUN") return "";
-    if (plat.verifiedTargets.indexOf(offset) === -1) return ONE_DERIVATION_TAG;
-    return verifiedTag(plat);
-  }
+  var verifiedEvidenceInRepo = G.verifiedEvidenceInRepo;
+  var verifiedTag = G.verifiedTag;
+  var derivationTag = G.derivationTag;
   // Say what the tag rests on, in the panel that prints it: the targets, the tag they get, the
   // methodology's note, and where the three derivations can be read (rngsolution/cli.py cmd_targets).
   function verificationLines(plat, indent) {

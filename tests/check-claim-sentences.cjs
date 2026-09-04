@@ -21,7 +21,21 @@
 // --emit-gen1-claims output), core/data/gen1-tid.json and gen2-tid.json (the website renders their
 // derivation fields verbatim), and the prose files that feed the citation registry.
 //
-// usage: node check-claim-sentences.cjs [--cs <claims.json>] [--webapp <dir>] [--data <gen1-tid.json>]
+// Round 5 added three surfaces, each because the guard was PROVEN blind to it:
+//   * the Gen 3 Secret ID panel and core/data/gen3-sid.json. The panel prints model.status, which
+//     said the constants were "emulator-measured on mGBA 0.10.5 by TWO INDEPENDENT HARNESSES
+//     (tools/gba-sid-harness ...; /tmp/gen3sid ...)" - an UNCOMMITTED scratch directory named as
+//     evidence for a load-bearing constant. gen3-sid.json was not among the JSON judged here and
+//     "two independent harnesses" was not a claim pattern.
+//   * RNG Solution's tests/fixtures headers. Both heads print
+//     "Evidence (RNG Solution): tests/fixtures/yellow-gba-triple.csv", so that file is where a
+//     reader who doubts the claim is sent - and its first line said "Rows: every route-valid offset
+//     plus every 50th offset" over 48 rows that were every 50th offset and no route-valid row at
+//     all. Neither guard read it.
+//   * the uncommitted-path rule: no judged unit may cite a /tmp path without saying it is not
+//     committed.
+//
+// usage: node check-claim-sentences.cjs [--cs <claims.json>] [--webapp <dir>] [--core <dir>] [--data <gen1-tid.json>] [--gen3 <gen3-sid.json>]
 //                                       [--gen2 <gen2-tid.json>] [--citations <citations.json>]
 //                                       [--rng <RNG-Solution root>] [--docs-root <dir>]
 // exit 0 = ran in full and passed, 3 = passed but a half could not run (DEGRADED), 1 = failed.
@@ -36,14 +50,19 @@ const RULE = JSON.parse(fs.readFileSync(path.join(__dirname, "claim-phrases.json
 const CASE_SENSITIVE = new Set(RULE.ships_patterns_case_sensitive);
 const csPath = opt("--cs", null);
 const webappDir = opt("--webapp", path.join(root, "webapp"));
-const dataPath = opt("--data", path.join(root, "core", "data", "gen1-tid.json"));
-const gen2Path = opt("--gen2", path.join(root, "core", "data", "gen2-tid.json"));
-const citationsPath = opt("--citations", path.join(root, "core", "data", "citations.json"));
+// --core points the ENGINE half at a copy. The derivation decision lives in core/gen1tid.js now
+// (one implementation for all three heads, including the website), so the negative control that
+// puts it back on verified-target membership has to plant it there.
+const coreDir = opt("--core", path.join(root, "core"));
+const dataPath = opt("--data", path.join(coreDir, "data", "gen1-tid.json"));
+const gen2Path = opt("--gen2", path.join(coreDir, "data", "gen2-tid.json"));
+const citationsPath = opt("--citations", path.join(coreDir, "data", "citations.json"));
 const docsRoot = opt("--docs-root", root);
 const rngRoot = opt("--rng", null);
+const gen3Path = opt("--gen3", path.join(coreDir, "data", "gen3-sid.json"));
 const DOCS = ["README.md", "USAGE.md", path.join("docs", "FACTS.md"), path.join("docs", "DATA.md")];
 
-let failures = 0, checks = 0, unitsSeen = 0, claimsSeen = 0;
+let failures = 0, checks = 0, unitsSeen = 0, claimsSeen = 0, pathsSeen = 0, pathsJudged = 0, fixtureClaims = 0;
 function check(label, ok, detail) {
   checks++;
   if (!ok) { failures++; console.error("FAIL claim sentence: " + label + (detail === undefined ? "" : "\n  " + detail)); }
@@ -84,6 +103,32 @@ function unqualifiedClaims(unit) {
   return bad;
 }
 
+// Round 5 finding D. Every path outside both repositories (a /tmp scratch directory) named in a
+// judged unit, with no "not committed" phrase within proximity_chars of it. Citing a directory that
+// is not in the repository as evidence is the same defect as a flat cold-boot tag whose logs are not
+// here: the reader cannot open the thing the sentence rests on. Every unit is judged, not only the
+// ones that make a claim - "Evidence: /tmp/x" asserts nothing by itself and is exactly the sentence
+// that misleads.
+function uncommittedPathCitations(unit) {
+  const w = RULE.proximity_chars, bad = [];
+  for (const pattern of RULE.uncommitted_path_patterns) {
+    const re = new RegExp(pattern, "g");
+    let m;
+    while ((m = re.exec(unit)) !== null) {
+      if (m[0] === "") { re.lastIndex++; continue; }
+      const window = unit.slice(Math.max(0, m.index - w), m.index + m[0].length + w);
+      if (!RULE.uncommitted_qualifier_patterns.some((q) => new RegExp(q, "i").test(window))) bad.push([m[0], m.index]);
+    }
+  }
+  return bad;
+}
+// every /tmp path the unit names, qualified or not: a rule with nothing to judge is not a rule
+function countPaths(unit) {
+  let n = 0;
+  for (const pattern of RULE.uncommitted_path_patterns) n += (unit.match(new RegExp(pattern, "g")) || []).length;
+  return n;
+}
+
 function unitsOfText(text) {
   const out = [];
   for (const block of String(text).split(/\n\s*\n/)) {
@@ -107,6 +152,12 @@ function unitsOfJson(obj, p, out) {
 function judge(surface, label, text) {
   const unit = normalise(stripTags(text));
   unitsSeen++;
+  pathsSeen += countPaths(unit);
+  for (const [p, at] of uncommittedPathCitations(unit)) {
+    pathsJudged++;
+    check(`${surface} | ${label} | cites ${p}, which is in neither repository, without saying so`,
+      false, unit.slice(Math.max(0, at - 120), at + 240));
+  }
   if (!claimsIn(unit).length) return;
   claimsSeen++;
   const bad = unqualifiedClaims(unit);
@@ -118,10 +169,10 @@ function judgeJson(surface, obj) { unitsOfJson(obj, "$", []).forEach(([p, s]) =>
 
 // ---- head 1: the web tab's module, rendering for real ------------------------------------------
 const DATA = JSON.parse(fs.readFileSync(dataPath, "utf8"));
-globalThis.ShinyCore = require(path.join(root, "core", "rng.js"));
-globalThis.ShinyGen1Tid = require(path.join(root, "core", "gen1tid.js"));
+globalThis.ShinyCore = require(path.join(coreDir, "rng.js"));
+globalThis.ShinyGen1Tid = require(path.join(coreDir, "gen1tid.js"));
 globalThis.ShinyGen1Data = DATA;
-globalThis.ShinyGen3SidData = JSON.parse(fs.readFileSync(path.join(root, "core", "data", "gen3-sid.json"), "utf8"));
+globalThis.ShinyGen3SidData = JSON.parse(fs.readFileSync(path.join(coreDir, "data", "gen3-sid.json"), "utf8"));
 globalThis.ShinyMode = require(path.join(root, "webapp", "mode.js"));
 globalThis.ShinyCitations = JSON.parse(fs.readFileSync(citationsPath, "utf8"));
 require(path.join(webappDir, "footnotes.js"));
@@ -190,15 +241,78 @@ if (heads.length === 2) {
   }
 }
 
+// ---- head 1 again: the Gen 3 Secret ID panel, rendered for real --------------------------------
+// Round 5 finding D: this panel prints model.status (webapp/gen1tid-ui.js sidCueProtocolLines), which
+// is where the two-independent-harnesses claim is rendered, and nothing judged it.
+const SID = JSON.parse(fs.readFileSync(gen3Path, "utf8"));
+{
+  let panels = 0, harnessClaims = 0;
+  for (const game of U.SID_GAMES) {
+    const m = U.sidMethodologyFor(SID, game);
+    const paths = Object.keys(m.model.variants || { "": 1 });
+    for (const variant of paths) {
+      const p = variant === "" ? null : variant;
+      const model = U.sidModelFor(m, "mid", p);
+      const cue = U.sidCue(m, 1, "mid", 30, 0, 0, p);
+      const lines = U.sidMethodologyLines(m, true).concat(U.sidCueProtocolLines(m, game, 1, "mid", 30, cue));
+      const where = `javascript (webapp/gen1tid-ui.js) gen3 ${game}${p ? "/" + p : ""}`;
+      judge(where, "Secret ID panel", lines.join("\n"));
+      panels++;
+      // the panel must PRINT the model's status, not merely have it in the data behind it
+      const body = normalise(lines.join("\n"));
+      check(`${where}: the panel prints the model's status`, body.indexOf(normalise(model.status)) !== -1,
+        normalise(model.status).slice(0, 160));
+      if (claimsIn(normalise(m.status) + " " + normalise(model.status)).length) harnessClaims++;
+    }
+  }
+  check("the Gen 3 Secret ID panel was rendered at all", panels >= 3, String(panels));
+  check("the Gen 3 panels carry an independence claim the rule can see (it has fired)", harnessClaims > 0, String(harnessClaims));
+  console.log(`  javascript (webapp/gen1tid-ui.js): ${panels} Gen 3 Secret ID panels rendered, ${harnessClaims} making an independence claim`);
+}
+
 // ---- the data the WEBSITE renders verbatim, and the prose --------------------------------------
 judgeJson("core/data/gen1-tid.json", DATA);
 judgeJson("core/data/gen2-tid.json", JSON.parse(fs.readFileSync(gen2Path, "utf8")));
+// round 5 finding D: gen3-sid.json was not among the JSON this guard judged, and both the Shiny
+// panel and the website's Gen 3 flow render its strings
+judgeJson("core/data/gen3-sid.json", SID);
 // the citation registry: generated from docs/FACTS.md, rendered as the footnotes under every panel
 judgeJson("core/data/citations.json", globalThis.ShinyCitations);
 for (const d of DOCS) {
   const file = path.join(docsRoot, d);
   check(`${d} exists to be judged`, fs.existsSync(file), file);
   if (fs.existsSync(file)) judgeText(d, fs.readFileSync(file, "utf8"));
+}
+
+// ---- the EVIDENCE FILES this repository sends readers to ----------------------------------------
+// Round 5 finding C. Both heads print "Evidence (RNG Solution): tests/fixtures/<x>-triple.csv". That
+// header is the surface a reader who doubts the claim actually opens, and it lived in the sibling
+// checkout, which neither guard read. The fixtures are RNG Solution's, so without that checkout this
+// half cannot run and the guard says so instead of passing quietly.
+if (!rngRoot) {
+  degraded += (degraded ? "; " : "") + "no RNG Solution checkout given (--rng): the evidence fixtures both heads cite were NOT judged";
+} else {
+  const fxRoot = path.join(rngRoot, "tests", "fixtures");
+  check("the evidence fixtures both heads cite are where the evidence says", fs.existsSync(fxRoot), fxRoot);
+  if (fs.existsSync(fxRoot)) {
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
+    let headers = 0;
+    for (const file of walk(fxRoot).sort()) {
+      const rel = path.relative(rngRoot, file);
+      if (file.endsWith(".md")) { judgeText("RNG Solution " + rel, fs.readFileSync(file, "utf8")); headers++; continue; }
+      if (!file.endsWith(".csv")) continue;
+      const lines = fs.readFileSync(file, "utf8").split("\n");
+      for (let i = 0; i < lines.length && lines[i].startsWith("#"); i++) {
+        judge("RNG Solution evidence fixtures", rel + " line " + (i + 1), lines[i]);
+        headers++;
+        if (claimsIn(normalise(stripTags(lines[i]))).length) fixtureClaims++;
+      }
+    }
+    check("some evidence fixture header was read (it has fired)", headers > 0, String(headers));
+    check("the evidence fixtures make a derivation claim the rule can see", fixtureClaims >= 8, String(fixtureClaims));
+    console.log(`  evidence fixture headers read from ${rngRoot}: ${headers} (${fixtureClaims} making a derivation claim)`);
+  }
 }
 
 // ---- the rule is the same rule on both sides ----------------------------------------------------
@@ -217,10 +331,13 @@ if (!rngRoot) {
 // ---- it has to have seen claims to have judged any ---------------------------------------------
 check("the guard saw enough text to be judging anything", unitsSeen > 200, String(unitsSeen));
 check("the guard saw derivation claims (a rule that matches nothing is not a check)", claimsSeen > 20, String(claimsSeen));
+// round 5: this number was 0 and nobody could see it, which is how "/tmp/gen3sid" stayed rendered
+check("the uncommitted-path rule had something to judge (a rule with no input is not a rule)", pathsSeen > 0, String(pathsSeen));
 
-if (failures) { console.error(`claim-sentence guard: ${checks} checks over ${unitsSeen} units (${claimsSeen} making a derivation claim), ${failures} FAILURE(S)`); process.exit(1); }
+const tally = `${checks} checks over ${unitsSeen} units (${claimsSeen} making a derivation claim, ${fixtureClaims} of those in the evidence fixtures themselves; ${pathsSeen} paths outside both repositories judged, ${pathsJudged} of them unqualified)`;
+if (failures) { console.error(`claim-sentence guard: ${tally}, ${failures} FAILURE(S)`); process.exit(1); }
 if (degraded) {
-  console.log(`claim-sentence guard: ${checks} checks over ${unitsSeen} units (${claimsSeen} making a derivation claim), 0 failures, but DEGRADED - ${degraded}`);
+  console.log(`claim-sentence guard: ${tally}, 0 failures, but DEGRADED - ${degraded}`);
   process.exit(3);
 }
-console.log(`claim-sentence guard: ${checks} checks over ${unitsSeen} units (${claimsSeen} making a derivation claim), 0 failures (both heads, the data and the docs)`);
+console.log(`claim-sentence guard: ${tally}, 0 failures (both heads, the Gen 3 panel, the data, the docs and the evidence fixtures)`);

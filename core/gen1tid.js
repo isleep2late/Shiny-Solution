@@ -369,6 +369,56 @@
     return tableEntries(table).filter(function (e) { return verdict(e[1], all) === "RUN"; });
   }
 
+  // ---- the derivation claim: computed from the EVIDENCE, never from list membership ----------
+  // "[3x cold-boot verified]" asserts that the three cold-boot re-derivations can be READ, so it is
+  // decided by what the evidence string names, not by whether an offset is in verified_targets.
+  // Red's three boots belong to the original tidderive extended sweep, whose logs are in neither
+  // repository, so Red's verified targets get the qualified tag; Blue's and Yellow's ship a fixture,
+  // so theirs get the flat one. This is the ONLY implementation. It lives in the engine rather than
+  // in a head because a THIRD head - the website's src/app/rng-solution/page.tsx - reimplemented the
+  // decision from verified-target membership and reimplemented, with it, the exact bug round 2 had
+  // fixed here; tools/sync-shiny-core.sh copies this file, so the website now calls these functions
+  // instead of writing its own. The Python side is rngsolution/cli.py derivation_tag and
+  // rngsolution/tables.py verified_evidence_in_repo; the desktop head is app/App/Gen1TidSupport.cs.
+  //
+  // A "plat" here is any object carrying { table, targetSets, verifiedTargets, verifiedEvidence } -
+  // webapp/gen1tid-ui.js resolve() returns one, and the website builds the same shape from
+  // core/data/gen1-tid.json.
+  var FIXTURE_PREFIX = "tests/fixtures/";
+  var VERIFIED_TAG = "[3x cold-boot verified]";
+  var VERIFIED_OFF_REPO_TAG = "[3x cold-boot verified off-repository: no derivation fixture here]";
+  var ONE_DERIVATION_TAG = "[extended sweep, one derivation]";
+
+  function verifiedEvidenceInRepo(plat) {
+    return String((plat && plat.verifiedEvidence) || "").indexOf(FIXTURE_PREFIX) === 0;
+  }
+  function verifiedTag(plat) { return verifiedEvidenceInRepo(plat) ? VERIFIED_TAG : VERIFIED_OFF_REPO_TAG; }
+  // "" for an offset that is not route-valid: it carries no derivation claim at all.
+  function derivationTag(plat, offset) {
+    if (verdict(plat.table[offset], plat.targetSets) !== "RUN") return "";
+    if ((plat.verifiedTargets || []).indexOf(offset) === -1) return ONE_DERIVATION_TAG;
+    return verifiedTag(plat);
+  }
+  // The same decision in a few words, for a table cell. Never the bare phrase "independent cold
+  // boots": that is the sentence RNG Solution retracted for Red, and the website printed it from
+  // list membership for exactly the targets whose logs are in neither repository.
+  function derivationLabel(plat, offset) {
+    var tag = derivationTag(plat, offset);
+    if (tag === VERIFIED_TAG) return "3 cold boots, fixture ships";
+    if (tag === VERIFIED_OFF_REPO_TAG) return "3 cold boots, off-repository";
+    if (tag === ONE_DERIVATION_TAG) return "one derivation";
+    return "";
+  }
+  // The same decision as a full sentence, tag first, then the platform's own evidence string, so a
+  // reader sees the claim and what backs it in one place.
+  function derivationSentence(plat, offset) {
+    var tag = derivationTag(plat, offset), evid = String((plat && plat.verifiedEvidence) || "");
+    if (tag === VERIFIED_TAG) return tag + " Re-derived from three independent cold boots. What ships as that evidence: " + evid;
+    if (tag === VERIFIED_OFF_REPO_TAG) return tag + " Re-derived from three independent cold boots, but " + evid;
+    if (tag === ONE_DERIVATION_TAG) return tag + " One derivation (the extended sweep), not re-derived from another boot.";
+    return "";
+  }
+
   function invert(table, tid) {
     tid = checkTid(tid);
     return tableEntries(table).filter(function (e) { return e[1] === tid; }).map(function (e) { return e[0]; });
@@ -1169,6 +1219,9 @@
     menuSchedule: menuSchedule, poweronSchedule: poweronSchedule, resetAnchorExtraSeconds: resetAnchorExtraSeconds, schedule: schedule,
     parseTid: parseTid, formatTid: formatTid, makeTargetSet: makeTargetSet, setAccepts: setAccepts, setDescribe: setDescribe,
     setsAccepting: setsAccepting, verdict: verdict, verdictText: verdictText, routeValidTargets: routeValidTargets, invert: invert,
+    FIXTURE_PREFIX: FIXTURE_PREFIX, VERIFIED_TAG: VERIFIED_TAG, VERIFIED_OFF_REPO_TAG: VERIFIED_OFF_REPO_TAG,
+    ONE_DERIVATION_TAG: ONE_DERIVATION_TAG, verifiedEvidenceInRepo: verifiedEvidenceInRepo, verifiedTag: verifiedTag,
+    derivationTag: derivationTag, derivationLabel: derivationLabel, derivationSentence: derivationSentence,
     nearestOffset: nearestOffset, decodeTable: decodeTable, tableEntries: tableEntries,
     errorFrames: errorFrames, isOutlier: isOutlier, impliedCorrection: impliedCorrection, makeSample: makeSample,
     splitByMethodology: splitByMethodology, isDuplicate: isDuplicate, addSample: addSample, dropLast: dropLast, dropLastUnder: dropLastUnder,

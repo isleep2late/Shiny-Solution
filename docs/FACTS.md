@@ -268,7 +268,8 @@ complete, `yellow-gba-holdfrom520.csv` and `yellow-dmg-holdfrom663.csv`); negati
 menu (hold lengths 200–1500 from frame 350: no menu; 1700+: frame 2006). Distinct IDs 2362 (GBA)
 and 2351 (DMG). No `$0000`. **PSR targets**: `6415` and `64EA` absent from offsets 0–5999 under the
 shipped plateau on both boots; under the after-intro plateau `64EA` at DMG offset 2005 only; under
-the blind-stretch plateau neither (sweeps of 0–2399; logs in `/tmp/tidwork-by/logs`). `$40xx`
+the blind-stretch plateau neither (sweeps of 0–2399; those sweep logs ran in a scratch directory
+and are not in this repository, so nothing shipped here shows them). `$40xx`
 values do occur (GBA 164 → `$4027`, 370 → `$405B`, 380 → `$400A`, 2196 → `$4028`; DMG 1153 →
 `$4024`) but Yellow has no bank-`$1D` sled route, so no target set accepts them. Hardware: **none**.
 
@@ -1070,10 +1071,11 @@ part is linear in the name length (measured: 8 / 4 / 1 frames per letter at SLOW
 
 #### Measured frame counts (EMPIRICAL: mGBA 0.10.5 headless, byte-exact ROMs; hardware unverified)
 
-Two harnesses over the RetroBridge mgx shim (`~/AI/Games/RetroBridge/embedded/shim`, `libmgx.so`, libmgba 0.10.5),
+Two harnesses, both committed in RNG Solution (`tools/gba-sid-harness`,
+`tools/gen3-sid-savestate-harness`), over the RetroBridge mgx shim (`~/AI/Games/RetroBridge/embedded/shim`, `libmgx.so`, libmgba 0.10.5),
 ROMs `pokeemerald.gba` sha1 `f3ae0881…`, `pokefirered.gba` `41cb23d8…`, `pokeleafgreen.gba` `574fa542…` (pret's hashes):
 
-* `tools/gba-sid-harness` (the committed harness; the numbers below are its `results/*.json`, 101 runs, `results/summary.csv`;
+* `tools/gba-sid-harness` in RNG Solution (the scripted-press harness; the numbers below are its `results/*.json`, 101 runs, `results/summary.csv`;
   `make_registry.py` writes them into `platforms.json` and `tests/test_gen3.py` checks the two agree): symbol
   addresses from byte-exact agbcc builds of the decomps (`gRngValue` Emerald `0x03005D80`, FRLG `0x03005000`;
   `gSaveBlock2Ptr` `0x03005D90` / `0x0300500C`, `playerTrainerId` at +0x0A, `include/global.h`), each verified
@@ -1087,17 +1089,22 @@ ROMs `pokeemerald.gba` sha1 `f3ae0881…`, `pokefirered.gba` `41cb23d8…`, `pok
   on LeafGreen's rival menu, four runs: the press was read a frame late; a human's held A is read at the
   next iteration, which is what is recorded). A stage of several presses (DOWN then A; A / START / A on
   the rival naming screen) chains each press two iterations after the previous one was READ.
-* `/tmp/gen3sid` (the savestate binary-search harness, not committed): memory reads only, each press's first accepted frame found by
+* `tools/gen3-sid-savestate-harness` in RNG Solution (the savestate binary-search harness; its scripts,
+  its 13 run logs and its 13 result JSONs were committed on 2026-09-04, having run uncommitted in
+  `/tmp/gen3sid` on 2026-09-02 - the ROMs and the `.sav` files it wrote are not committed, as with
+  `tools/gba-sid-harness`): memory reads only, each press's first accepted frame found by
   binary search from a savestate with a one-frame-earlier negative control at every stage (never
   accepted). It measured the Emerald mid 4-letter row kept below, and the 24 frames from the A on OK to
   the seed (every run).
 
 In every run the observed Secret ID equals `hi16(LCRNG^(k+1)(TID))` at the frame-counted k (checked at
-k +/- 3 by the savestate harness; from the step counter read at the write frame by the committed harness, whose
+k +/- 3 by the savestate harness `tools/gen3-sid-savestate-harness`; from the step counter read at the write
+frame by the scripted-press harness `tools/gba-sid-harness`, whose
 per-frame trace shows exactly one LCRNG step on every frame of the span and two on the roll frame), and
 the all-earliest Secret IDs are inverted from k = 0 in `tests/test_gen3.py`. Slope test: every press d
 frames late moves k by exactly d x the press count (d = 0 / 10 / 60 on every path and text speed; the
-two harnesses agree to the frame on every row both measured: Emerald mid 1645 / 1693, fast 680 / 692;
+two harnesses, both committed in RNG Solution, agree to the frame on every row both measured:
+Emerald mid 1645 / 1693, fast 680 / 692;
 FireRed preset 1781 / 1829, 866 / 878; LeafGreen preset 1765 / 1813, 862 / 874). k is independent of
 the Trainer ID (six different seeds, same k). Text speed: Emerald's is settable from the main menu's
 OPTION entry (a control through the real menu gives the same k as writing `SaveBlock2.optionsTextSpeed`:

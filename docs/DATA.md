@@ -54,7 +54,7 @@ dropped in without a rebuild. A generation is parsed on first use (the tab's gam
 ```
 python3 tools/gen-guide-data.py                     # writes core/data/*.json from ~/AI/pret
 python3 tools/gen-guide-data.py --check             # regenerates in memory, fails if core/data differs
-python3 tools/gen-guide-data.py --pokefinder /tmp/PokeFinder/Core/Resources/EncounterTables
+python3 tools/gen-guide-data.py --pokefinder /tmp/PokeFinder/Core/Resources/EncounterTables   # a scratch clone, not committed
                                                     # --check, plus a diff against PokeFinder's generator output and
                                                     # its hard-coded Gen 4 tables; exit 1 on any mismatch that is not
                                                     # in KNOWN_DELIBERATE; nothing is written unless --write is added
@@ -62,7 +62,7 @@ python3 tools/gen-guide-data.py --relocate          # a moved citation line is r
 PRET_DIR=/elsewhere python3 tools/gen-guide-data.py # or --pret DIR
 node tests/test-data.cjs                            # the data assertions (wired into tests/run-tests.sh)
 DATA_TEST_NEGATIVE=1 node tests/test-data.cjs       # negative control: two Snorlax assertions made wrong on purpose
-DATA_DIR=/tmp/mutated node tests/test-data.cjs      # run the assertions against another directory
+DATA_DIR=/tmp/mutated node tests/test-data.cjs      # run the assertions against another directory (a scratch copy, not committed)
 ```
 
 Python 3 standard library only. The output is deterministic (sorted keys, custom

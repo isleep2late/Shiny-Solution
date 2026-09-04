@@ -7,7 +7,7 @@
 // fixture, or if the two heads disagree about any of it. RNG Solution's tests/test_games.py
 // VerificationClaims is the same rule on that side; this is the missing half on this one.
 //
-// usage: node check-verification-claims.cjs --cs <claims.json> [--webapp <dir>] [--data <gen1-tid.json>]
+// usage: node check-verification-claims.cjs --cs <claims.json> [--webapp <dir>] [--core <dir>] [--data <gen1-tid.json>]
 //                                           [--citations <citations.json>] [--rng <RNG-Solution root>]
 // exit 0 = ran in full and passed, 3 = passed but a half could not run (DEGRADED), 1 = failed.
 const fs = require("fs");
@@ -19,10 +19,14 @@ function opt(name, def) { const i = argv.indexOf(name); return i === -1 ? def : 
 
 const FIXTURE_PREFIX = "tests/fixtures/";
 const csPath = opt("--cs", null);
-if (!csPath) { console.error("usage: node check-verification-claims.cjs --cs <claims.json> [--webapp <dir>] [--data <gen1-tid.json>] [--citations <citations.json>] [--rng <root>]"); process.exit(2); }
+if (!csPath) { console.error("usage: node check-verification-claims.cjs --cs <claims.json> [--webapp <dir>] [--core <dir>] [--data <gen1-tid.json>] [--citations <citations.json>] [--rng <root>]"); process.exit(2); }
 const webappDir = opt("--webapp", path.join(root, "webapp"));
-const dataPath = opt("--data", path.join(root, "core", "data", "gen1-tid.json"));
-const citationsPath = opt("--citations", path.join(root, "core", "data", "citations.json"));
+// --core points the ENGINE half at a copy. The derivation decision lives in core/gen1tid.js now
+// (one implementation for all three heads, including the website), so the negative control that
+// puts it back on verified-target membership has to plant it there.
+const coreDir = opt("--core", path.join(root, "core"));
+const dataPath = opt("--data", path.join(coreDir, "data", "gen1-tid.json"));
+const citationsPath = opt("--citations", path.join(coreDir, "data", "citations.json"));
 const rngRoot = opt("--rng", null);
 
 let failures = 0, checks = 0;
@@ -33,10 +37,10 @@ function check(label, ok, detail) {
 
 // ---- head 1: the web tab's module, rendering for real -------------------------------------------
 const DATA = JSON.parse(fs.readFileSync(dataPath, "utf8"));
-globalThis.ShinyCore = require(path.join(root, "core", "rng.js"));
-globalThis.ShinyGen1Tid = require(path.join(root, "core", "gen1tid.js"));
+globalThis.ShinyCore = require(path.join(coreDir, "rng.js"));
+globalThis.ShinyGen1Tid = require(path.join(coreDir, "gen1tid.js"));
 globalThis.ShinyGen1Data = DATA;
-globalThis.ShinyGen3SidData = JSON.parse(fs.readFileSync(path.join(root, "core", "data", "gen3-sid.json"), "utf8"));
+globalThis.ShinyGen3SidData = JSON.parse(fs.readFileSync(path.join(coreDir, "data", "gen3-sid.json"), "utf8"));
 globalThis.ShinyMode = require(path.join(root, "webapp", "mode.js"));
 globalThis.ShinyCitations = JSON.parse(fs.readFileSync(citationsPath, "utf8"));
 require(path.join(webappDir, "footnotes.js"));
@@ -135,6 +139,8 @@ for (const h of heads) {
 // ---- the other half: an in-repo claim must be a fixture that exists and carries the row ----------
 // (the fixtures live in RNG Solution, which owns the derivations; without that checkout this half
 // cannot run and the guard says so instead of passing quietly)
+// Round 5 finding B: it also checks the fixture's own '#' header against the note the panel prints
+// and against the rows the file really carries - the three had contradicted each other since round 2.
 let degraded = "";
 const inRepoPlatforms = heads[0].platforms.filter((p) => p.evidenceInRepo && p.verifiedTargets.length);
 if (!rngRoot) {
@@ -142,7 +148,7 @@ if (!rngRoot) {
 } else if (!fs.existsSync(path.join(rngRoot, "rngsolution", "data", "red", "platforms.json"))) {
   degraded = "--rng " + rngRoot + " is not an RNG Solution checkout: the fixture rows behind " + inRepoPlatforms.length + " flat-claim platforms were NOT read";
 } else {
-  let rows = 0;
+  let rows = 0, headers = 0;
   for (const p of inRepoPlatforms) {
     const rel = p.evidence.slice(FIXTURE_PREFIX.length).split(/\s/)[0];
     const file = path.join(rngRoot, FIXTURE_PREFIX, rel);
@@ -150,11 +156,34 @@ if (!rngRoot) {
     check(`${where}: the fixture ${rel} its flat claim names exists`, fs.existsSync(file), file);
     if (!fs.existsSync(file)) continue;
     const table = {};
+    let header = "";
     for (const line of fs.readFileSync(file, "utf8").split("\n")) {
-      if (!line || line.startsWith("#")) continue;
+      if (!line) continue;
+      if (line.startsWith("#")) { if (!header) header = line; continue; }
       const c = line.trim().split(",");
       if (!/^\d+$/.test(c[0])) continue;
       table[Number(c[0])] = c.slice(1);
+    }
+    // Round 5 finding B: the note the panel PRINTS and the header of the file it points at said
+    // different things about the same rows, for three rounds, because nobody read the file's own
+    // first line. The note, the header and the rows are checked against each other here.
+    headers++;
+    const offsets = Object.keys(table).map(Number).sort((a, b) => a - b);
+    const extras = offsets.filter((o) => o % 50);
+    for (const [kind, text] of [["note", p.note], ["header", header]]) {
+      const m = /(\d+)[- ]row SAMPLE/.exec(text || "");
+      check(`${where}: the ${kind} says how many rows ${rel} ships`, m !== null, (text || "").slice(0, 160));
+      if (m) check(`${where}: the ${kind}'s row count is the file's real row count`,
+        Number(m[1]) === offsets.length, `${kind} says ${m[1]}, ${rel} has ${offsets.length}`);
+      if (extras.length) {
+        check(`${where}: the ${kind} does not deny route-valid rows the file carries`,
+          (text || "").indexOf("no route-valid target to add") === -1, JSON.stringify(extras));
+      } else {
+        check(`${where}: the ${kind} says this table has no route-valid target to add`,
+          (text || "").indexOf("no route-valid target to add") !== -1, (text || "").slice(0, 200));
+        check(`${where}: the ${kind} does not promise route-valid rows ${rel} has none of`,
+          (text || "").indexOf("every route-valid offset plus every 50th offset") === -1, (text || "").slice(0, 200));
+      }
     }
     for (const t of p.targets.filter((x) => x.verified)) {
       const r = table[t.offset];
@@ -168,7 +197,8 @@ if (!rngRoot) {
     }
   }
   check("the fixture half read some rows (it has fired)", rows > 0, String(rows));
-  console.log(`  fixture rows read from ${rngRoot}: ${rows}`);
+  check("the fixture half read the fixtures' own headers (it has fired)", headers >= 4, String(headers));
+  console.log(`  fixture rows read from ${rngRoot}: ${rows} (over ${headers} fixture headers)`);
 }
 
 if (failures) { console.error(`verification claims guard: ${checks} checks, ${failures} FAILURE(S)`); process.exit(1); }

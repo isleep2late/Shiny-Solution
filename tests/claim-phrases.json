@@ -1,6 +1,6 @@
 {
   "what_this_is": "The claim-sentence rule, shared byte-for-byte by RNG Solution (tests/claim_sentences.py, tests/test_claims.py) and Shiny Solution (tests/check-claim-sentences.cjs). Both repositories keep an identical copy and each guard fails if the sibling checkout's copy differs, so the rule cannot drift between them the way the round-1 retraction did.",
-  "the_rule": "A user-facing unit of text that ASSERTS a multi-boot derivation must, in that same unit, NAME WHAT SHIPS from it. The per-offset tags are checked elsewhere (RNG tests/test_games.py VerificationClaims, Shiny tests/check-verification-claims.cjs) and are stripped out before matching here: this guard is about the SENTENCES beside them, which is the surface every earlier round left unqualified after qualifying the prose.",
+  "the_rule": "A user-facing unit of text that ASSERTS a multi-boot derivation, or that two independent harnesses / derivations agree, must, in that same unit, NAME WHAT SHIPS from it - and must not cite a scratch path outside both repositories as its evidence without saying that path is not committed. The per-offset tags are checked elsewhere (RNG tests/test_games.py VerificationClaims, Shiny tests/check-verification-claims.cjs) and are stripped out before matching here: this guard is about the SENTENCES beside them, which is the surface every earlier round left unqualified after qualifying the prose.",
   "strip_characters": "*`_",
   "proximity_chars": 600,
   "proximity": "The qualifier must be NEAR the claim, not merely somewhere in the same unit: a ships phrase must occur within proximity_chars characters (either side) of each claim match. A long rendered listing is one unit, and a footer at the bottom of it does not qualify a sentence at the top.",
@@ -23,7 +23,12 @@
     "triple[ -]verified",
     "3x cold-boot verified",
     "byte-identical tables",
-    "fourth full derivation"
+    "fourth full derivation",
+    "two independent harnesses",
+    "two harnesses",
+    "independent harness",
+    "independent (cold-boot |full )?re-?derivations?",
+    "independent derivations?"
   ],
   "ships_patterns": [
     "SAMPLE",
@@ -43,7 +48,33 @@
     "in neither repository",
     "outside both repositories",
     "off-repository",
+    "no derivation fixture",
+    "committed in (this repository|RNG Solution|Shiny Solution|either repository|both repositories)",
+    "committed here",
+    "not committed",
+    "uncommitted"
+  ],
+  "ships_patterns_case_sensitive": [
+    "SAMPLE"
+  ],
+  "uncommitted_path_patterns": [
+    "/tmp/[^ )`,;'\"\\]]+"
+  ],
+  "uncommitted_qualifier_patterns": [
+    "not committed",
+    "uncommitted",
+    "not shipped",
+    "ephemeral",
+    "not in this repository",
+    "not in the repository",
+    "not in either repository",
+    "in neither repository",
+    "outside both repositories",
+    "off-repository",
+    "scratch directory",
+    "scratch clone",
     "no derivation fixture"
   ],
-  "ships_patterns_case_sensitive": ["SAMPLE"]
+  "uncommitted_path_rule": "EVERY judged unit - not only the ones that make a derivation claim - must say, within proximity_chars of any path it names outside both repositories (a /tmp scratch directory), that the path is not committed. Round 5 finding D: 'rng-solution sid' printed 'emulator-measured ... by TWO INDEPENDENT HARNESSES (tools/gba-sid-harness ...; /tmp/gen3sid ...)' while docs/FACTS.md already said the second one was not committed - the prose was qualified, the rendered string was not, for the fourth time. The rule is not restricted to claim-bearing units because 'Evidence: /tmp/x' asserts nothing by itself and is exactly the sentence that misleads.",
+  "surfaces": "The guard must read the EVIDENCE FILES it sends readers to, not only the prose about them. Round 5 finding C: RNG Solution's table_header_units walked rngsolution/data only, so an unqualified derivation sentence planted as line 2 of tests/fixtures/blue-gba-triple.csv passed unchanged - and the 'Rows: every route-valid offset plus every 50th offset' line in both Yellow triple fixtures had survived three rounds of retraction while the registry note beside it said the opposite. Both guards now walk tests/fixtures too, and both cover the Gen 3 'sid' surface and gen3-sid.json."
 }

@@ -597,20 +597,23 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   esac
 
   # Negative control (a): the web tab's head, in a copy, computing the tag from the verified-target
-  # list alone again (the defect this guard exists for) must FAIL, and is shown failing.
+  # list alone again (the defect this guard exists for) must FAIL, and is shown failing. The decision
+  # lives in core/gen1tid.js since 2026-09-04 - one implementation for the web tab, the desktop head
+  # and the WEBSITE, which had reimplemented it and reimplemented this bug with it - so the plant goes
+  # into a copy of the engine and the guard is pointed at it with --core.
   ctam=$(mktemp -d)
-  cp -r ../webapp "$ctam/webapp"
-  python3 - "$ctam/webapp/gen1tid-ui.js" <<'PY_JS'
+  cp -r ../core "$ctam/core"
+  python3 - "$ctam/core/gen1tid.js" <<'PY_JS'
 import sys
 p = sys.argv[1]
 s = open(p).read()
-old = """    if (plat.verifiedTargets.indexOf(offset) === -1) return ONE_DERIVATION_TAG;
+old = """    if ((plat.verifiedTargets || []).indexOf(offset) === -1) return ONE_DERIVATION_TAG;
     return verifiedTag(plat);"""
-new = """    return plat.verifiedTargets.indexOf(offset) !== -1 ? VERIFIED_TAG : ONE_DERIVATION_TAG;"""
+new = """    return (plat.verifiedTargets || []).indexOf(offset) !== -1 ? VERIFIED_TAG : ONE_DERIVATION_TAG;"""
 assert old in s, "negative control setup: derivationTag is not the evidence-driven form any more"
 open(p, "w").write(s.replace(old, new, 1))
 PY_JS
-  if node check-verification-claims.cjs --cs "$claims" --webapp "$ctam/webapp" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+  if node check-verification-claims.cjs --cs "$claims" --core "$ctam/core" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
     echo "negative control (the web head printing the flat claim for Red again): DID NOT FAIL"
     rm -rf "$ctam"; rm -f "$claims"; exit 1
   else
@@ -838,6 +841,58 @@ else
     head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
   echo "negative control (the shared claim rule drifting between the repositories): FAILED as required ->"
   grep -m1 "byte-identical in both repositories" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
+fi
+rm -rf "$ctam"
+
+# Negative control (g): THE CONTROL BOTH GUARDS WERE PROVEN BLIND TO. The fixtures are what both
+# heads print as "Evidence (RNG Solution): tests/fixtures/<x>-triple.csv", and neither guard read
+# them: an unqualified derivation sentence planted as line 2 of blue-gba-triple.csv passed unchanged.
+if [ ${#claims_rng[@]} -gt 0 ]; then
+  ctam=$(mktemp -d)
+  mkdir -p "$ctam/tests" "$ctam/rngsolution/data/red"
+  cp -r "$RNG_SRC/tests/fixtures" "$ctam/tests/fixtures"
+  cp "$RNG_SRC/tests/claim-phrases.json" "$ctam/tests/claim-phrases.json"
+  cp "$RNG_SRC/rngsolution/data/red/platforms.json" "$ctam/rngsolution/data/red/platforms.json"
+  python3 - "$ctam/tests/fixtures/blue-gba-triple.csv" <<'PY_FX'
+import io, sys
+p = sys.argv[1]
+lines = io.open(p, encoding="utf-8").read().split("\n")
+lines.insert(1, "# every offset here was re-derived byte-identically from three independent cold boots")
+io.open(p, "w", encoding="utf-8").write("\n".join(lines))
+PY_FX
+  if node check-claim-sentences.cjs "${claims_cs[@]}" --rng "$ctam" > "$ctam/out" 2>&1; then
+    echo "negative control (an unqualified sentence in the evidence fixture both heads cite): DID NOT FAIL"
+    rm -rf "$ctam"; exit 1
+  else
+    grep -q "blue-gba-triple.csv line 2" "$ctam/out" || {
+      echo "negative control (an unqualified sentence in the evidence fixture both heads cite): failed for the wrong reason ->"
+      head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+    echo "negative control (an unqualified sentence in the evidence fixture both heads cite): FAILED as required ->"
+    grep -m1 "blue-gba-triple.csv line 2" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
+  fi
+  rm -rf "$ctam"
+fi
+
+# Negative control (h): the Gen 3 Secret ID panel citing an uncommitted scratch directory as one of
+# its two independent harnesses - round 5 finding D, exactly as it was rendered. gen3-sid.json was
+# not among the JSON this guard judged and 'two independent harnesses' was not a claim pattern.
+ctam=$(mktemp -d)
+python3 - ../core/data/gen3-sid.json "$ctam/gen3-sid.json" <<'PY_SID'
+import io, sys
+s = io.open(sys.argv[1], encoding="utf-8").read()
+old = "tools/gen3-sid-savestate-harness with a savestate binary search"
+assert old in s, "negative control setup: the savestate harness is not cited where it was"
+io.open(sys.argv[2], "w", encoding="utf-8").write(s.replace(old, "/tmp/gen3sid with a savestate binary search"))
+PY_SID
+if node check-claim-sentences.cjs "${claims_cs[@]}" --gen3 "$ctam/gen3-sid.json" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+  echo "negative control (the Gen 3 panel citing an uncommitted /tmp harness): DID NOT FAIL"
+  rm -rf "$ctam"; exit 1
+else
+  grep -q "cites /tmp/gen3sid" "$ctam/out" || {
+    echo "negative control (the Gen 3 panel citing an uncommitted /tmp harness): failed for the wrong reason ->"
+    head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+  echo "negative control (the Gen 3 panel citing an uncommitted /tmp harness): FAILED as required ->"
+  grep -m1 "cites /tmp/gen3sid" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
 fi
 rm -rf "$ctam"
 rm -f "${sent_cs:-}"

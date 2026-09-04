@@ -745,7 +745,7 @@ def main():
             "protocol": "community-script",
             "route": "TID 0x26FB acts as 'ld h,$FB' through Cyndaquil's OT ID (pokecrystal engine/pokemon/move_mon.asm:145-148) and LID 0x186F as 'jr $6F': a two-value target from one input script",
             "provenance": "SECONDARY: RNG Solution docs/ALL_GENERATIONS_FEASIBILITY.md section 3 row Crystal (glitchcity wiki, pastebin EiQzry7w,"
-                          " 'unverified fetch'). The PSR Crystal route docs under /tmp/psr_routes/docs/gen-2/crystal do not name these values"
+                          " 'unverified fetch'). The PSR Crystal route docs under /tmp/psr_routes/docs/gen-2/crystal (a local scratch clone, not committed and in neither repository) do not name these values"
                           " (the glitchless README links an 'LID Manip' video only). Not reproduced in the harness (Crystal setopt scripts).",
             "note": "NOT reachable by the single-press methodologies (both primaries searched, logs/analysis_primaries.txt); community script protocol,"
                     " provenance secondary.",
