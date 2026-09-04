@@ -227,7 +227,26 @@ assert("Gen 1 roll footnote names the Trainer ID section (the registry files the
 assert("Gen 1 steps marked", protoLines.some((l) => l.startsWith(" 3. ") && l.endsWith(" [^1] [^2]")) && protoLines.some((l) => l.startsWith(" 4. ") && l.endsWith(" [^2] [^3]")) && protoLines.includes("    Press A ON the long high beep. That is the only frame-exact action. [^4] [^5] [^2]") && protoLines.includes("    Each answer sharpens the correction. [^2]"));
 assert("Gen 1 no footnote outside the registry", U.procedureProblems(protoLines).length === 0);
 assert("Gen 1 power-on protocol marks its steps too", pproto.includes(" [^1] [^2]\n") && /Press A ON the long high beep\. \[\^4\] \[\^5\] \[\^2\]\n/.test(pproto) && pproto.includes("\n  [^2] HARDWARE-VALIDATED 5 of 6 (no decomp line; ") && pproto.includes("hold START on any frame 1450-1640 and the NEW GAME menu opens on frame 1701"));
-assert("Gen 1 target line marked", U.describeTarget(plat, 358).endsWith(" [3x cold-boot verified] [^2] [^4]"));
+// The derivation tag is a claim about evidence: Red's three cold boots are part of the original tidderive sweep, whose logs
+// are in neither repository, so Red's verified targets carry the qualified tag and Blue's, whose three boots ship as
+// tests/fixtures/blue-*-triple.csv in RNG Solution, carry the flat one. Not a blanket downgrade.
+assert("Gen 1 target line marked", U.describeTarget(plat, 358).endsWith(" [3x cold-boot verified off-repository: no derivation fixture here] [^2] [^4]"));
+{
+  const blueGse = U.resolve(DATA, "blue", "gse", null, null), blueDmg = U.resolve(DATA, "blue", "dmg", null, null);
+  assert("Gen 1 Red's verified targets carry the off-repository qualifier on both families, never the flat tag",
+    [358, 743, 1131].every((o) => U.derivationTag(plat, o) === U.VERIFIED_OFF_REPO_TAG) &&
+    [517, 878].every((o) => U.derivationTag(dmg, o) === U.VERIFIED_OFF_REPO_TAG) &&
+    !U.verifiedEvidenceInRepo(plat) && !U.verifiedEvidenceInRepo(dmg));
+  assert("Gen 1 Blue's verified targets keep the flat tag (its three boots are a fixture in RNG Solution)",
+    U.derivationTag(blueGse, 675) === U.VERIFIED_TAG && U.derivationTag(blueDmg, 658) === U.VERIFIED_TAG &&
+    U.verifiedEvidenceInRepo(blueGse) && U.verifiedEvidenceInRepo(blueDmg));
+  assert("Gen 1 a route-valid offset outside the verified list is still one derivation, and a non-route-valid offset is untagged",
+    U.derivationTag(plat, 1448) === U.ONE_DERIVATION_TAG && U.derivationTag(dmg, 2359) === U.ONE_DERIVATION_TAG && U.derivationTag(plat, 359) === "");
+  assert("Gen 1 the methodology panel says where the three derivations are",
+    U.methodologyLines(plat, true, "").includes("Verification: offsets 358, 743, 1131 [3x cold-boot verified off-repository: no derivation fixture here]") &&
+    U.methodologyLines(plat, true, "").some((l) => l.startsWith("  Evidence (RNG Solution): the three cold boots are part of the original tidderive extended sweep, whose logs are not in this repository")) &&
+    U.methodologyLines(blueDmg, true, "").includes("Verification: offsets 658, 994, 1003, 1028, 1513, 1810, 2105, 2248, 2304 [3x cold-boot verified]"));
+}
 assert("Gen 1 schedule A cue marked", sl.endsWith(" [^2]"));
 const vl = U.verifyLines(gbp, 16387, 7.333, false, 3, null).lines;
 assert("Gen 1 verify carries the table and roll footnotes and lists those two", vl.includes("  the table produces it at offset 358 [^2] [^4]") && vl.some((l) => l.startsWith("  [^2] EMPIRICAL (no decomp line; ") && l.endsWith("GameCube Game Boy Player: UNVALIDATED on this console")) && vl.some((l) => l.startsWith("  [^4] pokered/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: ")) && vl.filter((l) => /^  \[\^/.test(l)).length === 2);

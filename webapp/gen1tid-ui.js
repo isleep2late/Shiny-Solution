@@ -23,6 +23,15 @@
   var METHODOLOGY_SENTENCE = "Predictions are valid only under this methodology.";
   var RULES_LINE = "Run mode uses only your own input: you press the anchor button and type the Trainer ID you saw. Nothing reads the screen, the emulator or the console.";
   var ANY_PERCENT = "Any% save corruption";
+  // The derivation tag is a claim about evidence, so it is computed from the evidence, not from the
+  // list of verified targets (rngsolution/cli.py derivation_tag, rngsolution/tables.py
+  // verified_evidence_in_repo). The flat claim is only printed when the three derivations are a
+  // fixture shipped in RNG Solution; Red's three cold boots are part of the original tidderive
+  // sweep, whose logs are in neither repository, so Red's verified targets get the qualified tag.
+  var FIXTURE_PREFIX = "tests/fixtures/";
+  var VERIFIED_TAG = "[3x cold-boot verified]";
+  var VERIFIED_OFF_REPO_TAG = "[3x cold-boot verified off-repository: no derivation fixture here]";
+  var ONE_DERIVATION_TAG = "[extended sweep, one derivation]";
   var SID_GAMES = ["emerald", "firered", "leafgreen"];
   var DEFAULT_GAME = "red";
   var LEAD_S = 0.02;          // the buffer is started this long after the anchor, with the same offset into the buffer
@@ -124,7 +133,11 @@
       defaults: data.defaults, anchorNames: data.anchor_names || {},
       targetSets: G.targetSetsFor(data, gameKey, targetSetKeys && targetSetKeys.length ? targetSetKeys : null),
       visibleLagFrames: Number(m.timing.visible_lag_frames || 0), visibleLagNote: m.timing.visible_lag_note || "",
-      verifiedTargets: (m.timing.verified_targets || []).slice()
+      verifiedTargets: (m.timing.verified_targets || []).slice(),
+      // the methodology's own evidence and note, else the console family's (tools/gen-gen1-data.py
+      // already resolves the family fallback into timing; the family lookup is the belt on it)
+      verifiedEvidence: m.timing.verified_targets_evidence || family.verified_targets_evidence || "",
+      verifiedNote: m.timing.verified_targets_note || family.verified_targets_note || ""
     };
   }
 
@@ -133,9 +146,24 @@
     var inForce = targetSetKeys(plat);
     return (plat.game.target_sets || []).filter(function (k) { return inForce.indexOf(k) === -1; });
   }
+  function verifiedEvidenceInRepo(plat) { return plat.verifiedEvidence.indexOf(FIXTURE_PREFIX) === 0; }
+  function verifiedTag(plat) { return verifiedEvidenceInRepo(plat) ? VERIFIED_TAG : VERIFIED_OFF_REPO_TAG; }
   function derivationTag(plat, offset) {
     if (G.verdict(plat.table[offset], plat.targetSets) !== "RUN") return "";
-    return plat.verifiedTargets.indexOf(offset) !== -1 ? "[3x cold-boot verified]" : "[extended sweep, one derivation]";
+    if (plat.verifiedTargets.indexOf(offset) === -1) return ONE_DERIVATION_TAG;
+    return verifiedTag(plat);
+  }
+  // Say what the tag rests on, in the panel that prints it: the targets, the tag they get, the
+  // methodology's note, and where the three derivations can be read (rngsolution/cli.py cmd_targets).
+  function verificationLines(plat, indent) {
+    indent = isNil(indent) ? "  " : indent;
+    if (!plat.verifiedTargets.length) return [];
+    var lines = [indent + "Verification: offsets " + plat.verifiedTargets.join(", ") + " " + verifiedTag(plat)];
+    if (plat.verifiedNote) lines.push(indent + "  " + plat.verifiedNote);
+    // the fixtures the evidence names are RNG Solution's: it owns the derivations, this repository
+    // only carries the generated tables, so say whose tests/fixtures/ a path is
+    if (plat.verifiedEvidence) lines.push(indent + "  Evidence (RNG Solution): " + plat.verifiedEvidence);
+    return lines;
   }
   function setTag(plat, tid) { return G.setsAccepting(tid, plat.targetSets).map(function (s) { return s.key; }).join(", "); }
   function describeTarget(plat, offset) {
@@ -181,6 +209,7 @@
     if (conditions) {
       lines.push(indent + "Valid only if:");
       (m.validity || []).forEach(function (c) { lines.push(indent + "  - " + c); });
+      verificationLines(plat, indent).forEach(function (l) { lines.push(l); });
     }
     return lines;
   }
@@ -744,6 +773,8 @@
     fmtSf: fmtSf, fmtMs: fmtMs, fmtPct: fmtPct, fmtAttempts: fmtAttempts, hex4: hex4, hex8: hex8,
     supportedGames: supportedGames, platformMethodologies: platformMethodologies, platformsFor: platformsFor, resolve: resolve,
     targetSetKeys: targetSetKeys, otherTargetSetKeys: otherTargetSetKeys, derivationTag: derivationTag, setTag: setTag, describeTarget: describeTarget,
+    VERIFIED_TAG: VERIFIED_TAG, VERIFIED_OFF_REPO_TAG: VERIFIED_OFF_REPO_TAG, ONE_DERIVATION_TAG: ONE_DERIVATION_TAG,
+    verifiedEvidenceInRepo: verifiedEvidenceInRepo, verifiedTag: verifiedTag, verificationLines: verificationLines,
     methodologyLines: methodologyLines, targetSetLines: targetSetLines, protocolLines: protocolLines, scheduleLines: scheduleLines,
     SOURCE_ORDER: SOURCE_ORDER, statusWord: statusWord, sourcesFor: sourcesFor, footnotesFor: footnotesFor, procedureProblems: FN.procedureProblems,
     announceCue: announceCue, buildSchedule: buildSchedule, renderCues: renderCues,
@@ -1266,7 +1297,10 @@
       report.footnoteHeaderStatus = g1proto.indexOf(FN.HEADER + FN.STATUS_NOTE) !== -1;
       report.footnoteProblems = FN.procedureProblems(g1proto).length;
       report.registryLoaded = FN.citationsLoaded();
-      report.targetInfoMarked = /\[3x cold-boot verified\] \[\^2\] \[\^4\]$/.test($("g1-target-info").textContent);
+      // Red's three cold boots are off-repository, so the target line must carry the QUALIFIED tag
+      report.targetInfoMarked = /\[3x cold-boot verified off-repository: no derivation fixture here\] \[\^2\] \[\^4\]$/.test($("g1-target-info").textContent);
+      report.methodologyVerification = $("g1-methodology-text").textContent.indexOf(
+        "Verification: offsets 358, 743, 1131 [3x cold-boot verified off-repository: no derivation fixture here]") !== -1;
       report.scheduleMarked = /A cue \(long beep\) .* minus correction .* \[\^2\]$/m.test($("g1-schedule").textContent);
       var fullRegistry = root.ShinyCitations;
       FN.setCitations({ entries: (fullRegistry && fullRegistry.entries || []).filter(function (e) { return e.cite !== "pokered/engine/movie/title.asm:227-239,266"; }) });

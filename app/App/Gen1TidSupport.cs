@@ -264,10 +264,35 @@ public static class Gen1TidText
     }
     public static Citations.Footnotes FootnotesFor(Gen1Platform p) => new(SourcesFor(p), SourceOrder);
 
+    // The derivation tag is a claim about evidence, so it is computed from the evidence, not from the
+    // list of verified targets (rngsolution/cli.py derivation_tag). The flat claim is only printed when
+    // the three derivations are a fixture shipped in RNG Solution; Red's three cold boots are part of
+    // the original tidderive sweep, whose logs are in neither repository, so Red gets the qualified tag.
+    public const string VerifiedTag = "[3x cold-boot verified]";
+    public const string VerifiedOffRepoTag = "[3x cold-boot verified off-repository: no derivation fixture here]";
+    public const string OneDerivationTag = "[extended sweep, one derivation]";
+
+    public static string VerifiedTagFor(Gen1Platform p) => p.Timing.VerifiedEvidenceInRepo ? VerifiedTag : VerifiedOffRepoTag;
+
     public static string DerivationTag(Gen1Platform p, int offset)
     {
         if (Gen1Tid.Verdict(p.Table[offset], p.TargetSets) != "RUN") return "";
-        return p.Timing.VerifiedTargets.Contains(offset) ? "[3x cold-boot verified]" : "[extended sweep, one derivation]";
+        if (!p.Timing.VerifiedTargets.Contains(offset)) return OneDerivationTag;
+        return VerifiedTagFor(p);
+    }
+
+    // Say what the tag rests on, in the panel that prints it: the targets, the tag they get, the
+    // methodology's note, and where the three derivations can be read (rngsolution/cli.py cmd_targets).
+    public static List<string> VerificationLines(Gen1Platform p, string indent = "  ")
+    {
+        var lines = new List<string>();
+        if (p.Timing.VerifiedTargets.Length == 0) return lines;
+        lines.Add(indent + "Verification: offsets " + string.Join(", ", p.Timing.VerifiedTargets) + " " + VerifiedTagFor(p));
+        if (p.Timing.VerifiedTargetsNote != "") lines.Add(indent + "  " + p.Timing.VerifiedTargetsNote);
+        // the fixtures the evidence names are RNG Solution's: it owns the derivations, this repository
+        // only carries the generated tables, so say whose tests/fixtures/ a path is
+        if (p.Timing.VerifiedTargetsEvidence != "") lines.Add(indent + "  Evidence (RNG Solution): " + p.Timing.VerifiedTargetsEvidence);
+        return lines;
     }
     public static string SetTag(Gen1Platform p, int tid) => string.Join(", ", Gen1Tid.SetsAccepting(tid, p.TargetSets).Select(s => s.Key));
     public static string DescribeTarget(Gen1Platform p, int offset)
@@ -292,6 +317,7 @@ public static class Gen1TidText
         {
             lines.Add(indent + "Valid only if:");
             foreach (var c in J.SA(m, "validity")) lines.Add(indent + "  - " + c);
+            lines.AddRange(VerificationLines(p, indent));
         }
         return lines;
     }

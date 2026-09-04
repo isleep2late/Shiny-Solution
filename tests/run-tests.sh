@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# ---- cross-repo guards that cannot run are LOUD ------------------------------------------------
+# A guard that degrades to a silent pass is not a guard: that is how a retraction made in RNG
+# Solution reached neither of this repository's heads while every run stayed green. Every guard
+# that cannot run records itself here, the run ends on a summary line that names it, and the suite
+# FAILS unless the run explicitly accepts an incomplete one with SHINY_ALLOW_DEGRADED_GUARDS=1.
+DEGRADED_LOG=$(mktemp)
+trap 'rm -f "$DEGRADED_LOG"' EXIT
+guard_degraded() {   # $1 = the guard, $2 = why it could not run
+  echo "GUARD DEGRADED: $1 DID NOT RUN -> $2"
+  printf '  - %s: %s\n' "$1" "$2" >> "$DEGRADED_LOG"
+}
 python3 reference.py > vectors.json
 node test.cjs vectors.json
 node test-data.cjs
@@ -158,7 +170,8 @@ if [ -f "$RNG_SRC/tests/emit_vectors.py" ]; then
   fi
   rm -f "$reemit" "$reemit.re" "$reemit.have"
 else
-  echo "no RNG Solution checkout at $RNG_SRC; tests/gen1tid-vectors.json is not re-emitted (the committed copy is used)"
+  guard_degraded "cross-repo guard A (tests/gen1tid-vectors.json re-emitted from RNG Solution and byte-compared)" \
+    "no RNG Solution checkout at $RNG_SRC (set RNG_SOLUTION_SRC); the committed copy was used and NOT checked against its oracle"
 fi
 
 # Gen 1 Trainer ID / Gen 3 Secret ID / press-jitter engine against the vectors emitted by RNG Solution's
@@ -503,7 +516,8 @@ if [ -f "$RNG_SRC/rngsolution/data/red/platforms.json" ]; then
       echo "$f regenerated from RNG Solution's registry: byte-identical to the committed file"
     done
   else
-    echo "RNG Solution's registry has moved since core/data/*.json were generated (rngsolution/data/red/platforms.json is $reg_sha, the committed files record $rec_sha); the regeneration ran and wrote both files, and they are not byte-compared with copies made from a different registry"
+    guard_degraded "cross-repo guard B (core/data/*.json byte-compared with a regeneration from RNG Solution's registry)" \
+      "RNG Solution's registry has moved since core/data/*.json were generated (rngsolution/data/red/platforms.json is $reg_sha, the committed files record $rec_sha); the regeneration ran and wrote both files, but nothing was byte-compared. Re-run tools/gen-gen1-data.py"
   fi
   rm -rf "$gendir/core"
 
@@ -551,9 +565,99 @@ PY_REG
   fi
   rm -rf "$gendir"
 else
-  echo "no RNG Solution checkout at $RNG_SRC; tools/gen-gen1-data.py is not exercised"
+  guard_degraded "cross-repo guard B (core/data/*.json byte-compared with a regeneration from RNG Solution's registry)" \
+    "no RNG Solution checkout at $RNG_SRC (set RNG_SOLUTION_SRC); tools/gen-gen1-data.py was not exercised at all"
 fi
 rm -f "$plant_sled"
+
+# ---- guard C: the verification claims of BOTH heads --------------------------------------------
+# "[3x cold-boot verified]" is a claim about evidence, so the repository that prints it must be able
+# to show the three derivations. RNG Solution enforces that on its own CLI (tests/test_games.py
+# VerificationClaims); this is the same rule over THIS repository's two heads, run on the real
+# rendered lines of each: the web tab's module loaded in node, and the desktop head's own emission
+# (app/Tests --emit-gen1-claims over app/App/Gen1TidSupport.cs). It fails if either head prints the
+# flat claim for an offset whose evidence is not a fixture that ships, if the two heads disagree,
+# or (with an RNG Solution checkout) if a named fixture has no agreeing row for a verified target.
+claims_rng=()
+if [ -f "$RNG_SRC/rngsolution/data/red/platforms.json" ]; then claims_rng=(--rng "$RNG_SRC"); fi
+if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
+  export DOTNET_ROOT="$HOME/.dotnet"
+  export PATH="$HOME/.dotnet:$PATH"
+  claims=$(mktemp --suffix=.json)
+  dotnet run --project ../app/Tests -c Release -- --emit-gen1-claims "$claims" - ../core/data/citations.json
+  set +e
+  node check-verification-claims.cjs --cs "$claims" "${claims_rng[@]}"
+  claims_status=$?
+  set -e
+  case "$claims_status" in
+    0) : ;;
+    3) guard_degraded "cross-repo guard C (the verification-claims guard's fixture half)" \
+         "no RNG Solution checkout at $RNG_SRC (set RNG_SOLUTION_SRC); the flat claims were checked for in-repo evidence but the fixture ROWS behind them were not read" ;;
+    *) echo "verification claims guard FAILED"; rm -f "$claims"; exit 1 ;;
+  esac
+
+  # Negative control (a): the web tab's head, in a copy, computing the tag from the verified-target
+  # list alone again (the defect this guard exists for) must FAIL, and is shown failing.
+  ctam=$(mktemp -d)
+  cp -r ../webapp "$ctam/webapp"
+  python3 - "$ctam/webapp/gen1tid-ui.js" <<'PY_JS'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = """    if (plat.verifiedTargets.indexOf(offset) === -1) return ONE_DERIVATION_TAG;
+    return verifiedTag(plat);"""
+new = """    return plat.verifiedTargets.indexOf(offset) !== -1 ? VERIFIED_TAG : ONE_DERIVATION_TAG;"""
+assert old in s, "negative control setup: derivationTag is not the evidence-driven form any more"
+open(p, "w").write(s.replace(old, new, 1))
+PY_JS
+  if node check-verification-claims.cjs --cs "$claims" --webapp "$ctam/webapp" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+    echo "negative control (the web head printing the flat claim for Red again): DID NOT FAIL"
+    rm -rf "$ctam"; rm -f "$claims"; exit 1
+  else
+    grep -q "the FLAT claim at offset 358 is backed by an in-repo fixture" "$ctam/out" || {
+      echo "negative control (the web head printing the flat claim for Red again): failed for the wrong reason ->"
+      head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; rm -f "$claims"; exit 1; }
+    echo "negative control (the web head printing the flat claim for Red again): FAILED as required ->"
+    grep -m2 "^FAIL" "$ctam/out" | cut -c1-160 | sed 's/^/      /'
+  fi
+  rm -rf "$ctam"
+
+  # Negative control (b): the same defect in the DESKTOP head - a copy of app/ with DerivationTag
+  # back on the verified-target list, compiled and re-emitted - must FAIL, and is shown failing.
+  ctam=$(mktemp -d)
+  mkdir -p "$ctam/core"
+  cp -r ../app "$ctam/app"
+  cp -r ../core/data "$ctam/core/data"
+  rm -rf "$ctam/app/Tests/bin" "$ctam/app/Tests/obj" "$ctam/app/App/bin" "$ctam/app/App/obj" "$ctam/app/Core/bin" "$ctam/app/Core/obj"
+  python3 - "$ctam/app/App/Gen1TidSupport.cs" <<'PY_CS'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = """        if (!p.Timing.VerifiedTargets.Contains(offset)) return OneDerivationTag;
+        return VerifiedTagFor(p);"""
+new = """        return p.Timing.VerifiedTargets.Contains(offset) ? VerifiedTag : OneDerivationTag;"""
+assert old in s, "negative control setup: DerivationTag is not the evidence-driven form any more"
+open(p, "w").write(s.replace(old, new, 1))
+PY_CS
+  dotnet run --project "$ctam/app/Tests" -c Release -- --emit-gen1-claims "$ctam/claims.json" - ../core/data/citations.json > "$ctam/build" 2>&1 || {
+    echo "negative control (the desktop head printing the flat claim for Red again): the tampered copy did not build ->"
+    tail -5 "$ctam/build" | sed 's/^/      /'; rm -rf "$ctam"; rm -f "$claims"; exit 1; }
+  if node check-verification-claims.cjs --cs "$ctam/claims.json" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+    echo "negative control (the desktop head printing the flat claim for Red again): DID NOT FAIL"
+    rm -rf "$ctam"; rm -f "$claims"; exit 1
+  else
+    grep -q "csharp (app/App/Gen1TidSupport.cs) red/gse: the FLAT claim at offset 358 is backed by an in-repo fixture" "$ctam/out" || {
+      echo "negative control (the desktop head printing the flat claim for Red again): failed for the wrong reason ->"
+      head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; rm -f "$claims"; exit 1; }
+    echo "negative control (the desktop head printing the flat claim for Red again): FAILED as required ->"
+    grep -m2 "^FAIL verification claims: csharp" "$ctam/out" | cut -c1-160 | sed 's/^/      /'
+  fi
+  rm -rf "$ctam"
+  rm -f "$claims"
+else
+  guard_degraded "cross-repo guard C (the verification-claims guard)" \
+    "dotnet not found, so the desktop head could not be rendered and neither head's claims were checked"
+fi
 
 # The desktop wizard panel is pinned to the web tab through tests/wizard-panel-vectors.json (what webapp/wizard-ui.js computes
 # for its self-test scenarios and 20 random wanted-IV searches; app/run-core-tests.sh checks WizardSupport.cs against it). A
@@ -864,6 +968,7 @@ const checks = [
   ["the table footnote is under EMULATOR-EXACT on GSE and the header carries the status note", r.footnoteStatusGse === true && r.footnoteHeaderStatus === true],
   ["no footnote outside the registry", r.footnoteProblems === 0],
   ["the target line and the schedule A cue carry the block numbers", r.targetInfoMarked === true && r.scheduleMarked === true],
+  ["Red\x27s target line carries the off-repository qualifier and the methodology panel says where the derivations are", r.targetInfoMarked === true && r.methodologyVerification === true],
   ["the registry without the hold-START line is reported as NOT IN THE REGISTRY and restored is clean", Array.isArray(r.registryCutProblems) && r.registryCutProblems.length === 1 && /^  \[\^1\] pokered\/engine\/movie\/title\.asm:227-239,266 NOT IN THE REGISTRY \(core\/data\/citations\.json carries no such line of docs\/FACTS\.md\): /.test(r.registryCutProblems[0]) && r.registryRestoredProblems === 0],
   ["the GBA HD prints HARDWARE-VALIDATED 5 of 5, the DMG 5 of 6 with its window, Yellow its pokeyellow lines and EMPIRICAL", r.footnoteStatusGbaHd === true && r.footnoteStatusDmg === true && r.footnoteYellow === true]
 ];
@@ -1182,3 +1287,18 @@ process.exit(bad ? 1 : 0);
 else
   echo "google-chrome not found; skipping the browser self-test"
 fi
+
+# ---- the summary: a run that could not run a guard says so, and does not pass quietly ----------
+echo
+if [ -s "$DEGRADED_LOG" ]; then
+  n=$(wc -l < "$DEGRADED_LOG")
+  echo "!!! $n CROSS-REPO GUARD(S) COULD NOT RUN IN THIS SUITE - IT DID NOT CHECK WHAT THEY CHECK !!!"
+  cat "$DEGRADED_LOG"
+  if [ "${SHINY_ALLOW_DEGRADED_GUARDS:-0}" = "1" ]; then
+    echo "TESTS PASSED, NEGATIVE CONTROLS FAILED AS REQUIRED, BUT $n CROSS-REPO GUARD(S) DID NOT RUN (accepted: SHINY_ALLOW_DEGRADED_GUARDS=1)"
+    exit 0
+  fi
+  echo "SUITE INCOMPLETE: $n cross-repo guard(s) did not run. Fix the cause, or accept an unchecked run with SHINY_ALLOW_DEGRADED_GUARDS=1."
+  exit 1
+fi
+echo "ALL TESTS PASSED, ALL NEGATIVE CONTROLS FAILED AS REQUIRED, ALL CROSS-REPO GUARDS RAN"

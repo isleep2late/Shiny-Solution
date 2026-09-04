@@ -122,8 +122,12 @@ promoted), the desktop app's
    under that input pattern, and the protocol's steps are that pattern.
 2. **Target.** Click a route-valid row (Red / Blue: any `$40xx` Trainer ID for the Any% save
    corruption — the high byte is the whole rule, the low byte is free, so 1 in 256;
-   `[3x cold-boot verified]` or `[extended sweep, one derivation]`; the PSR sets are opt-in
-   target sets), or type any Trainer ID and take one of its press times, or any offset.
+   the row's tag says what its Trainer ID rests on: `[3x cold-boot verified]` when the three
+   cold-boot re-derivations ship as a fixture (Blue and Yellow), `[3x cold-boot verified
+   off-repository: no derivation fixture here]` when they were made but their logs are in
+   neither repository (Red's 358/743/1131 and 517/878), `[extended sweep, one derivation]`
+   otherwise; the methodology panel prints the same tag with the evidence behind it; the PSR
+   sets are opt-in target sets), or type any Trainer ID and take one of its press times, or any offset.
    Yellow has no route-valid ID under the shipped methodology. The `$40xx` rule is measured
    in emulation only (never on a cartridge), and on Blue it is inferred from Red rather than
    swept.

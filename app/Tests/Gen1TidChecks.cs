@@ -639,7 +639,27 @@ static class Gen1TidChecks
             Check("no footnote outside the registry", 0, Citations.ProcedureProblems(proto).Count);
             Check("protocol roll footnote names the Trainer ID section (the registry files the pokered line first under the DV roll)", true, proto.Any(l => l.StartsWith("  [^4] pokered/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 1 Trainer ID / Where the ID comes from): InitPlayerData2")) && Citations.FootnoteText(4, new Citations.CiteSource("pokered/engine/movie/oak_speech/init_player_data.asm:1-10", null, "x")).EndsWith(" (docs/FACTS.md: Gen 1/2 (Game Boy) / Where DVs are rolled): x"));
             Check("a section the registry does not file the line under is NOT IN THE REGISTRY", 1, Citations.ProcedureProblems(new[] { "  " + Citations.FootnoteText(4, new Citations.CiteSource("pokered/engine/movie/oak_speech/init_player_data.asm:1-10", null, "x", Section: "Gen 1/2 (Game Boy) / The RNG")) }).Count);
-            Check("target line marked", true, Gen1TidText.DescribeTarget(gse, 358).EndsWith(" [3x cold-boot verified] [^2] [^4]"));
+            // The derivation tag is a claim about evidence: Red's three cold boots are part of the original tidderive sweep,
+            // whose logs are in neither repository, so Red's verified targets carry the qualified tag and Blue's, whose three
+            // boots ship as tests/fixtures/blue-*-triple.csv in RNG Solution, carry the flat one. Not a blanket downgrade.
+            Check("target line marked", true, Gen1TidText.DescribeTarget(gse, 358).EndsWith(" [3x cold-boot verified off-repository: no derivation fixture here] [^2] [^4]"));
+            var redDmg = Gen1Platform.Resolve(DATA, "red", "dmg", null, null);
+            var blueGse = Gen1Platform.Resolve(DATA, "blue", "gse", null, null);
+            var blueDmgP = Gen1Platform.Resolve(DATA, "blue", "dmg", null, null);
+            Check("Red's verified targets carry the off-repository qualifier on both families", true,
+                new[] { 358, 743, 1131 }.All(o => Gen1TidText.DerivationTag(gse, o) == Gen1TidText.VerifiedOffRepoTag) &&
+                new[] { 517, 878 }.All(o => Gen1TidText.DerivationTag(redDmg, o) == Gen1TidText.VerifiedOffRepoTag) &&
+                !gse.Timing.VerifiedEvidenceInRepo && !redDmg.Timing.VerifiedEvidenceInRepo);
+            Check("Blue's verified targets keep the flat tag (its three boots are a fixture in RNG Solution)", true,
+                Gen1TidText.DerivationTag(blueGse, 675) == Gen1TidText.VerifiedTag && Gen1TidText.DerivationTag(blueDmgP, 658) == Gen1TidText.VerifiedTag &&
+                blueGse.Timing.VerifiedEvidenceInRepo && blueDmgP.Timing.VerifiedEvidenceInRepo);
+            Check("a route-valid offset outside the verified list is still one derivation, a non-route-valid offset untagged", true,
+                Gen1TidText.DerivationTag(gse, 1448) == Gen1TidText.OneDerivationTag && Gen1TidText.DerivationTag(redDmg, 2359) == Gen1TidText.OneDerivationTag &&
+                Gen1TidText.DerivationTag(gse, 359) == "");
+            Check("the methodology panel says where the three derivations are", true,
+                Gen1TidText.MethodologyLines(gse, true, "").Contains("Verification: offsets 358, 743, 1131 [3x cold-boot verified off-repository: no derivation fixture here]") &&
+                Gen1TidText.MethodologyLines(gse, true, "").Any(l => l.StartsWith("  Evidence (RNG Solution): the three cold boots are part of the original tidderive extended sweep, whose logs are not in this repository")) &&
+                Gen1TidText.MethodologyLines(blueDmgP, true, "").Contains("Verification: offsets 658, 994, 1003, 1028, 1513, 1810, 2105, 2248, 2304 [3x cold-boot verified]"));
             Check("schedule A cue marked", true, Gen1TidText.ScheduleLines(sched, 358, 200, gse).Last().EndsWith(" [^2]"));
             var verify = Gen1TidText.VerifyLines(Gen1Platform.Resolve(DATA, "red", "gbp", null, null), 0x4003, 7.333, false, 3, null).Lines;
             Check("verify carries the table and roll footnotes and its Sources", true, verify.Contains("  the table produces it at offset 358 [^2] [^4]") && verify.Any(l => l.StartsWith("  [^2] EMPIRICAL (no decomp line; ")) && verify.Any(l => l.StartsWith("  [^4] pokered/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: Gen 1/2 (Game Boy) / Gen 1 Trainer ID / Where the ID comes from): InitPlayerData2")) && verify.Count(l => l.StartsWith("  [^")) == 2);

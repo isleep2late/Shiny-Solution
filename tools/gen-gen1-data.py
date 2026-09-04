@@ -32,8 +32,12 @@ RNG = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "
 DATA = os.path.join(RNG, "rngsolution", "data")
 OUT_DIR = os.path.join(ROOT, "core", "data")
 
+# verified_targets_evidence travels with verified_targets: the tag the front ends print is a claim
+# about evidence ("[3x cold-boot verified]" only when the derivations are a fixture shipped in RNG
+# Solution; the qualified tag otherwise), so a methodology that inherits the targets must inherit the
+# evidence with them. RNG Solution's own mirror of these rules is tests/test_shared_data.py TIMING_KEYS.
 TIMING_KEYS = ("hold_lo_frame", "hold_hi_frame", "menu_frame", "visible_lag_frames", "visible_lag_note",
-               "verified_targets", "verified_targets_note")
+               "verified_targets", "verified_targets_note", "verified_targets_evidence")
 
 
 def sha1(path):

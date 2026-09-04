@@ -48,6 +48,12 @@ public sealed class Gen1Timing
     public string VisibleLagNote { get; init; } = "";
     public int[] VerifiedTargets { get; init; } = Array.Empty<int>();
     public string VerifiedTargetsNote { get; init; } = "";
+    // Where the three cold-boot re-derivations can be read: a path under FixturePrefix, shipped in RNG
+    // Solution, or a sentence saying the logs are outside both repositories. The derivation tag is
+    // computed from this, not from VerifiedTargets (rngsolution/tables.py verified_evidence_in_repo).
+    public string VerifiedTargetsEvidence { get; init; } = "";
+    public const string FixturePrefix = "tests/fixtures/";
+    public bool VerifiedEvidenceInRepo => VerifiedTargetsEvidence.StartsWith(FixturePrefix, StringComparison.Ordinal);
 }
 
 public sealed class ResetPath
@@ -1251,7 +1257,8 @@ public sealed class Gen1TidData
                     VisibleLagFrames = t.TryGetProperty("visible_lag_frames", out var vl) ? vl.GetDouble() : 0.0,
                     VisibleLagNote = t.TryGetProperty("visible_lag_note", out var vn) ? vn.GetString() ?? "" : "",
                     VerifiedTargets = t.TryGetProperty("verified_targets", out var vt) ? vt.EnumerateArray().Select(x => x.GetInt32()).ToArray() : Array.Empty<int>(),
-                    VerifiedTargetsNote = t.TryGetProperty("verified_targets_note", out var vtn) ? vtn.GetString() ?? "" : ""
+                    VerifiedTargetsNote = t.TryGetProperty("verified_targets_note", out var vtn) ? vtn.GetString() ?? "" : "",
+                    VerifiedTargetsEvidence = t.TryGetProperty("verified_targets_evidence", out var vte) ? vte.GetString() ?? "" : ""
                 },
                 Table = Gen1Tid.DecodeTable(td.GetProperty("tids_hex").GetString() ?? "", td.GetProperty("offset_min").GetInt32()),
                 Raw = m.Value

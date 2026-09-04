@@ -16,7 +16,7 @@ void Check<T>(string label, T actual, T expected)
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> [citations.json] | --generators <generators-vectors.json> [cross-out.json] | --check-timer-vectors <timer-vectors.json> | --emit-timer-parity <out.json> [count] [seed] | --gen5 <gen5-vectors.json> | --emit-gen5-random <out.json> | --mode-wall <mode-wall-fixture.json> | --gen2tid <gen2tid-vectors.json> <repo-root> | --gen2tid-panel <gen2tid-panel-vectors.json> [citations.json] | --wizard-panel <wizard-panel-vectors.json> [citations.json] | --seedtime4 <seedtime4-vectors.json> | --seedtime4-cross <inputs.json> <out.json>");
+    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> [citations.json] | --generators <generators-vectors.json> [cross-out.json] | --check-timer-vectors <timer-vectors.json> | --emit-timer-parity <out.json> [count] [seed] | --gen5 <gen5-vectors.json> | --emit-gen5-random <out.json> | --emit-gen1-claims <out.json> [gen1-tid.json|-] [citations.json] | --mode-wall <mode-wall-fixture.json> | --gen2tid <gen2tid-vectors.json> <repo-root> | --gen2tid-panel <gen2tid-panel-vectors.json> [citations.json] | --wizard-panel <wizard-panel-vectors.json> [citations.json] | --seedtime4 <seedtime4-vectors.json> | --seedtime4-cross <inputs.json> <out.json>");
     return 2;
 }
 
@@ -144,6 +144,16 @@ if (args[0] == "--emit-timer-parity")
 if (args[0] == "--gen5")
 {
     return ShinySolution.Tests.Gen5Checks.Run(args[1]);
+}
+
+if (args[0] == "--emit-gen1-claims")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --emit-gen1-claims <out.json> [gen1-tid.json] [citations.json]");
+        return 2;
+    }
+    return Gen1ClaimsEmit.Run(args[1], args.Length > 2 && args[2] != "-" ? args[2] : null, args.Length > 3 ? args[3] : null);
 }
 
 if (args[0] == "--emit-gen5-random")

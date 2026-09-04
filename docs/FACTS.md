@@ -202,7 +202,7 @@ tables agree with them on every overlapping offset (`tests/test_tables.py`, fixt
 | GameCube Game Boy Player | **not sampled with this hold-window table.** An earlier method (per-START-frame tables without the GBC boot, 2026-08-30, six calibration triples) did not transfer to the GBP under any constant alignment. Whether the GBP shares the GBA HD's determinism is open; the tool labels it unvalidated, lists it after the validated choices, and asks for a transfer test | **unvalidated** |
 | GSE / gambatte-speedrun | the derivation core and boot | emulator-exact |
 | press-to-visible lag | 8.7 frames (0.146 s): the A press's first visible effect on the game screen, GBA HD, one sample; provisional. The GBA HD's button overlay in the black margin shows the press itself | hardware, n = 1 |
-| route-valid offsets | 358 → `$4003`, 743 → `$400C`, 1131 → `$404A`, 1448 → `$405B`, 1640 → `$4052`, 1647 → `$40D9`, 1785 → `$40EA` | 358/743/1131 triple cold-boot verified; 1448/1640/1647/1785 one derivation |
+| route-valid offsets | 358 → `$4003`, 743 → `$400C`, 1131 → `$404A`, 1448 → `$405B`, 1640 → `$4052`, 1647 → `$40D9`, 1785 → `$40EA` | 358/743/1131 triple cold-boot verified &mdash; but those boots are part of the original tidderive extended sweep, whose logs are in **neither repository**, so nothing shipped here shows them (both heads say `[3x cold-boot verified off-repository: no derivation fixture here]`); 1448/1640/1647/1785 one derivation |
 
 #### Original Game Boy (`dmg.csv`)
 
@@ -215,7 +215,7 @@ tables agree with them on every overlapping offset (`tests/test_tables.py`, fixt
 | distinct IDs | 2366 of 2400 (34 collisions) | table |
 | hardware | real DMG, 2026-09-01: 5 of 6 observed IDs in the table at the stopwatch offset; untuned prediction one frame out with the truth inside the printed ±1 set | hardware-validated |
 | press-to-visible lag | 38.83 frames (650 ms): Red's fade-out is the first visible effect of the A press; fitted on two independent runs (38.55 and 39.10, a 0.55-frame spread) | hardware, n = 2 |
-| route-valid offsets | 100 → `$40AD`, 236 → `$4093`, 517 → `$400B`, 878 → `$4052`, 1093 → `$40FB`, 1160 → `$40DC`, 1622 → `$4081`, 1777 → `$40D3`, 1978 → `$4073`, 2359 → `$4033`, 2389 → `$405F` | 517/878 re-derived with START held at 1450, 1545 and 1640 (byte-identical); the other nine one derivation each. Offset 100 is the cheapest (A 3.01 s after the menu) and was window-invariant at hold starts 1450/1545/1640 |
+| route-valid offsets | 100 → `$40AD`, 236 → `$4093`, 517 → `$400B`, 878 → `$4052`, 1093 → `$40FB`, 1160 → `$40DC`, 1622 → `$4081`, 1777 → `$40D3`, 1978 → `$4073`, 2359 → `$4033`, 2389 → `$405F` | 517/878 re-derived with START held at 1450, 1545 and 1640 (byte-identical) &mdash; but those boots are part of the original tidderive extended sweep, whose logs are in **neither repository**, so nothing shipped here shows them (both heads say `[3x cold-boot verified off-repository: no derivation fixture here]`); the other nine one derivation each. Offset 100 is the cheapest (A 3.01 s after the menu) and was window-invariant at hold starts 1450/1545/1640 |
 
 #### Blue (`rngsolution/data/blue/`)
 
@@ -228,7 +228,7 @@ boot ROMs as Red, `wSaveFileStatus $D088`, `wPlayerID $D359` (`pokeblue.sym`).
 |---|---|---|---|
 | plateau (`hold` search, step 5 over 0–2400 then step 1 over every candidate) | START held from any frame 1293–1492 opens the menu on frame 1560; 1280–1292 never open it; 1493+ slide 1:1 | 1441–1640 → frame 1708; 1430–1440 never; 1641+ slide | emulator-measured |
 | derivation hold frame | 1400 | 1545 | |
-| three further cold boots | START from 1293, 1350, 1492: byte-identical on all 2400 offsets | 1441, 1500, 1640: byte-identical | emulator-measured |
+| three further cold boots | START from 1293, 1350, 1492: byte-identical on all 2400 offsets of the sweep; the shipped evidence is a sample of it, RNG Solution's `tests/fixtures/blue-gba-triple.csv`, 55 rows (every route-valid offset plus every 50th) | 1441, 1500, 1640: byte-identical on all 2400; sample `tests/fixtures/blue-dmg-triple.csv`, 57 rows | emulator-measured |
 | negative control | START from 1500 (menu 1568): 0 of 2400 offsets agree | START from 1650 (menu 1718): 0 of 2400 agree | emulator-measured |
 | release timing | irrelevant (0/5/15/30/60/120/240 frames after the menu, offset 300: `$8BF8` every time) | same (`$61A3`) | emulator-measured |
 | finite hold | a 60-frame hold from 1400 never opens the menu; 100 frames does (1560) | | emulator-measured |
@@ -258,8 +258,10 @@ step 1 over every candidate range, `timeline` brightness with no input):
 | 1982–2202 / 2093–2305 | 2259 | 2360 | the intro has ended; the title's first held-START check is on a fixed frame |
 | 2203+ / 2306+ | slides | slides | the title polls every frame |
 
-Shipped plateau checks: three further cold boots (START from 0, 267, 520 on GBA; 0, 411, 663 on
-DMG) byte-identical on all 2400 offsets; negative controls START from 600 (GBA, menu 2086) and
+Plateau checks: three further cold boots (START from 0, 267, 520 on GBA; 0, 411, 663 on
+DMG) byte-identical on all 2400 offsets of the sweep, of which a sample ships as evidence
+(`tests/fixtures/yellow-gba-triple.csv` and `yellow-dmg-triple.csv`, 48 rows each: every
+route-valid offset plus every 50th); negative controls START from 600 (GBA, menu 2086) and
 700 (DMG, menu 2144) agree on 0 of 2400; release timing after the menu irrelevant (offset 300:
 `$ECDE` GBA, `$168C` DMG for every release delay); a hold released before the title never opens the
 menu (hold lengths 200–1500 from frame 350: no menu; 1700+: frame 2006). Distinct IDs 2362 (GBA)
