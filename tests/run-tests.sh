@@ -723,8 +723,11 @@ esac
 # Round 7 finding R7-7. tools/check-evidence-display.cjs is the guard over the PUBLIC head - the
 # thing a reader actually sees - and NO SUITE RAN IT. Only /var/www/hackmons-beta/tools/sync-shiny-core.sh
 # did, so every plant in round 7 could have been committed to the site with the guard never
-# executing once. It runs here, and its own negative controls (the nine plants that beat earlier
-# versions of it, replayed) run with it, because a guard that has never fired is not a guard.
+# executing once. It runs here, and its own negative controls (the plants that beat earlier versions
+# of it, replayed) run with it, because a guard that has never fired is not a guard. HOW MANY plants
+# there are is asked of that script (--count, which derives it from its own list) and never written
+# down here: this comment said "the nine plants" while twelve were running, and a count that has
+# stopped matching what it counts is the defect this whole thread is about.
 SITE_SRC="${HACKMONS_BETA_SRC:-/var/www/hackmons-beta}"
 if [ -f "$SITE_SRC/tools/check-evidence-display.cjs" ] && [ -d "$SITE_SRC/node_modules/esbuild" ]; then
   set +e
@@ -737,6 +740,8 @@ if [ -f "$SITE_SRC/tools/check-evidence-display.cjs" ] && [ -d "$SITE_SRC/node_m
          "the website guard ran DEGRADED: one of the heads it compares against was missing" ;;
     *) echo "the website's evidence display disagrees with this repository's heads"; exit 1 ;;
   esac
+  site_controls_n=$("$SITE_SRC/tools/check-evidence-display-controls.sh" --count 2>/dev/null || echo "an unknown number of")
+  echo "  the website's evidence-display guard has $site_controls_n negative controls; running them"
   site_controls_out=$(mktemp)
   set +e
   "$SITE_SRC/tools/check-evidence-display-controls.sh" --shiny "$(cd .. && pwd)" --rng "$RNG_SRC" > "$site_controls_out" 2>&1
@@ -748,7 +753,7 @@ if [ -f "$SITE_SRC/tools/check-evidence-display.cjs" ] && [ -d "$SITE_SRC/node_m
     echo "the website's evidence-display guard passed a page that lies: it is not guarding anything"; exit 1
   fi
 else
-  guard_degraded "cross-repo guard F (the website's evidence display, and its nine negative controls)" \
+  guard_degraded "cross-repo guard F (the website's evidence display, and its negative controls)" \
     "no website checkout with node_modules at $SITE_SRC (set HACKMONS_BETA_SRC); the PUBLIC head was NOT rendered or compared"
 fi
 
