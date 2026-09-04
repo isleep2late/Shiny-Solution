@@ -125,8 +125,16 @@ public sealed class TargetSet
                 ? t.EnumerateArray().Select(x => Convert.ToInt32(x.ToString(), 16)).OrderBy(x => x).ToArray()
                 : Array.Empty<int>();
         }
+        else if (Kind == "highbyte")
+        {
+            // Every Trainer ID with this high byte; the low byte is unconstrained.
+            Hi = Convert.ToInt32(spec.GetProperty("hi").ToString(), 16);
+        }
         else if (Kind == "sled")
         {
+            // A high byte plus a window on the LOW byte. No shipped Trainer ID set uses this: on the
+            // save-corruption route the bank-$1D window constrains the jump POINTER's low byte, which
+            // comes from wLetterPrintingDelayFlags ($D358), not from the Trainer ID (see "highbyte").
             Hi = Convert.ToInt32(spec.GetProperty("hi").ToString(), 16);
             LoRanges = spec.TryGetProperty("lo_ranges", out var lr)
                 ? lr.EnumerateArray().Select(x => (Convert.ToInt32(x[0].ToString(), 16), Convert.ToInt32(x[1].ToString(), 16))).ToArray()
@@ -135,13 +143,9 @@ public sealed class TargetSet
         else throw new ArgumentException($"target set {key}: unknown kind '{Kind}'");
     }
 
-    public static TargetSet Sled(string key, string name, int hi, (int, int)[] loRanges)
+    public static TargetSet HighByte(string key, string name, int hi)
     {
-        using var doc = JsonDocument.Parse(JsonSerializer.Serialize(new
-        {
-            kind = "sled", hi = hi.ToString("X2"), name,
-            lo_ranges = loRanges.Select(r => new[] { r.Item1.ToString("X2"), r.Item2.ToString("X2") }).ToArray()
-        }));
+        using var doc = JsonDocument.Parse(JsonSerializer.Serialize(new { kind = "highbyte", hi = hi.ToString("X2"), name }));
         return new TargetSet(key, doc.RootElement.Clone());
     }
 
@@ -149,16 +153,17 @@ public sealed class TargetSet
     {
         if (Kind == "list") return Array.IndexOf(Tids, tid) >= 0;
         if ((tid >> 8) != Hi) return false;
+        if (Kind == "highbyte") return true;
         int lo = tid & 0xFF;
         return LoRanges.Any(r => r.Lo <= lo && lo <= r.Hi);
     }
 
-    public bool Trap(int tid) => Kind == "sled" && (tid >> 8) == Hi && !Accepts(tid);
-
     public string Describe()
     {
         if (Kind == "list") return Key + ": " + string.Join(", ", Tids.Select(t => $"${t:X4} ({t})"));
-        return Key + ": high byte $" + (Hi ?? 0).ToString("X2") + ", low byte " + string.Join(" or ", LoRanges.Select(r => $"${r.Lo:X2}-${r.Hi:X2}"));
+        string hi = (Hi ?? 0).ToString("X2");
+        if (Kind == "highbyte") return Key + ": high byte $" + hi + ", any low byte ($" + hi + "00-$" + hi + "FF)";
+        return Key + ": high byte $" + hi + ", low byte " + string.Join(" or ", LoRanges.Select(r => $"${r.Lo:X2}-${r.Hi:X2}"));
     }
 }
 
@@ -290,14 +295,16 @@ public static class Gen1Tid
     public static readonly IReadOnlyDictionary<string, string> VerdictText = new Dictionary<string, string>
     {
         ["RUN"] = "route-valid for Any% save corruption",
-        ["40!"] = "$40 high byte but the low byte overshoots the sled: the route hard-locks",
-        ["no"] = "not route-valid (the route needs $4000-$4038 or $403A-$405C)"
+        ["no"] = "not route-valid (the $40xx route needs a $40 high byte: $4000-$40FF)"
     };
 
-    // The owner's $40xx sled as a set object (Red and Blue list it; Yellow does not). It is NOT a default: a
-    // verdict with no sets is an error, so a $40xx Trainer ID on Yellow, where no set accepts it, is "no", never "RUN".
-    public static readonly TargetSet Sled40xx = TargetSet.Sled("sled-40xx", "$40xx bank-$1D sled (Red / Blue Any% save corruption)", 0x40,
-        new[] { (0x00, 0x38), (0x3A, 0x5C) });
+    // The owner's $40xx set as a set object (Red and Blue list it; Yellow does not). The whole rule is the HIGH
+    // byte: swap 1 of the corruption overwrites $D35A-$D364 and destroys the Trainer ID's low byte before swap 2
+    // runs, so swap 2 delivers ($D358, TID-high) into $D36E/$D36F and the jump target is always $HH01. The
+    // bank-$1D sled window is real but constrains that pointer low byte ($D358 = wLetterPrintingDelayFlags = $01,
+    // inside the window), not the Trainer ID. It is NOT a default: a verdict with no sets is an error, so a $40xx
+    // Trainer ID on Yellow, where no set accepts it, is "no", never "RUN".
+    public static readonly TargetSet Hi40Corruption = TargetSet.HighByte("hi40-corruption", "$40xx high byte (Red / Blue Any% save corruption): any Trainer ID $4000-$40FF", 0x40);
 
     public static double FramesToSeconds(double frames) => frames / Fps;
     public static double SecondsToFrames(double seconds) => seconds * Fps;
@@ -439,7 +446,7 @@ public static class Gen1Tid
 
     public static string FormatTid(int tid) => $"{tid} (${tid:X4})";
 
-    // The sets in force are never defaulted: a null list is an error, not the $40xx sled.
+    // The sets in force are never defaulted: a null list is an error, not the $40xx set.
     static IReadOnlyList<TargetSet> RequireSets(IReadOnlyList<TargetSet>? sets)
         => sets ?? throw new ArgumentException("target sets are required: pass Gen1TidData.TargetSetsFor(game)");
     static int CheckTid(int tid) => tid is >= 0 and <= 0xFFFF ? tid : throw new ArgumentException($"a Trainer ID is 0..65535 (got {tid})");
@@ -456,7 +463,6 @@ public static class Gen1Tid
         var all = RequireSets(sets);
         CheckTid(tid);
         if (all.Any(s => s.Accepts(tid))) return "RUN";
-        if (all.Any(s => s.Trap(tid))) return "40!";
         return "no";
     }
 
@@ -464,7 +470,6 @@ public static class Gen1Tid
     {
         string v = Verdict(tid, sets);
         if (v == "RUN") return "route-valid for Any% save corruption (target set " + string.Join(", ", SetsAccepting(tid, sets).Select(s => s.Key)) + ")";
-        if (v == "40!" && (tid & 0xFF) == 0x39) return "$4039 is the one hole inside the sled (excluded by the route rule): not usable";
         if (v == "no") return "not route-valid (accepted by none of: " + string.Join(", ", sets!.Select(s => s.Key)) + ")";
         return VerdictText[v];
     }
@@ -652,7 +657,7 @@ public static class Gen1Tid
     }
 
     // ---- Verification (moderators; human-measured input) ---------------------------
-    // sets stays last (callers pass it positionally) but is required: null is an error, not the $40xx sled.
+    // sets stays last (callers pass it positionally) but is required: null is an error, not the $40xx set.
     public static VerifyResult Verify(int[] table, int tid, double menuToPressS, int toleranceFrames = 3, double visibleLagFrames = 0.0,
         IReadOnlyList<TargetSet>? sets = null)
     {

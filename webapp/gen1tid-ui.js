@@ -141,7 +141,7 @@
   function describeTarget(plat, offset) {
     var tid = plat.table[offset];
     var v = G.verdict(tid, plat.targetSets);
-    var tag = { "RUN": "route-valid (" + ANY_PERCENT + ": " + setTag(plat, tid) + ")", "40!": "TRAP: $40 but hard-locks", "no": "" }[v];
+    var tag = { "RUN": "route-valid (" + ANY_PERCENT + ": " + setTag(plat, tid) + ")", "no": "" }[v];
     var ver = derivationTag(plat, offset);
     return "offset " + offset + " -> " + G.formatTid(tid) + " : press A " + fmtSf(G.targetSeconds(offset)) + " after the menu" +
       (tag ? "   " + tag : "") + (ver ? " " + ver : "") + footnotesFor(plat).mark(["table", "tidRoll"]);
@@ -260,9 +260,9 @@
       if (sched.droppedCountIn) lines.push("    (" + plural(sched.droppedCountIn, "count-in beep") + " left out: they would have sounded before the menu.)");
     }
     if (plat.focusNote) lines.push("", "    " + webNote(plat.focusNote));
-    if (plat.targetSets.some(function (x) { return x.kind === "sled"; })) {
+    if (plat.targetSets.some(function (x) { return x.kind === "highbyte" || x.kind === "sled"; })) {
       lines.push(" 6. Afterwards, type the Trainer ID you got below (a Pokemon's status screen shows IDNo;",
-        "    in the route, whether the corruption completes tells you the high byte was $40).");
+        "    in the route, whether the corruption completes tells you the high byte was $40, which is the whole rule).");
     } else {
       lines.push(" 6. Afterwards, type the Trainer ID you got below (read it off the Trainer Card, or a",
         "    Pokemon's status screen shows IDNo).");

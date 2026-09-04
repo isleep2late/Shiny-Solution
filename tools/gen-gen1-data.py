@@ -13,6 +13,10 @@ copied verbatim (provenance strings included); this script only adds
   * "table_data": the CSV table as 4 hex digits per offset, with the CSV's own '#'
     provenance header lines and a sha1 of the CSV file.
 
+It also refuses to run over a registry whose Trainer ID target sets still window the ID's LOW
+byte (see check_target_sets): on the save-corruption route only the high byte reaches the jump
+pointer, and regenerating over the old rule would silently restore it.
+
 Usage:  python3 tools/gen-gen1-data.py [path-to-RNG-Solution]   (default ../RNG-Solution)
 Re-running it on the same inputs writes byte-identical files (no timestamps).
 """
@@ -79,10 +83,32 @@ def table_data(rel, path):
     }
 
 
+def check_target_sets(sets):
+    """Refuse a Trainer ID set that puts a window on the ID's LOW byte.
+
+    On the Any% save-corruption route only the Trainer ID's HIGH byte reaches the jump pointer:
+    swap 1 overwrites $D35A-$D364 and destroys the ID's low byte before swap 2 copies
+    ($D358, TID-high) into $D36E/$D36F. The bank-$1D sled window ($00-$38 / $3A-$5C) is real but
+    constrains that pointer low byte ($D358 = wLetterPrintingDelayFlags = $01), not the ID, so a
+    'sled' Trainer ID set is the 1-in-712 mistake this data was corrected away from on 2026-09-04.
+    Regenerating over a registry that still carries it would silently restore it.
+    """
+    for key, spec in sets.items():
+        if spec.get("kind") != "sled":
+            continue
+        lo = [(int(a, 16), int(b, 16)) for a, b in spec.get("lo_ranges", [])]
+        if not any(a <= 0x00 and b >= 0xFF for a, b in lo):
+            raise SystemExit(
+                "target set %r is kind 'sled' with a restricted low byte %s: the bank-$1D window "
+                "constrains the jump POINTER's low byte, not the Trainer ID's. Correct the registry "
+                "(kind 'highbyte', or lo_ranges 00-FF) before regenerating." % (key, spec.get("lo_ranges")))
+
+
 def main():
     reg_path = os.path.join(DATA, "red", "platforms.json")
     with open(reg_path) as f:
         reg = json.load(f)
+    check_target_sets(reg["target_sets"])
     families = reg["families"]
     games = reg["games"]
 

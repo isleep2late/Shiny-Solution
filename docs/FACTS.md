@@ -202,8 +202,7 @@ tables agree with them on every overlapping offset (`tests/test_tables.py`, fixt
 | GameCube Game Boy Player | **not sampled with this hold-window table.** An earlier method (per-START-frame tables without the GBC boot, 2026-08-30, six calibration triples) did not transfer to the GBP under any constant alignment. Whether the GBP shares the GBA HD's determinism is open; the tool labels it unvalidated, lists it after the validated choices, and asks for a transfer test | **unvalidated** |
 | GSE / gambatte-speedrun | the derivation core and boot | emulator-exact |
 | press-to-visible lag | 8.7 frames (0.146 s): the A press's first visible effect on the game screen, GBA HD, one sample; provisional. The GBA HD's button overlay in the black margin shows the press itself | hardware, n = 1 |
-| route-valid offsets | 358 → `$4003`, 743 → `$400C`, 1131 → `$404A`, 1448 → `$405B`, 1640 → `$4052` | 358/743/1131 triple cold-boot verified; 1448/1640 one derivation |
-| `$40xx` traps | 1647 → `$40D9`, 1785 → `$40EA` | table |
+| route-valid offsets | 358 → `$4003`, 743 → `$400C`, 1131 → `$404A`, 1448 → `$405B`, 1640 → `$4052`, 1647 → `$40D9`, 1785 → `$40EA` | 358/743/1131 triple cold-boot verified; 1448/1640/1647/1785 one derivation |
 
 #### Original Game Boy (`dmg.csv`)
 
@@ -216,8 +215,7 @@ tables agree with them on every overlapping offset (`tests/test_tables.py`, fixt
 | distinct IDs | 2366 of 2400 (34 collisions) | table |
 | hardware | real DMG, 2026-09-01: 5 of 6 observed IDs in the table at the stopwatch offset; untuned prediction one frame out with the truth inside the printed ±1 set | hardware-validated |
 | press-to-visible lag | 38.83 frames (650 ms): Red's fade-out is the first visible effect of the A press; fitted on two independent runs (38.55 and 39.10, a 0.55-frame spread) | hardware, n = 2 |
-| route-valid offsets | 517 → `$400B`, 878 → `$4052`, 2359 → `$4033` | 517/878 re-derived with START held at 1450, 1545 and 1640 (byte-identical); 2359 one derivation |
-| `$40xx` traps | 100 → `$40AD`, 236 → `$4093`, 1093 → `$40FB`, 1160 → `$40DC`, 1622 → `$4081`, 1777 → `$40D3`, 1978 → `$4073`, 2389 → `$405F` | table |
+| route-valid offsets | 100 → `$40AD`, 236 → `$4093`, 517 → `$400B`, 878 → `$4052`, 1093 → `$40FB`, 1160 → `$40DC`, 1622 → `$4081`, 1777 → `$40D3`, 1978 → `$4073`, 2359 → `$4033`, 2389 → `$405F` | 517/878 re-derived with START held at 1450, 1545 and 1640 (byte-identical); the other nine one derivation each. Offset 100 is the cheapest (A 3.01 s after the menu) and was window-invariant at hold starts 1450/1545/1640 |
 
 #### Blue (`rngsolution/data/blue/`)
 
@@ -236,9 +234,8 @@ boot ROMs as Red, `wSaveFileStatus $D088`, `wPlayerID $D359` (`pokeblue.sym`).
 | finite hold | a 60-frame hold from 1400 never opens the menu; 100 frames does (1560) | | emulator-measured |
 | white flash with no input | frames 1328–1392 (inside the window) | 1476–1540 (inside) | emulator-measured |
 | distinct IDs | 2357 of 2400 (43 collisions); offset 1913 is a genuine `$0000` (the `wPlayerMoney` write that follows it was seen 22 frames after A) | 2344 (56 collisions) | table |
-| `sled-40xx` hits | 1028 → `$404A`, 1699 → `$4026`, 1810 → `$4040` | 994 → `$4047`, 1513 → `$400E`, 2105 → `$402C` | all triple-verified |
+| `hi40-corruption` hits | 675 → `$4091`, 1006 → `$40B2`, 1028 → `$404A`, 1422 → `$40F3`, 1699 → `$4026`, 1810 → `$4040`, 2107 → `$40DE` | 658 → `$40D6`, 994 → `$4047`, 1003 → `$40F3`, 1028 → `$40C1`, 1513 → `$400E`, 1810 → `$40B1`, 2105 → `$402C`, 2248 → `$4093`, 2304 → `$40A6` | the offsets are triple-verified; that Blue accepts every `$40xx` is **inferred**, not swept (see below) |
 | `psr-64c2` family | none in 0–5999 | none in 0–5999 | extended sweep |
-| `$40xx` traps | 675, 1006, 1422, 2107 | 658, 1003, 1028, 1810, 2248, 2304 | table |
 | hardware | **none** | **none** | unvalidated |
 
 #### Yellow (`rngsolution/data/yellow/`)
@@ -272,16 +269,44 @@ the blind-stretch plateau neither (sweeps of 0–2399; logs in `/tmp/tidwork-by/
 values do occur (GBA 164 → `$4027`, 370 → `$405B`, 380 → `$400A`, 2196 → `$4028`; DMG 1153 →
 `$4024`) but Yellow has no bank-`$1D` sled route, so no target set accepts them. Hardware: **none**.
 
-#### Why a `$40` high byte is not enough
+#### Why a `$40` high byte IS enough
 
 The Any% save-corruption route forces `wCurMapScriptPtr` to `jp $40xx` with bank `$1D`
-mapped. `1D:$4000–$405B` is map-block data that executes as a harmless 92-byte sled falling
-into `HallOfFamePC` at `1D:$405C`; a low byte past `$5C` jumps into the middle of that
-routine and hard-locks. The published rule also excludes `$39` (the one hole inside the
-sled; the tool names it as such rather than as an overshoot). Hence `verdict()`: high byte
-`$40` and low byte in `$00–$38` or `$3A–$5C`. This rule comes from the route documentation
-(the practice kit's sled analysis and the PSR route docs); the tool applies it as published
-and does not re-derive it. Route-valid density is (1/256) × (92/256) ≈ 1 in 712 offsets.
+mapped. `1D:$4000–$405B` is map-block data that executes as a harmless sled falling into
+`HallOfFamePC` at `1D:$405C`; a pointer low byte past `$5C` jumps into the middle of that
+routine and hard-locks. That window is real — but it constrains the **jump pointer's** low
+byte, not the Trainer ID's.
+
+The Trainer ID's low byte never reaches the pointer. Swap 1 of the corruption (party slots
+7 ↔ 21) overwrites `$D35A`–`$D364`, destroying the low half of `wPlayerID` before swap 2
+runs; swap 2 is an offset-preserving 11-byte OT-name copy of `$D34F`–`$D359` onto
+`$D365`–`$D36F`, so `($D36E, $D36F) := ($D358, TID-high)` and `RunMapScript` loads that
+little-endian — the jump target is always `$HH01`. `$D358` is `wLetterPrintingDelayFlags`
+(`$01`), which sits deep inside the sled. Hence `verdict()`: **high byte `$40`, full stop**,
+and route-valid density is **1 in 256** (≈ 4.7 expected per 1200 offsets, ≈ 9.4 per 2400) —
+not the (1/256) × (92/256) ≈ 1 in 712 this tool published before 2026-09-04.
+
+Measured (Red): all 256 Trainer IDs `$4000`–`$40FF` driven through the documented 15-step
+button sequence reach `HallOfFamePC` at frame 1472 with HL = `$4001` at the real `jp hl`
+(`00:104B`), and the ID read back after swap 1 is `$4000` on every row. Isolation control on
+the same state: forcing `$D358` to `$AD` hard-locks (jump `$40AD`) while Trainer ID `$40AD`
+reaches the Hall of Fame. An exhaustive search over all 65,280 swap index pairs finds zero
+1- or 2-swap paths from `$D35A` to `$D36E`/`$D36F`, and the result reproduces on a third
+corrupted save minted by gambatte-core from a genuine NEW GAME plus mid-save reset. The old
+92-low-byte window came from sweeps that poison the Trainer ID and poke `wCurMapScriptPtr`
+directly — their column 5 is a pointer low byte — so the four IDs this tool used to call
+traps (`$40AD`, `$4093`, `$40FB`, `$40DC`) were never observed to lock; all four measure
+Hall of Fame at frame 1472. `$4039` is likewise a valid Trainer ID, and the sled width is
+register-state dependent rather than a ROM constant, so it must not be republished as one.
+
+Two caveats the tool carries into its own copy: **nothing here was run on real hardware**
+(PyBoy for the runs, gambatte-core for the saves and the hold tables; the claim is WRAM
+arithmetic, not timing, so it should transfer, but that is inference), and **Blue is
+inferred** — `1D:$4000–$405B` is byte-identical in `pokeblue.gbc` and the swap code is the
+same source, but no Blue corruption-route Trainer ID sweep was ever run. Everything measured
+was Red. The separate TID-free route, where the pointer low byte genuinely comes from a
+typed name character, still needs the `$00–$38` / `$3A–$5C` window; that check must not be
+stripped from it.
 
 ### Cue model
 

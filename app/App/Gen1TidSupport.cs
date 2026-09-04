@@ -274,7 +274,7 @@ public static class Gen1TidText
     {
         int tid = p.Table[offset];
         string v = Gen1Tid.Verdict(tid, p.TargetSets);
-        string tag = v == "RUN" ? $"route-valid ({AnyPercent}: {SetTag(p, tid)})" : v == "40!" ? "TRAP: $40 but hard-locks" : "";
+        string tag = v == "RUN" ? $"route-valid ({AnyPercent}: {SetTag(p, tid)})" : "";
         string ver = DerivationTag(p, offset);
         return $"offset {offset} -> {Gen1Tid.FormatTid(tid)} : press A {FmtSf(Gen1Tid.TargetSeconds(offset))} after the menu" +
             (tag != "" ? "   " + tag : "") + (ver != "" ? " " + ver : "") + FootnotesFor(p).Mark("table", "tidRoll");
@@ -381,10 +381,10 @@ public static class Gen1TidText
             if (sched.DroppedCountIn > 0) lines.Add($"    ({Plural(sched.DroppedCountIn, "count-in beep")} left out: they would have sounded before the menu.)");
         }
         if (p.FocusNote != "") { lines.Add(""); lines.Add("    " + AppNote(p.FocusNote)); }
-        if (p.TargetSets.Any(x => x.Kind == "sled"))
+        if (p.TargetSets.Any(x => x.Kind == "highbyte" || x.Kind == "sled"))
         {
             lines.Add(" 6. Afterwards, type the Trainer ID you got below (a Pokemon's status screen shows IDNo;");
-            lines.Add("    in the route, whether the corruption completes tells you the high byte was $40).");
+            lines.Add("    in the route, whether the corruption completes tells you the high byte was $40, which is the whole rule).");
         }
         else
         {

@@ -65,7 +65,7 @@ says what to do, cues the one timed press, and learns from the ID you type after
 1. Pick the game, the console (GSE, GBA HD, GBA / GBA SP, Game Boy Player, original Game Boy)
    and read the methodology: the input protocol the prediction is valid under (hold START in
    the untimed window, the NEW GAME menu opens on a fixed frame, one timed A press).
-2. Aim at a route-valid row (the $40xx sled for the Any% save corruption; PSR sets are opt-in),
+2. Aim at a route-valid row (any $40xx Trainer ID for the Any% save corruption; PSR sets are opt-in),
    or type any Trainer ID and get its press time(s), or any offset.
 3. Choose the anchor (the menu appearing: recommended; the power switch; RESET on GSE / GBP)
    and read the PROTOCOL. The correction starts at 200 ms (menu) / 100 ms (power-on, reset).

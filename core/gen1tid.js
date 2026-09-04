@@ -271,7 +271,13 @@
     };
     if (ts.kind === "list") {
       ts.tids = (spec.tids || []).map(function (t) { return parseInt("" + t, 16); }).sort(function (a, b) { return a - b; });
+    } else if (ts.kind === "highbyte") {
+      // Every Trainer ID with this high byte; the low byte is unconstrained.
+      ts.hi = parseInt("" + spec.hi, 16);
     } else if (ts.kind === "sled") {
+      // A high byte plus a window on the LOW byte. No shipped Trainer ID set uses this: on the
+      // save-corruption route the bank-$1D window constrains the jump POINTER's low byte, which
+      // comes from wLetterPrintingDelayFlags ($D358), not from the Trainer ID (see "highbyte").
       ts.hi = parseInt("" + spec.hi, 16);
       ts.loRanges = (spec.lo_ranges || []).map(function (r) { return [parseInt("" + r[0], 16), parseInt("" + r[1], 16)]; });
     } else {
@@ -283,24 +289,29 @@
     tid = checkTid(tid);
     if (ts.kind === "list") return ts.tids.indexOf(tid) !== -1;
     if ((tid >> 8) !== ts.hi) return false;
+    if (ts.kind === "highbyte") return true;
     var lo = tid & 0xFF;
     for (var i = 0; i < ts.loRanges.length; i++) if (ts.loRanges[i][0] <= lo && lo <= ts.loRanges[i][1]) return true;
     return false;
   }
-  function setTrap(ts, tid) { tid = checkTid(tid); return ts.kind === "sled" && (tid >> 8) === ts.hi && !setAccepts(ts, tid); }
   function setDescribe(ts) {
     if (ts.kind === "list") {
       return ts.key + ": " + ts.tids.map(function (t) { return "$" + hex(t, 4) + " (" + t + ")"; }).join(", ");
     }
+    if (ts.kind === "highbyte") return ts.key + ": high byte $" + hex(ts.hi, 2) + ", any low byte ($" + hex(ts.hi, 2) + "00-$" + hex(ts.hi, 2) + "FF)";
     return ts.key + ": high byte $" + hex(ts.hi, 2) + ", low byte " +
       ts.loRanges.map(function (r) { return "$" + hex(r[0], 2) + "-$" + hex(r[1], 2); }).join(" or ");
   }
 
-  // The owner's $40xx sled as a set object (Red and Blue list it; Yellow does not). It is NOT a
+  // The owner's $40xx set as a set object (Red and Blue list it; Yellow does not). The whole rule is
+  // the HIGH byte: swap 1 of the corruption overwrites $D35A-$D364 and destroys the Trainer ID's low
+  // byte before swap 2 runs, so swap 2 delivers ($D358, TID-high) into $D36E/$D36F and the jump
+  // target is always $HH01. The bank-$1D sled window is real but constrains that pointer low byte
+  // ($D358 = wLetterPrintingDelayFlags = $01, inside the window), not the Trainer ID. It is NOT a
   // default: a verdict with no sets is an error, so a $40xx Trainer ID on Yellow, where no set
   // accepts it, is "no" and never "RUN".
-  var SLED_40XX = makeTargetSet("sled-40xx", { kind: "sled", hi: "40", lo_ranges: [["00", "38"], ["3A", "5C"]],
-    name: "$40xx bank-$1D sled (Red / Blue Any% save corruption)" });
+  var HI40_CORRUPTION = makeTargetSet("hi40-corruption", { kind: "highbyte", hi: "40",
+    name: "$40xx high byte (Red / Blue Any% save corruption): any Trainer ID $4000-$40FF" });
 
   function requireSets(sets) {
     if (isNil(sets)) fail("target sets are required: pass targetSetsFor(data, game)");
@@ -313,14 +324,12 @@
     var all = requireSets(sets);
     tid = checkTid(tid);
     if (all.some(function (s) { return setAccepts(s, tid); })) return "RUN";
-    if (all.some(function (s) { return setTrap(s, tid); })) return "40!";
     return "no";
   }
 
   var VERDICT_TEXT = {
     "RUN": "route-valid for Any% save corruption",
-    "40!": "$40 high byte but the low byte overshoots the sled: the route hard-locks",
-    "no": "not route-valid (the route needs $4000-$4038 or $403A-$405C)"
+    "no": "not route-valid (the $40xx route needs a $40 high byte: $4000-$40FF)"
   };
 
   function verdictText(tid, sets) {
@@ -328,7 +337,6 @@
     if (v === "RUN") {
       return "route-valid for Any% save corruption (target set " + setsAccepting(tid, sets).map(function (s) { return s.key; }).join(", ") + ")";
     }
-    if (v === "40!" && (tid & 0xFF) === 0x39) return "$4039 is the one hole inside the sled (excluded by the route rule): not usable";
     if (v === "no") return "not route-valid (accepted by none of: " + sets.map(function (s) { return s.key; }).join(", ") + ")";
     return VERDICT_TEXT[v];
   }
@@ -1149,14 +1157,14 @@
     FPS: FPS, FRAME_MS: FRAME_MS, MENU_TO_TABLE_FRAMES: MENU_TO_TABLE_FRAMES, OUTLIER_FRAMES: OUTLIER_FRAMES, COUNT_IN_CLEAR_S: COUNT_IN_CLEAR_S,
     COUNT_IN_TONE: COUNT_IN_TONE, A_CUE_TONE: A_CUE_TONE, RESET_BEAT_TONE: RESET_BEAT_TONE, A_BEAT_TONE: A_BEAT_TONE, HOLD_TONE: HOLD_TONE,
     MENU_MARK_TONE: MENU_MARK_TONE, ANCHOR_MENU: ANCHOR_MENU, ANCHOR_POWERON: ANCHOR_POWERON, ANCHOR_RESET: ANCHOR_RESET, ANCHORS: ANCHORS,
-    VERDICT_TEXT: VERDICT_TEXT, SLED_40XX: SLED_40XX, GBA_FPS: GBA_FPS, TEXT_SPEEDS: TEXT_SPEEDS,
+    VERDICT_TEXT: VERDICT_TEXT, HI40_CORRUPTION: HI40_CORRUPTION, GBA_FPS: GBA_FPS, TEXT_SPEEDS: TEXT_SPEEDS,
     MAD_TO_SD: MAD_TO_SD, MIN_ANCHOR_SD_MS: MIN_ANCHOR_SD_MS, DRIFT_TAIL: DRIFT_TAIL, DRIFT_THRESHOLD_MS: DRIFT_THRESHOLD_MS,
     WELCH_STRONG_T: WELCH_STRONG_T, SD_INTERVAL_CONF: SD_INTERVAL_CONF, SMALL_N: SMALL_N,
     checkReal: checkReal, checkNumber: checkNumber, checkInt: checkInt, checkTid: checkTid, checkSid: checkSid, checkPid: checkPid, checkOffset: checkOffset,
     framesToSeconds: framesToSeconds, secondsToFrames: secondsToFrames, framesToMs: framesToMs, msToFrames: msToFrames,
     targetSeconds: targetSeconds, pressFrameFromMenu: pressFrameFromMenu, cueDelaySeconds: cueDelaySeconds, countInCues: countInCues,
     menuSchedule: menuSchedule, poweronSchedule: poweronSchedule, resetAnchorExtraSeconds: resetAnchorExtraSeconds, schedule: schedule,
-    parseTid: parseTid, formatTid: formatTid, makeTargetSet: makeTargetSet, setAccepts: setAccepts, setTrap: setTrap, setDescribe: setDescribe,
+    parseTid: parseTid, formatTid: formatTid, makeTargetSet: makeTargetSet, setAccepts: setAccepts, setDescribe: setDescribe,
     setsAccepting: setsAccepting, verdict: verdict, verdictText: verdictText, routeValidTargets: routeValidTargets, invert: invert,
     nearestOffset: nearestOffset, decodeTable: decodeTable, tableEntries: tableEntries,
     errorFrames: errorFrames, isOutlier: isOutlier, impliedCorrection: impliedCorrection, makeSample: makeSample,

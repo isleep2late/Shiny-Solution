@@ -214,9 +214,16 @@ static class Gen1TidChecks
             Check($"table {id} route-valid", P(t, "routeValid"), Gen1Tid.RouteValidTargets(tab, defaults).Select(x => new[] { x.Offset, x.Tid }).ToArray());
             foreach (var ps in P(t, "routeValidPerSet").EnumerateObject())
                 Check($"table {id} route-valid under {ps.Name}", ps.Value, Gen1Tid.RouteValidTargets(tab, DATA.TargetSetsFor(game, new[] { ps.Name })).Select(x => new[] { x.Offset, x.Tid }).ToArray());
-            var traps = new List<int[]>();
-            for (int o = 0; o < tab.Length; o++) if (Gen1Tid.Verdict(tab[o], defaults) == "40!") traps.Add(new[] { o, tab[o] });
-            Check($"table {id} traps", P(t, "traps"), traps);
+            // The $40xx set's whole rule is the high byte: on a game that carries it, every $40xx entry in the
+            // table is route-valid and none is a near-miss. (The bank-$1D low-byte window constrains the jump
+            // pointer, which comes from $D358, not from the Trainer ID.)
+            if (P(t, "defaultTargetSets").EnumerateArray().Any(x => x.GetString() == "hi40-corruption"))
+            {
+                var hi40 = new List<int[]>();
+                for (int o = 0; o < tab.Length; o++) if (tab[o] != Gen1Tid.NoTid && (tab[o] >> 8) == 0x40) hi40.Add(new[] { o, tab[o] });
+                Check($"table {id} every $40xx is route-valid", hi40,
+                    Gen1Tid.RouteValidTargets(tab, DATA.TargetSetsFor(game, new[] { "hi40-corruption" })).Select(x => new[] { x.Offset, x.Tid }).ToArray());
+            }
             Check($"table {id} samples", P(t, "samples"), P(t, "samples").EnumerateArray().Select(s => new[] { I(s[0]), tab[I(s[0])] }).ToArray());
         }
 
@@ -264,7 +271,7 @@ static class Gen1TidChecks
             var ts = P(V, "targetSets");
             foreach (var d in P(ts, "describe").EnumerateObject())
             {
-                var set = d.Name == "<default sled>" ? Gen1Tid.Sled40xx : DATA.TargetSet(d.Name);
+                var set = d.Name.StartsWith("<default") ? Gen1Tid.Hi40Corruption : DATA.TargetSet(d.Name);
                 Check($"describe {d.Name}", S(d.Value), set.Describe());
             }
             foreach (var c in P(ts, "verdicts").EnumerateArray())
@@ -275,7 +282,7 @@ static class Gen1TidChecks
                 Check(label, new object[] { S(P(c, "verdict")), S(P(c, "text")), SA(P(c, "accepting")) },
                     new object[] { Gen1Tid.Verdict(tid, s), Gen1Tid.VerdictTextFor(tid, s), Gen1Tid.SetsAccepting(tid, s).Select(x => x.Key).ToArray() });
                 if (c.TryGetProperty("perSet", out var per))
-                    Check(label + " per set", per, s.ToDictionary(x => x.Key, x => new { accepts = x.Accepts(tid), trap = x.Trap(tid) }));
+                    Check(label + " per set", per, s.ToDictionary(x => x.Key, x => new { accepts = x.Accepts(tid) }));
             }
             foreach (var g in P(ts, "defaultSets").EnumerateObject())
                 Check($"default sets {g.Name}", g.Value, DATA.TargetSetsFor(g.Name).Select(s => s.Key).ToArray());

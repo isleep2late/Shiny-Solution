@@ -115,13 +115,13 @@ for (const game of U.supportedGames(DATA)) {
   }
 }
 assert("yellow has no route-valid target", G.routeValidTargets(U.resolve(DATA, "yellow", "gse").table, U.resolve(DATA, "yellow", "gse").targetSets).length === 0);
-assert("blue dmg route-valid offsets", JSON.stringify(G.routeValidTargets(U.resolve(DATA, "blue", "dmg").table, U.resolve(DATA, "blue", "dmg").targetSets).map((e) => e[0])) === "[994,1513,2105]");
+assert("blue dmg route-valid offsets", JSON.stringify(G.routeValidTargets(U.resolve(DATA, "blue", "dmg").table, U.resolve(DATA, "blue", "dmg").targetSets).map((e) => e[0])) === "[658,994,1003,1028,1513,1810,2105,2248,2304]");
 assert("non-red status comes from the methodology", U.resolve(DATA, "blue", "gba-hd").status === "emulator-derived, no hardware sample yet");
 assert("psr-64c2 accepts nothing in red gse", G.routeValidTargets(U.resolve(DATA, "red", "gse", null, ["psr-64c2"]).table, U.resolve(DATA, "red", "gse", null, ["psr-64c2"]).targetSets).length === 0);
 
 const plat = U.resolve(DATA, "red", "gse", null, null);
 assert("gse anchors", JSON.stringify(plat.anchors) === '["menu","reset"]');
-assert("route-valid red gse", JSON.stringify(G.routeValidTargets(plat.table, plat.targetSets).map((e) => e[0])) === "[358,743,1131,1448,1640]");
+assert("route-valid red gse", JSON.stringify(G.routeValidTargets(plat.table, plat.targetSets).map((e) => e[0])) === "[358,743,1131,1448,1640,1647,1785]");
 
 // the schedule and its text
 const sched = U.buildSchedule(plat, "menu", 358, 200, 4, 1.0);

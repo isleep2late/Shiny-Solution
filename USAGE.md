@@ -120,10 +120,13 @@ promoted), the desktop app's
    transfer test), or the original Game Boy (Red: 5 of 6). Read the **methodology** it resolves
    to (e.g. `red/gba/hold-start-v1`) and its validity conditions: the prediction holds only
    under that input pattern, and the protocol's steps are that pattern.
-2. **Target.** Click a route-valid row (Red / Blue: the `$40xx` sled for the Any% save
-   corruption, `[3x cold-boot verified]` or `[extended sweep, one derivation]`; the PSR sets
-   are opt-in target sets), or type any Trainer ID and take one of its press times, or any
-   offset. Yellow has no route-valid ID under the shipped methodology.
+2. **Target.** Click a route-valid row (Red / Blue: any `$40xx` Trainer ID for the Any% save
+   corruption — the high byte is the whole rule, the low byte is free, so 1 in 256;
+   `[3x cold-boot verified]` or `[extended sweep, one derivation]`; the PSR sets are opt-in
+   target sets), or type any Trainer ID and take one of its press times, or any offset.
+   Yellow has no route-valid ID under the shipped methodology. The `$40xx` rule is measured
+   in emulation only (never on a cartridge), and on Blue it is inferred from Red rather than
+   swept.
 3. **Anchor and correction.** The anchor is the moment you press ANCHOR (or Space): the NEW
    GAME menu appearing (recommended), the power switch (handhelds, GBA HD, DMG), or RESET
    (GSE, Game Boy Player: the 2.175 s fade and stall are added). The correction starts at

@@ -119,7 +119,14 @@ for (const t of V.tables) {
   for (const key of Object.keys(t.routeValidPerSet)) {
     check(`table ${t.methodology} route-valid under ${key}`, t.routeValidPerSet[key], G.routeValidTargets(tab, G.targetSetsFor(DATA, t.game, [key])));
   }
-  check(`table ${t.methodology} traps`, t.traps, entries.filter((e) => G.verdict(e[1], G.targetSetsFor(DATA, t.game)) === "40!"));
+  // The $40xx set's whole rule is the high byte: on a game that carries it, every $40xx entry in the
+  // table is route-valid and none is a near-miss. (The bank-$1D low-byte window constrains the jump
+  // pointer, which comes from $D358, not from the Trainer ID.)
+  if (t.defaultTargetSets.includes("hi40-corruption")) {
+    const hi40 = entries.filter((e) => (e[1] >> 8) === 0x40);
+    check(`table ${t.methodology} every $40xx is route-valid`, hi40,
+      G.routeValidTargets(tab, G.targetSetsFor(DATA, t.game, ["hi40-corruption"])));
+  }
   check(`table ${t.methodology} samples`, t.samples, t.samples.map((s) => [s[0], tab[s[0]]]));
 }
 
@@ -158,7 +165,7 @@ for (const c of V.formatTid) check(`formatTid ${c.tid}`, c.text, G.formatTid(c.t
 {
   const ts = V.targetSets;
   for (const key of Object.keys(ts.describe)) {
-    const set = key === "<default sled>" ? G.SLED_40XX : G.makeTargetSet(key, DATA.target_sets[key]);
+    const set = key.startsWith("<default") ? G.HI40_CORRUPTION : G.makeTargetSet(key, DATA.target_sets[key]);
     check(`describe ${key}`, ts.describe[key], G.setDescribe(set));
   }
   for (const c of ts.verdicts) {
@@ -167,7 +174,7 @@ for (const c of V.formatTid) check(`formatTid ${c.tid}`, c.text, G.formatTid(c.t
     check(label, [c.verdict, c.text, c.accepting], [G.verdict(c.tid, s), G.verdictText(c.tid, s), G.setsAccepting(c.tid, s).map((x) => x.key)]);
     if (c.perSet) {
       const got = {};
-      for (const x of s) got[x.key] = { accepts: G.setAccepts(x, c.tid), trap: G.setTrap(x, c.tid) };
+      for (const x of s) got[x.key] = { accepts: G.setAccepts(x, c.tid) };
       check(label + " per set", c.perSet, got);
     }
   }
