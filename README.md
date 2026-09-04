@@ -231,6 +231,19 @@ RNG Solution's registry and tables and embedded in every head.
   registry lacks the Gen 1 hold-START line is shown failing the Gen 1 footnote checks; `app/run-core-tests.sh` gives
   the C# checks a registry without the Ruby RTC line, without the Gen 1 hold-START line and without the Gen 2 poll
   line and shows each failing.
+- The claim-SENTENCE guard, `tests/check-claim-sentences.cjs` (in `run-tests.sh` as cross-repo guard D; rule in
+  `tests/claim-phrases.json`, byte-identical to RNG Solution's copy and shown failing when a sibling's copy has
+  drifted). `check-verification-claims.cjs` above is about the per-offset TAG; this is about the sentences beside it:
+  every rendered unit of text that asserts a multi-boot derivation must name what ships from that derivation within
+  the same block and within 600 characters of the claim, and a panel that prints a `[3x cold-boot verified…]` tag must
+  print the platform's note and evidence too. It judges both heads rendered for real (the web tab's module loaded in
+  node, the desktop head's `--emit-gen1-claims` emission, which now carries the methodology panel), requires the two
+  to render the same sentences, and reads `core/data/gen1-tid.json`, `gen2-tid.json` and `citations.json` (which the
+  website renders verbatim) and `README.md`, `USAGE.md`, `docs/FACTS.md` and `docs/DATA.md`. Six negative controls:
+  the note taken out from under a verified tag in the web head, an unqualified sweep sentence planted at the top of
+  each head's methodology panel (the desktop one compiled and re-emitted), a `derivation` field in `gen1-tid.json`
+  with its "what SHIPS" clause removed, an unqualified sentence appended to `USAGE.md`, and a sibling rule file with a
+  claim pattern deleted - each shown failing.
 - `tests/test-sw.cjs` (in `run-tests.sh`): `webapp/sw.js` driven in a node sandbox with fake caches, fetch and clients:
   install precaches every file `index.html` loads, activate drops the caches of other builds, and with the network gone
   the shell, a navigation to the page and a wizard table opened once are served from the caches while a table

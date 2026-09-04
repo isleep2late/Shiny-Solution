@@ -44,6 +44,9 @@ static class Gen1ClaimsEmit
                     note = p.Timing.VerifiedTargetsNote,
                     evidenceInRepo = p.Timing.VerifiedEvidenceInRepo,
                     verificationLines = Gen1TidText.VerificationLines(p, "  "),
+                    // the whole methodology panel, for the claim-SENTENCE guard
+                    // (tests/check-claim-sentences.cjs): the derivation claim is a sentence in here
+                    methodologyLines = Gen1TidText.MethodologyLines(p, true, "  "),
                     targets,
                 });
             }

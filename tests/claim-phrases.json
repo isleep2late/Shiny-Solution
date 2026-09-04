@@ -1,0 +1,49 @@
+{
+  "what_this_is": "The claim-sentence rule, shared byte-for-byte by RNG Solution (tests/claim_sentences.py, tests/test_claims.py) and Shiny Solution (tests/check-claim-sentences.cjs). Both repositories keep an identical copy and each guard fails if the sibling checkout's copy differs, so the rule cannot drift between them the way the round-1 retraction did.",
+  "the_rule": "A user-facing unit of text that ASSERTS a multi-boot derivation must, in that same unit, NAME WHAT SHIPS from it. The per-offset tags are checked elsewhere (RNG tests/test_games.py VerificationClaims, Shiny tests/check-verification-claims.cjs) and are stripped out before matching here: this guard is about the SENTENCES beside them, which is the surface every earlier round left unqualified after qualifying the prose.",
+  "strip_characters": "*`_",
+  "proximity_chars": 600,
+  "proximity": "The qualifier must be NEAR the claim, not merely somewhere in the same unit: a ships phrase must occur within proximity_chars characters (either side) of each claim match. A long rendered listing is one unit, and a footer at the bottom of it does not qualify a sentence at the top.",
+  "unit": "a blank-line separated block of a rendered command's output or of a prose file; a Markdown table row (a line starting with |) is a unit on its own; a JSON string value is a unit on its own. Whitespace is collapsed to single spaces before matching, so a word-wrapped sentence matches the same as an unwrapped one, and the characters in strip_characters are dropped, so Markdown emphasis inside a phrase (in **neither repository**) does not hide it.",
+  "tag_literals": [
+    "[3x cold-boot verified off-repository: no derivation fixture here]",
+    "[3x cold-boot verified]",
+    "[extended sweep, one derivation]"
+  ],
+  "claim_patterns": [
+    "three (other |further |independent )?cold boots",
+    "three cold-boot re-derivations",
+    "three further cold boots",
+    "three independent full derivations",
+    "three-derivation claim",
+    "re-derived byte-identically",
+    "re-derived from independent cold boots",
+    "independent cold boots",
+    "triple[ -]cold-boot verified",
+    "triple[ -]verified",
+    "3x cold-boot verified",
+    "byte-identical tables",
+    "fourth full derivation"
+  ],
+  "ships_patterns": [
+    "SAMPLE",
+    "sample of",
+    "is a sample",
+    "row sample",
+    "what ships",
+    "ships as evidence",
+    "shipped evidence",
+    "sample ships",
+    "-triple\\.csv",
+    "\\*-triple\\.csv",
+    "holdfrom",
+    "not in this repository",
+    "not in the repository",
+    "not in either repository",
+    "in neither repository",
+    "outside both repositories",
+    "off-repository",
+    "no derivation fixture"
+  ],
+  "ships_patterns_case_sensitive": ["SAMPLE"]
+}

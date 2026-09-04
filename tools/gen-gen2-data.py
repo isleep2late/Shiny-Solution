@@ -508,10 +508,19 @@ def main():
                                " reset = GSE's hard reset in GBP mode (the Gen 1 gbp-fade model's fade + stall added). platforms[] says which a console offers.",
                 "bin_rule": rule_name, "rolls": ["tid", "lid"] + (["sid"] if game == "crystal" else []),
                 "rtc_dependent": gs, "table": "%s-%s.csv" % (game, plat), "timing": timing,
+                # The multi-derivation sentence is a claim about evidence, and the website renders this
+                # field verbatim (rng-solution/gen2.tsx), so it says what SHIPS as well as what was done:
+                # no per-offset comparison ships for Gen 2 in either repository. Gen 1's Blue/Yellow
+                # wording is the model (rngsolution/data/red/platforms.json).
                 "derivation": "%s, %s, START held from frame %d (plateau %d-%d), one 8-frame A tap at every offset 0-2399; three independent"
                               " full derivations (hold frames at the start, middle and end of the plateau) byte-identical; the negative control"
                               " (hold one frame past the plateau) agrees on 0 of 2400; REVIEW.md adds 40 random offsets from an unused hold"
-                              " frame (40/40) and, for Gold GBP, a fourth full derivation (2400/2400)"
+                              " frame (40/40) and, for Gold GBP, a fourth full derivation (2400/2400). What SHIPS from that is only the one"
+                              " table per state below (its CSV sha1 in table_data): the further derivations, the negative control and REVIEW.md"
+                              " live in the derivation folder, which is NOT in this repository and NOT in RNG Solution, so no per-offset"
+                              " comparison fixture backs this claim anywhere - unlike Gen 1 Blue and Yellow, where one of the three boots"
+                              " complete plus a 48-57 row SAMPLE of the three-boot comparison ships as RNG Solution's"
+                              " tests/fixtures/*-holdfrom*.csv and tests/fixtures/*-triple.csv"
                               % (CORE, fam["load_flags"], hold_lo if info["protocol"] == "hold-start" else 544, hold_lo, hold_hi),
                 "validation": fam["hardware_validation"],
                 "provenance": "STRUCTURAL: wPlayerID is written once, first thing in _ResetWRAM (pokegold engine/menus/intro_menu.asm:28-49;"

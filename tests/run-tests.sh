@@ -659,6 +659,189 @@ else
     "dotnet not found, so the desktop head could not be rendered and neither head's claims were checked"
 fi
 
+# ---- guard D: the claim SENTENCES, of both heads, of the data and of the docs -------------------
+# Guard C is about the TAG. This is about the sentence beside it: a rendered unit of text that
+# asserts a multi-boot derivation must name what ships from it, and a panel that prints a verified
+# tag must print that platform's note and evidence too. tests/claim-phrases.json carries the rule
+# and is byte-identical to RNG Solution's copy (the guard compares them when the checkout is there),
+# so the two repositories cannot drift on what counts as qualified - which is how the round-1
+# retraction failed to reach the sibling. RNG Solution runs the same rule on its own surfaces
+# (tests/test_claims.py, controls C1-C5 there).
+claims_cs=()
+if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
+  export DOTNET_ROOT="$HOME/.dotnet"
+  export PATH="$HOME/.dotnet:$PATH"
+  sent_cs=$(mktemp --suffix=.json)
+  dotnet run --project ../app/Tests -c Release -- --emit-gen1-claims "$sent_cs" - ../core/data/citations.json > /dev/null
+  claims_cs=(--cs "$sent_cs")
+fi
+set +e
+node check-claim-sentences.cjs "${claims_cs[@]}" "${claims_rng[@]}"
+sent_status=$?
+set -e
+case "$sent_status" in
+  0) : ;;
+  3) guard_degraded "cross-repo guard D (the claim-sentence guard)" \
+       "dotnet or the RNG Solution checkout was missing, so the desktop head's sentences and/or the shared rule file were NOT judged" ;;
+  *) echo "claim sentence guard FAILED"; exit 1 ;;
+esac
+
+# Negative control (a): the web head printing a verified tag with the note taken out from under it
+# (rounds 2 and 3's defect: the tag reached the user, the sentence behind it did not) must FAIL.
+ctam=$(mktemp -d)
+cp -r ../webapp "$ctam/webapp"
+python3 - "$ctam/webapp/gen1tid-ui.js" <<'PY_NOTE'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = '    if (plat.verifiedNote) lines.push(indent + "  " + plat.verifiedNote);'
+assert old in s, "negative control setup: verificationLines no longer prints the note"
+open(p, "w").write(s.replace(old, "", 1))
+PY_NOTE
+if node check-claim-sentences.cjs "${claims_cs[@]}" --webapp "$ctam/webapp" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+  echo "negative control (the web head printing a verified tag with no note behind it): DID NOT FAIL"
+  rm -rf "$ctam"; exit 1
+else
+  grep -q "the panel prints a verified tag and the note behind it" "$ctam/out" || {
+    echo "negative control (the web head printing a verified tag with no note behind it): failed for the wrong reason ->"
+    head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+  echo "negative control (the web head printing a verified tag with no note behind it): FAILED as required ->"
+  grep -m2 "^FAIL claim sentence" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
+fi
+rm -rf "$ctam"
+
+# Negative control (b): an unqualified sweep sentence planted at the TOP of the web head's
+# methodology panel - far from the note at the bottom - must FAIL: the qualifier has to be near the
+# claim, or a footer would excuse anything above it.
+ctam=$(mktemp -d)
+cp -r ../webapp "$ctam/webapp"
+python3 - "$ctam/webapp/gen1tid-ui.js" <<'PY_PLANT'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = 'var lines = [indent + "Methodology: " + plat.methodologyId'
+new = ('var lines = [indent + "Every offset of this table was re-derived byte-identically from three other cold boots.", '
+       'indent + "Methodology: " + plat.methodologyId')
+assert old in s, "negative control setup: methodologyLines has moved"
+open(p, "w").write(s.replace(old, new, 1))
+PY_PLANT
+if node check-claim-sentences.cjs "${claims_cs[@]}" --webapp "$ctam/webapp" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+  echo "negative control (an unqualified sweep sentence in the web head's panel): DID NOT FAIL"
+  rm -rf "$ctam"; exit 1
+else
+  grep -q "methodology panel | asserts" "$ctam/out" || {
+    echo "negative control (an unqualified sweep sentence in the web head's panel): failed for the wrong reason ->"
+    head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+  echo "negative control (an unqualified sweep sentence in the web head's panel): FAILED as required ->"
+  grep -m2 "^FAIL claim sentence" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
+fi
+rm -rf "$ctam"
+
+# Negative control (c): the same sentence in the DESKTOP head - a copy of app/ with the plant in
+# Gen1TidSupport.cs, compiled and re-emitted - must FAIL, and is shown failing. Without it this
+# guard would only ever have judged the web head's strings.
+if [ ${#claims_cs[@]} -gt 0 ]; then
+  ctam=$(mktemp -d)
+  mkdir -p "$ctam/core"
+  cp -r ../app "$ctam/app"
+  cp -r ../core/data "$ctam/core/data"
+  rm -rf "$ctam/app/Tests/bin" "$ctam/app/Tests/obj" "$ctam/app/App/bin" "$ctam/app/App/obj" "$ctam/app/Core/bin" "$ctam/app/Core/obj"
+  python3 - "$ctam/app/App/Gen1TidSupport.cs" <<'PY_CS_PLANT'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = """        var lines = new List<string>
+        {
+            $"{indent}Methodology:"""
+new = """        var lines = new List<string>
+        {
+            indent + "Every offset of this table was re-derived byte-identically from three other cold boots.",
+            $"{indent}Methodology:"""
+assert old in s, "negative control setup: MethodologyLines has moved"
+open(p, "w").write(s.replace(old, new, 1))
+PY_CS_PLANT
+  dotnet run --project "$ctam/app/Tests" -c Release -- --emit-gen1-claims "$ctam/claims.json" - ../core/data/citations.json > "$ctam/build" 2>&1 || {
+    echo "negative control (an unqualified sweep sentence in the desktop head): the tampered copy did not build ->"
+    tail -5 "$ctam/build" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+  if node check-claim-sentences.cjs --cs "$ctam/claims.json" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+    echo "negative control (an unqualified sweep sentence in the desktop head): DID NOT FAIL"
+    rm -rf "$ctam"; exit 1
+  else
+    grep -q "csharp (app/App/Gen1TidSupport.cs).*methodology panel | asserts" "$ctam/out" || {
+      echo "negative control (an unqualified sweep sentence in the desktop head): failed for the wrong reason ->"
+      head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+    echo "negative control (an unqualified sweep sentence in the desktop head): FAILED as required ->"
+    grep -m1 "^FAIL claim sentence: csharp" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
+  fi
+  rm -rf "$ctam"
+fi
+
+# Negative control (d): the data the WEBSITE renders verbatim - a copy of core/data/gen1-tid.json
+# with a derivation field's "what SHIPS" clause taken out - must FAIL.
+ctam=$(mktemp -d)
+python3 - ../core/data/gen1-tid.json "$ctam/gen1-tid.json" <<'PY_DATA'
+import json, sys
+d = json.load(open(sys.argv[1]))
+m = d["methodologies"]["blue/gba/hold-start-v1"]
+i = m["derivation"].index(" - what SHIPS")
+m["derivation"] = m["derivation"][:i]
+json.dump(d, open(sys.argv[2], "w"), indent=1)
+PY_DATA
+if node check-claim-sentences.cjs "${claims_cs[@]}" --data "$ctam/gen1-tid.json" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+  echo "negative control (an unqualified derivation field in gen1-tid.json): DID NOT FAIL"
+  rm -rf "$ctam"; exit 1
+else
+  grep -q "blue/gba/hold-start-v1.derivation" "$ctam/out" || {
+    echo "negative control (an unqualified derivation field in gen1-tid.json): failed for the wrong reason ->"
+    head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+  echo "negative control (an unqualified derivation field in gen1-tid.json): FAILED as required ->"
+  grep -m1 "blue/gba/hold-start-v1.derivation" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
+fi
+rm -rf "$ctam"
+
+# Negative control (e): the prose. A copy of the repository's docs with one unqualified sentence
+# appended to USAGE.md must FAIL.
+ctam=$(mktemp -d)
+mkdir -p "$ctam/docs"
+cp ../README.md ../USAGE.md "$ctam/"
+cp ../docs/FACTS.md ../docs/DATA.md "$ctam/docs/"
+printf '\n\nEvery offset of every table was re-derived byte-identically from three other cold boots.\n' >> "$ctam/USAGE.md"
+if node check-claim-sentences.cjs "${claims_cs[@]}" --docs-root "$ctam" "${claims_rng[@]}" > "$ctam/out" 2>&1; then
+  echo "negative control (an unqualified sentence in USAGE.md): DID NOT FAIL"
+  rm -rf "$ctam"; exit 1
+else
+  grep -q "USAGE.md | block" "$ctam/out" || {
+    echo "negative control (an unqualified sentence in USAGE.md): failed for the wrong reason ->"
+    head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+  echo "negative control (an unqualified sentence in USAGE.md): FAILED as required ->"
+  grep -m1 "USAGE.md | block" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
+fi
+rm -rf "$ctam"
+
+# Negative control (f): the rule itself drifting apart between the repositories - a sibling checkout
+# whose claim-phrases.json has lost a claim pattern - must FAIL, because then one repository would
+# accept a sentence the other rejects.
+ctam=$(mktemp -d)
+mkdir -p "$ctam/tests"
+python3 - claim-phrases.json "$ctam/tests/claim-phrases.json" <<'PY_RULE'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["claim_patterns"] = [p for p in d["claim_patterns"] if "byte-identically" not in p]
+json.dump(d, open(sys.argv[2], "w"), indent=2)
+PY_RULE
+if node check-claim-sentences.cjs "${claims_cs[@]}" --rng "$ctam" > "$ctam/out" 2>&1; then
+  echo "negative control (the shared claim rule drifting between the repositories): DID NOT FAIL"
+  rm -rf "$ctam"; exit 1
+else
+  grep -q "byte-identical in both repositories" "$ctam/out" || {
+    echo "negative control (the shared claim rule drifting between the repositories): failed for the wrong reason ->"
+    head -4 "$ctam/out" | sed 's/^/      /'; rm -rf "$ctam"; exit 1; }
+  echo "negative control (the shared claim rule drifting between the repositories): FAILED as required ->"
+  grep -m1 "byte-identical in both repositories" "$ctam/out" | cut -c1-165 | sed 's/^/      /'
+fi
+rm -rf "$ctam"
+rm -f "${sent_cs:-}"
+
 # The desktop wizard panel is pinned to the web tab through tests/wizard-panel-vectors.json (what webapp/wizard-ui.js computes
 # for its self-test scenarios and 20 random wanted-IV searches; app/run-core-tests.sh checks WizardSupport.cs against it). A
 # re-emit from the tab's module must be byte-identical to the committed file, so the file always says what the tab says now.

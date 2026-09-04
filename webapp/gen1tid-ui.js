@@ -157,8 +157,13 @@
   // methodology's note, and where the three derivations can be read (rngsolution/cli.py cmd_targets).
   function verificationLines(plat, indent) {
     indent = isNil(indent) ? "  " : indent;
-    if (!plat.verifiedTargets.length) return [];
-    var lines = [indent + "Verification: offsets " + plat.verifiedTargets.join(", ") + " " + verifiedTag(plat)];
+    // A table with no route-valid target still has derivation evidence, and Yellow's note is the one
+    // that says its sample is "every 50th offset; this table has no route-valid target to add". Returning
+    // [] on an empty verified list left that corrected wording rendered by nobody.
+    if (!plat.verifiedTargets.length && !plat.verifiedNote && !plat.verifiedEvidence) return [];
+    var lines = [indent + "Verification: " + (plat.verifiedTargets.length
+      ? "offsets " + plat.verifiedTargets.join(", ") + " " + verifiedTag(plat)
+      : "no route-valid target in this table; the evidence for the table itself:")];
     if (plat.verifiedNote) lines.push(indent + "  " + plat.verifiedNote);
     // the fixtures the evidence names are RNG Solution's: it owns the derivations, this repository
     // only carries the generated tables, so say whose tests/fixtures/ a path is

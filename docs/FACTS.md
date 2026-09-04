@@ -234,7 +234,7 @@ boot ROMs as Red, `wSaveFileStatus $D088`, `wPlayerID $D359` (`pokeblue.sym`).
 | finite hold | a 60-frame hold from 1400 never opens the menu; 100 frames does (1560) | | emulator-measured |
 | white flash with no input | frames 1328–1392 (inside the window) | 1476–1540 (inside) | emulator-measured |
 | distinct IDs | 2357 of 2400 (43 collisions); offset 1913 is a genuine `$0000` (the `wPlayerMoney` write that follows it was seen 22 frames after A) | 2344 (56 collisions) | table |
-| `hi40-corruption` hits | 675 → `$4091`, 1006 → `$40B2`, 1028 → `$404A`, 1422 → `$40F3`, 1699 → `$4026`, 1810 → `$4040`, 2107 → `$40DE` | 658 → `$40D6`, 994 → `$4047`, 1003 → `$40F3`, 1028 → `$40C1`, 1513 → `$400E`, 1810 → `$40B1`, 2105 → `$402C`, 2248 → `$4093`, 2304 → `$40A6` | the offsets are triple-verified; that Blue accepts every `$40xx` is **inferred**, not swept (see below) |
+| `hi40-corruption` hits | 675 → `$4091`, 1006 → `$40B2`, 1028 → `$404A`, 1422 → `$40F3`, 1699 → `$4026`, 1810 → `$4040`, 2107 → `$40DE` | 658 → `$40D6`, 994 → `$4047`, 1003 → `$40F3`, 1028 → `$40C1`, 1513 → `$400E`, 1810 → `$40B1`, 2105 → `$402C`, 2248 → `$4093`, 2304 → `$40A6` | the offsets were re-derived from three further cold boots, byte-identical, of which what ships is one boot complete (RNG Solution's `tests/fixtures/blue-{gba,dmg}-holdfrom*.csv`) plus a 55/57-row sample of the comparison (`blue-{gba,dmg}-triple.csv`, every route-valid offset plus every 50th); that Blue accepts every `$40xx` is **inferred**, not swept (see below) |
 | `psr-64c2` family | none in 0–5999 | none in 0–5999 | extended sweep |
 | hardware | **none** | **none** | unvalidated |
 
@@ -260,8 +260,9 @@ step 1 over every candidate range, `timeline` brightness with no input):
 
 Plateau checks: three further cold boots (START from 0, 267, 520 on GBA; 0, 411, 663 on
 DMG) byte-identical on all 2400 offsets of the sweep, of which a sample ships as evidence
-(`tests/fixtures/yellow-gba-triple.csv` and `yellow-dmg-triple.csv`, 48 rows each: every
-route-valid offset plus every 50th); negative controls START from 600 (GBA, menu 2086) and
+(RNG Solution's `tests/fixtures/yellow-gba-triple.csv` and `yellow-dmg-triple.csv`, 48 rows
+each: every 50th offset — these tables have no route-valid target to add — beside one boot
+complete, `yellow-gba-holdfrom520.csv` and `yellow-dmg-holdfrom663.csv`); negative controls START from 600 (GBA, menu 2086) and
 700 (DMG, menu 2144) agree on 0 of 2400; release timing after the menu irrelevant (offset 300:
 `$ECDE` GBA, `$168C` DMG for every release delay); a hold released before the title never opens the
 menu (hold lengths 200–1500 from frame 350: no menu; 1700+: frame 2006). Distinct IDs 2362 (GBA)

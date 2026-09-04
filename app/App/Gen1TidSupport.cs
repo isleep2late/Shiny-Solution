@@ -286,8 +286,13 @@ public static class Gen1TidText
     public static List<string> VerificationLines(Gen1Platform p, string indent = "  ")
     {
         var lines = new List<string>();
-        if (p.Timing.VerifiedTargets.Length == 0) return lines;
-        lines.Add(indent + "Verification: offsets " + string.Join(", ", p.Timing.VerifiedTargets) + " " + VerifiedTagFor(p));
+        // A table with no route-valid target still has derivation evidence, and Yellow's note is the one
+        // that says its sample is "every 50th offset; this table has no route-valid target to add".
+        // Returning early on an empty verified list left that corrected wording rendered by nobody.
+        if (p.Timing.VerifiedTargets.Length == 0 && p.Timing.VerifiedTargetsNote == "" && p.Timing.VerifiedTargetsEvidence == "") return lines;
+        lines.Add(indent + "Verification: " + (p.Timing.VerifiedTargets.Length > 0
+            ? "offsets " + string.Join(", ", p.Timing.VerifiedTargets) + " " + VerifiedTagFor(p)
+            : "no route-valid target in this table; the evidence for the table itself:"));
         if (p.Timing.VerifiedTargetsNote != "") lines.Add(indent + "  " + p.Timing.VerifiedTargetsNote);
         // the fixtures the evidence names are RNG Solution's: it owns the derivations, this repository
         // only carries the generated tables, so say whose tests/fixtures/ a path is
