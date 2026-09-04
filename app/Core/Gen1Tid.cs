@@ -1242,6 +1242,19 @@ public sealed class Gen1TidData
         {
             var t = m.Value.GetProperty("timing");
             var td = m.Value.GetProperty("table_data");
+            // The console family's fallback. Round 7 finding R7-5: this head read the three
+            // verified_targets_* fields off the methodology's timing block ALONE, while the other
+            // two implementations (core/gen1tid.js derivationPlatform, RNG Solution's
+            // rngsolution/tables.py) fall back to families[console_id]. With
+            // blue/gba/hold-start-v1's own evidence removed, the JS engine yields the family's
+            // sentence and this head yielded "" - so a family-level fixture path would have made
+            // the desktop app print the off-repository tag while the web tab and the website
+            // printed the flat one. It was latent only because every shipped methodology happens
+            // to carry its own; a guard that only ever runs on the shipped data cannot see that.
+            var consoleId = m.Value.GetProperty("console_id").GetString() ?? "";
+            JsonElement fam = default;
+            bool hasFam = root.TryGetProperty("families", out var fams)
+                          && fams.TryGetProperty(consoleId, out fam);
             _methodologies[m.Name] = new Gen1Methodology
             {
                 Id = m.Name,
@@ -1256,14 +1269,27 @@ public sealed class Gen1TidData
                     MenuFrame = t.GetProperty("menu_frame").GetInt32(),
                     VisibleLagFrames = t.TryGetProperty("visible_lag_frames", out var vl) ? vl.GetDouble() : 0.0,
                     VisibleLagNote = t.TryGetProperty("visible_lag_note", out var vn) ? vn.GetString() ?? "" : "",
-                    VerifiedTargets = t.TryGetProperty("verified_targets", out var vt) ? vt.EnumerateArray().Select(x => x.GetInt32()).ToArray() : Array.Empty<int>(),
-                    VerifiedTargetsNote = t.TryGetProperty("verified_targets_note", out var vtn) ? vtn.GetString() ?? "" : "",
-                    VerifiedTargetsEvidence = t.TryGetProperty("verified_targets_evidence", out var vte) ? vte.GetString() ?? "" : ""
+                    VerifiedTargets = WithFamily(t, fam, hasFam, "verified_targets") is JsonElement vt
+                        ? vt.EnumerateArray().Select(x => x.GetInt32()).ToArray() : Array.Empty<int>(),
+                    VerifiedTargetsNote = WithFamily(t, fam, hasFam, "verified_targets_note") is JsonElement vtn
+                        ? vtn.GetString() ?? "" : "",
+                    VerifiedTargetsEvidence = WithFamily(t, fam, hasFam, "verified_targets_evidence") is JsonElement vte
+                        ? vte.GetString() ?? "" : ""
                 },
                 Table = Gen1Tid.DecodeTable(td.GetProperty("tids_hex").GetString() ?? "", td.GetProperty("offset_min").GetInt32()),
                 Raw = m.Value
             };
         }
+    }
+
+    // A timing field, resolved the way all three implementations resolve it: the methodology's own
+    // value first, the console family's second (core/gen1tid.js derivationPlatform,
+    // rngsolution/tables.py verified_targets_evidence). Null when neither carries it.
+    static JsonElement? WithFamily(JsonElement timing, JsonElement family, bool hasFamily, string name)
+    {
+        if (timing.TryGetProperty(name, out var own)) return own;
+        if (hasFamily && family.TryGetProperty(name, out var fromFamily)) return fromFamily;
+        return null;
     }
 
     public static string DefaultFileName => "gen1-tid.json";

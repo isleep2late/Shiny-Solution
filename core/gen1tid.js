@@ -455,7 +455,13 @@
     return {
       table: tableFor(data, methodologyId),
       targetSets: targetSetsFor(data, gameKey, targetSetKeys && targetSetKeys.length ? targetSetKeys : null),
-      verifiedTargets: (t.verified_targets || []).slice(),
+      // Methodology first, console family second - for ALL THREE fields. Round 7 finding R7-5 was
+      // that C# had no family fallback at all; the cross-head test written for it
+      // (tests/test-derivation-fallback.cjs) then found that THIS implementation had the fallback
+      // for the evidence and the note and not for the offsets, so a family-level verified_targets
+      // would have made this engine claim nothing was re-derived while the CLI and the desktop head
+      // listed the family's offsets. The shipped data never exercises it; the test does.
+      verifiedTargets: (t.verified_targets || family.verified_targets || []).slice(),
       verifiedEvidence: t.verified_targets_evidence || family.verified_targets_evidence || "",
       verifiedNote: t.verified_targets_note || family.verified_targets_note || ""
     };

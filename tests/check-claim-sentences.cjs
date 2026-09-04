@@ -62,6 +62,41 @@ const rngRoot = opt("--rng", null);
 const gen3Path = opt("--gen3", path.join(coreDir, "data", "gen3-sid.json"));
 const DOCS = ["README.md", "USAGE.md", path.join("docs", "FACTS.md"), path.join("docs", "DATA.md")];
 
+// ---- the PROVENANCE DIRECTORIES ----------------------------------------------------------------
+// Round 7 finding R7-3. RNG Solution grew this list in round 6 (tests/claim_sentences.py
+// PROVENANCE_DIRS) because tools/gen1-tid-tables - the directory docs/FACTS.md sends a reader to -
+// was governed by nothing. This repository has exactly the same hole and it was left open:
+// README.md line 28, USAGE.md line 507 and docs/FACTS.md line 974 all cite tests/harness/ as the
+// evidence for the Gen 3 boot-seed model ("verified on Ruby under libmgba (tests/harness/)"), and
+// DOCS above never included it. A planted three-boot + two-harness claim carrying a ~/AI/gen3-scratch
+// citation passed at 150 checks over 10135 units, 0 failures - and the real README in there cited
+// /tmp/mgba-src/build and /tmp/libmgba-py with no qualifier at all.
+//
+// Every text file under these directories is judged, not only the README: the sentence that
+// misleads is as likely to be a comment in the script that produced the evidence as it is to be
+// prose about it.
+const PROVENANCE_DIRS = ["tests/harness"];
+const PROVENANCE_SUFFIXES = [".md", ".txt", ".sh", ".py", ".cpp", ".json", ".jsonl", ".csv", ".log", ".js", ".cjs"];
+const provenanceRoot = opt("--provenance-root", root);
+
+// ---- and the two lists above are PINNED --------------------------------------------------------
+// Round 7 finding R7-4: the list that decides WHAT is governed was governed by nothing, in both
+// repositories. The pin does not live beside the list - it lives in tests/claim-phrases.json, the
+// rule this repository and RNG Solution hold byte-identical copies of (this guard fails if the
+// sibling's copy differs, at the bottom of this file) and the website reads rather than copying.
+// Shrinking a list here fails here; shrinking the pin fails in RNG Solution too.
+const PINNED = (RULE.governed_surfaces || {}).shiny_solution || {};
+function checkGoverned() {
+  const docs = DOCS.map((d) => d.split(path.sep).join("/"));
+  for (const rel of PINNED.docs || [])
+    check(`DOCS still governs ${rel}`, docs.indexOf(rel) !== -1, JSON.stringify(docs));
+  for (const rel of PINNED.provenance_dirs || [])
+    check(`PROVENANCE_DIRS still governs ${rel}`, PROVENANCE_DIRS.indexOf(rel) !== -1, JSON.stringify(PROVENANCE_DIRS));
+  check("the shared rule pins this repository's governed surfaces at all",
+    (PINNED.docs || []).length >= 4 && (PINNED.provenance_dirs || []).length >= 1,
+    JSON.stringify(PINNED));
+}
+
 let failures = 0, checks = 0, unitsSeen = 0, claimsSeen = 0, pathsSeen = 0, pathsJudged = 0, fixtureClaims = 0;
 function check(label, ok, detail) {
   checks++;
@@ -294,6 +329,43 @@ for (const d of DOCS) {
   if (fs.existsSync(file)) judgeText(d, fs.readFileSync(file, "utf8"));
 }
 
+// ---- the provenance directories this repository sends readers to -------------------------------
+{
+  checkGoverned();
+  let provenanceUnits = 0, provenanceFiles = 0;
+  const walkDir = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? (e.name === "__pycache__" || e.name === "venv" || e.name === "node_modules" ? [] : walkDir(path.join(dir, e.name)))
+      : [path.join(dir, e.name)]);
+  for (const rel of PROVENANCE_DIRS) {
+    const base = path.join(provenanceRoot, rel);
+    check(`the provenance directory ${rel} is where the docs say it is`, fs.existsSync(base), base);
+    if (!fs.existsSync(base)) continue;
+    for (const file of walkDir(base).sort()) {
+      if (!PROVENANCE_SUFFIXES.some((x) => file.endsWith(x))) continue;
+      const label = path.relative(provenanceRoot, file);
+      const text = fs.readFileSync(file, "utf8");
+      provenanceFiles++;
+      if (file.endsWith(".json")) {
+        let parsed = null;
+        try { parsed = JSON.parse(text); } catch (e) { parsed = null; }
+        if (parsed !== null) { const before = unitsSeen; judgeJson(label, parsed); provenanceUnits += unitsSeen - before; continue; }
+      }
+      if (file.endsWith(".jsonl")) {
+        text.split("\n").forEach((line, i) => {
+          if (!line.trim()) return;
+          provenanceUnits++;
+          try { judgeJson(label + " line " + (i + 1), JSON.parse(line)); } catch (e) { judge(label, "line " + (i + 1), line); }
+        });
+        continue;
+      }
+      unitsOfText(text).forEach((u, i) => { provenanceUnits++; judge(label, "block " + (i + 1), u); });
+    }
+  }
+  check("the provenance directories were read at all (round 7 finding R7-3: they never had been)",
+    provenanceFiles >= 5 && provenanceUnits > 100, `${provenanceFiles} files, ${provenanceUnits} units`);
+  console.log(`  provenance directories (${PROVENANCE_DIRS.join(", ")}): ${provenanceFiles} files, ${provenanceUnits} units judged`);
+}
+
 // ---- the EVIDENCE FILES this repository sends readers to ----------------------------------------
 // Round 5 finding C. Both heads print "Evidence (RNG Solution): tests/fixtures/<x>-triple.csv". That
 // header is the surface a reader who doubts the claim actually opens, and it lived in the sibling
@@ -308,16 +380,41 @@ if (!rngRoot) {
     const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
       e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
     let headers = 0;
+    // Round 7 finding R7-6, and the same widening RNG Solution's fixture_header_units got: .log and
+    // .jsonl fixtures were read by neither guard, while tests/fixtures/hunt/README.md - a judged
+    // surface - names them as what the hunt tools produced. A .log has no header and no blank line,
+    // so every line is a unit; a .jsonl is a JSON record per line.
+    const judgeFixtureLine = (rel, i, text) => {
+      judge("RNG Solution evidence fixtures", rel + " line " + (i + 1), text);
+      headers++;
+      if (claimsIn(normalise(stripTags(text))).length) fixtureClaims++;
+    };
     for (const file of walk(fxRoot).sort()) {
       const rel = path.relative(rngRoot, file);
       if (file.endsWith(".md")) { judgeText("RNG Solution " + rel, fs.readFileSync(file, "utf8")); headers++; continue; }
-      if (!file.endsWith(".csv")) continue;
-      const lines = fs.readFileSync(file, "utf8").split("\n");
-      for (let i = 0; i < lines.length && lines[i].startsWith("#"); i++) {
-        judge("RNG Solution evidence fixtures", rel + " line " + (i + 1), lines[i]);
-        headers++;
-        if (claimsIn(normalise(stripTags(lines[i]))).length) fixtureClaims++;
+      if (file.endsWith(".json")) {
+        let parsed = null;
+        try { parsed = JSON.parse(fs.readFileSync(file, "utf8")); } catch (e) { parsed = null; }
+        if (parsed !== null) { for (const [p2, v] of unitsOfJson(parsed, "$", [])) judgeFixtureLine(rel + " " + p2, 0, v); }
+        continue;
       }
+      if (file.endsWith(".jsonl")) {
+        fs.readFileSync(file, "utf8").split("\n").forEach((line, i) => {
+          if (!line.trim()) return;
+          let parsed = null;
+          try { parsed = JSON.parse(line); } catch (e) { parsed = null; }
+          if (parsed === null) { judgeFixtureLine(rel, i, line); return; }
+          for (const [p2, v] of unitsOfJson(parsed, "$", [])) judgeFixtureLine(rel + " " + p2, i, v);
+        });
+        continue;
+      }
+      if (file.endsWith(".log")) {
+        fs.readFileSync(file, "utf8").split("\n").forEach((line, i) => { if (line.trim()) judgeFixtureLine(rel, i, line); });
+        continue;
+      }
+      if (!file.endsWith(".csv") && !file.endsWith(".txt")) continue;
+      const lines = fs.readFileSync(file, "utf8").split("\n");
+      for (let i = 0; i < lines.length; i++) if (lines[i].trimStart().startsWith("#")) judgeFixtureLine(rel, i, lines[i]);
     }
     check("some evidence fixture header was read (it has fired)", headers > 0, String(headers));
     check("the evidence fixtures make a derivation claim the rule can see", fixtureClaims >= 8, String(fixtureClaims));

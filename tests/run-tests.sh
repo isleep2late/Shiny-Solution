@@ -699,6 +699,59 @@ case "$sent_status" in
   *) echo "claim sentence guard FAILED"; exit 1 ;;
 esac
 
+# ---- guard E: the FAMILY FALLBACK, in all three implementations at once -------------------------
+# Round 7 finding R7-5. Four expressions resolved an evidence string and the fourth was wrong:
+# app/Core/Gen1Tid.cs read verified_targets / _note / _evidence off the methodology's timing block
+# alone, with no fallback to the console family, while core/gen1tid.js and RNG Solution's
+# rngsolution/tables.py both fall back. It was latent only because every shipped methodology carries
+# its own evidence - so the fallback never fires on the shipped data, and every cross-head guard here
+# runs on the shipped data. tests/test-derivation-fallback.cjs removes one methodology's own fields
+# from a copy of gen1-tid.json and drives all three heads off it. Writing it found a second one: the
+# JS engine had the fallback for the evidence and the note but not for the offsets.
+set +e
+node test-derivation-fallback.cjs --rng "$RNG_SRC"
+fallback_status=$?
+set -e
+case "$fallback_status" in
+  0) : ;;
+  3) guard_degraded "cross-repo guard E (the family-fallback guard)" \
+       "dotnet or the RNG Solution checkout was missing, so not all three implementations of the evidence fallback were compared" ;;
+  *) echo "derivation fallback guard FAILED"; exit 1 ;;
+esac
+
+# ---- guard F: THE WEBSITE, server-rendered ------------------------------------------------------
+# Round 7 finding R7-7. tools/check-evidence-display.cjs is the guard over the PUBLIC head - the
+# thing a reader actually sees - and NO SUITE RAN IT. Only /var/www/hackmons-beta/tools/sync-shiny-core.sh
+# did, so every plant in round 7 could have been committed to the site with the guard never
+# executing once. It runs here, and its own negative controls (the nine plants that beat earlier
+# versions of it, replayed) run with it, because a guard that has never fired is not a guard.
+SITE_SRC="${HACKMONS_BETA_SRC:-/var/www/hackmons-beta}"
+if [ -f "$SITE_SRC/tools/check-evidence-display.cjs" ] && [ -d "$SITE_SRC/node_modules/esbuild" ]; then
+  set +e
+  node "$SITE_SRC/tools/check-evidence-display.cjs" --root "$SITE_SRC" --shiny "$(cd .. && pwd)" --rng "$RNG_SRC"
+  site_status=$?
+  set -e
+  case "$site_status" in
+    0) : ;;
+    3) guard_degraded "cross-repo guard F (the website's evidence display)" \
+         "the website guard ran DEGRADED: one of the heads it compares against was missing" ;;
+    *) echo "the website's evidence display disagrees with this repository's heads"; exit 1 ;;
+  esac
+  site_controls_out=$(mktemp)
+  set +e
+  "$SITE_SRC/tools/check-evidence-display-controls.sh" --shiny "$(cd .. && pwd)" --rng "$RNG_SRC" > "$site_controls_out" 2>&1
+  controls_status=$?
+  set -e
+  tail -1 "$site_controls_out" | sed 's/^/  /'
+  rm -f "$site_controls_out"
+  if [ "$controls_status" != "0" ]; then
+    echo "the website's evidence-display guard passed a page that lies: it is not guarding anything"; exit 1
+  fi
+else
+  guard_degraded "cross-repo guard F (the website's evidence display, and its nine negative controls)" \
+    "no website checkout with node_modules at $SITE_SRC (set HACKMONS_BETA_SRC); the PUBLIC head was NOT rendered or compared"
+fi
+
 # Negative control (a): the web head printing a verified tag with the note taken out from under it
 # (rounds 2 and 3's defect: the tag reached the user, the sentence behind it did not) must FAIL.
 ctam=$(mktemp -d)

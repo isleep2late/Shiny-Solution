@@ -15,7 +15,10 @@ That script (verified end-to-end on this machine):
 1. creates `tests/harness/venv` (python3.12) and installs
    `cffi setuptools Pillow patchelf`;
 2. builds mGBA **0.10.2** as a shared lib (`cmake -DBUILD_SHARED=ON` +
-   headless feature flags) in `/tmp/mgba-src/build`;
+   headless feature flags) in `/tmp/mgba-src/build` (a scratch build tree
+   the script creates under `$WORK` on your own machine; not committed in
+   either repository, and not evidence for anything - it is mGBA's own
+   source and build output);
 3. clones hanzi/libmgba-py, patches `_config.py` (upstream hardcodes
    Docker-container paths on Linux) and adds stubs for the 8
    `EReaderScan*` symbols that the cdef declares but libmgba only
@@ -27,7 +30,9 @@ That script (verified end-to-end on this machine):
 Notes: `pip install mgba` does not exist on PyPI. The prebuilt
 libmgba-py release zips only target ubuntu-lunar / older pythons, so we
 build from source. Do **not** run python from inside `/tmp/libmgba-py`
-(its source `mgba/` dir shadows the installed package).
+(its source `mgba/` dir shadows the installed package) - that clone is
+another scratch directory the script makes under `$WORK`, not committed
+in either repository.
 
 ## ROM
 

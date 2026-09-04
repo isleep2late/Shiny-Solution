@@ -82,5 +82,53 @@
     "no derivation fixture"
   ],
   "uncommitted_path_rule": "EVERY judged unit - not only the ones that make a derivation claim - must say, within proximity_chars of any path it names outside both repositories (a /tmp scratch directory), that the path is not committed. Round 5 finding D: 'rng-solution sid' printed 'emulator-measured ... by TWO INDEPENDENT HARNESSES (tools/gba-sid-harness ...; /tmp/gen3sid ...)' while docs/FACTS.md already said the second one was not committed - the prose was qualified, the rendered string was not, for the fourth time. The rule is not restricted to claim-bearing units because 'Evidence: /tmp/x' asserts nothing by itself and is exactly the sentence that misleads.",
-  "surfaces": "The guard must read the EVIDENCE FILES it sends readers to, not only the prose about them. Round 5 finding C: RNG Solution's table_header_units walked rngsolution/data only, so an unqualified derivation sentence planted as line 2 of tests/fixtures/blue-gba-triple.csv passed unchanged - and the 'Rows: every route-valid offset plus every 50th offset' line in both Yellow triple fixtures had survived three rounds of retraction while the registry note beside it said the opposite. Both guards now walk tests/fixtures too, and both cover the Gen 3 'sid' surface and gen3-sid.json."
+  "surfaces": "The guard must read the EVIDENCE FILES it sends readers to, not only the prose about them. Round 5 finding C: RNG Solution's table_header_units walked rngsolution/data only, so an unqualified derivation sentence planted as line 2 of tests/fixtures/blue-gba-triple.csv passed unchanged - and the 'Rows: every route-valid offset plus every 50th offset' line in both Yellow triple fixtures had survived three rounds of retraction while the registry note beside it said the opposite. Both guards now walk tests/fixtures too, and both cover the Gen 3 'sid' surface and gen3-sid.json.",
+  "governed_surfaces_rule": "Round 7 finding R7-4: the list that decides WHAT is governed was itself governed by nothing. Setting RNG Solution's PROVENANCE_DIRS to a single directory - deleting tools/gen1-tid-tables, the directory docs/FACTS.md sends a reader to for the Blue and Yellow derivations, and round 6 finding C's whole subject - passed the suite at exit 0, because the only backstop was a total-unit floor that ONE directory clears by itself. The surfaces are therefore pinned HERE, in the rule both repositories hold byte-identical copies of and the website reads, rather than beside the list each guard keeps. A surface may be added freely; dropping one from a guard's list, or letting a pinned surface go missing or empty, is a failure in every repository at once.",
+  "governed_surfaces": {
+    "rng_solution": {
+      "docs": [
+        "README.md",
+        "docs/FACTS.md",
+        "docs/ALL_GENERATIONS_FEASIBILITY.md",
+        "docs/RNG_GUIDE_DESIGN.md",
+        "tools/gba-sid-harness/RESULTS.md",
+        "tools/gen3-sid-savestate-harness/README.md"
+      ],
+      "provenance_dirs": [
+        "tools/gen1-tid-tables",
+        "tools/gba-sid-harness",
+        "tools/gen3-sid-savestate-harness"
+      ],
+      "fixture_suffixes": [
+        ".md",
+        ".json",
+        ".csv",
+        ".log",
+        ".jsonl",
+        ".py"
+      ]
+    },
+    "shiny_solution": {
+      "docs": [
+        "README.md",
+        "USAGE.md",
+        "docs/FACTS.md",
+        "docs/DATA.md"
+      ],
+      "provenance_dirs": [
+        "tests/harness"
+      ]
+    },
+    "website": {
+      "source_dirs": [
+        "src/app/rng-solution",
+        "src/app/shiny-solution"
+      ],
+      "data_files": [
+        "gen1-tid.json",
+        "gen2-tid.json",
+        "gen3-sid.json"
+      ]
+    }
+  }
 }
