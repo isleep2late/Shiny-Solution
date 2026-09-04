@@ -356,15 +356,19 @@ s["lo_ranges"] = [["00", "38"], ["3A", "5C"]]
 json.dump(d, open(sys.argv[2], "w"), indent=1, ensure_ascii=False)
 PY_SLED
 
-# make_root <dir> windowed|nogen3 - a temp repo root holding core/data, never the committed one.
-#   windowed: gen3-sid.json copied, gen1-tid.json with the low-byte window planted (the real mutation)
-#   nogen3:   the CORRECT gen1-tid.json and no gen3-sid.json at all (the unrelated breakage)
+# make_root <dir> windowed|nogen3|truncated - a temp repo root holding core/data, never the committed one.
+#   windowed:  gen3-sid.json copied, gen1-tid.json with the low-byte window planted (the real mutation)
+#   nogen3:    the CORRECT gen1-tid.json and no gen3-sid.json at all (an unrelated breakage)
+#   truncated: gen3-sid.json copied, gen1-tid.json cut to its first 400 bytes (a second unrelated
+#              breakage, used below to record what the C# head's sha1 pin cannot distinguish)
 make_root() {
   mkdir -p "$1/core/data"
   case "$2" in
-    windowed) cp ../core/data/gen3-sid.json "$1/core/data/"
-              python3 "$plant_sled" ../core/data/gen1-tid.json "$1/core/data/gen1-tid.json" ;;
-    nogen3)   cp ../core/data/gen1-tid.json "$1/core/data/" ;;
+    windowed)  cp ../core/data/gen3-sid.json "$1/core/data/"
+               python3 "$plant_sled" ../core/data/gen1-tid.json "$1/core/data/gen1-tid.json" ;;
+    nogen3)    cp ../core/data/gen1-tid.json "$1/core/data/" ;;
+    truncated) cp ../core/data/gen3-sid.json "$1/core/data/"
+               head -c 400 ../core/data/gen1-tid.json > "$1/core/data/gen1-tid.json" ;;
   esac
 }
 
@@ -405,11 +409,18 @@ else
 fi
 rm -rf "$okroot"
 
-# The C# head carries gen1-tid.json as an embedded resource and only compares it, by sha1, with the file under
-# the repo root it is given, so the same mutated copy cannot reach its engine at all: it is caught by that pin,
-# with that one check failing and no other. (The C# engine's own "every $40xx is route-valid" assertion runs
-# against the embedded data in app/run-core-tests.sh; this control shows that a hand-edited data file is never
-# used there silently.) Its unrelated breakage exits 134, not 1, which the status check alone now catches.
+# The C# head's EMBEDDED-RESOURCE PIN. This is NOT a $40xx check and must not be read as one. The C# head
+# carries gen1-tid.json as an embedded resource and never parses the repo file at all - it only sha1-compares
+# the two - so the windowed copy cannot reach its engine, and the pin reports the same single failure for ANY
+# edit to core/data/gen1-tid.json: the $40xx mutation, a reworded note and a truncation are indistinguishable
+# to it. What this control establishes is therefore exactly that, and only that: a hand-edited data file is
+# never used by the C# head silently. (The C# engine's own "every $40xx is route-valid" assertion runs against
+# the EMBEDDED data, in app/run-core-tests.sh; the rule itself is covered by negative control (a) above, on
+# the JS head, which does parse the file.)
+# Two self-checks bound the claim. A root with no gen3-sid.json exits 134, not 1, so a bare non-zero exit is
+# not accepted in the pin's place. And a gen1-tid.json truncated to its first 400 bytes - a breakage with
+# nothing to do with the $40xx rule - is REQUIRED to trip the pin identically, which puts the limitation above
+# in the suite's output instead of leaving it to be assumed.
 if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   export DOTNET_ROOT="$HOME/.dotnet"
   export PATH="$HOME/.dotnet:$PATH"
@@ -420,10 +431,10 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   badroot=$(mktemp -d); make_root "$badroot" windowed
   run_capture "$badroot/out" dotnet run --project ../app/Tests -c Release -- --gen1tid gen1tid-vectors.json "$badroot"
   if refusal_is "$badroot/out" "$RUN_STATUS" 1 "${cs_refusal[@]}"; then
-    echo "negative control (the windowed data file against the C# head's embedded-resource pin): FAILED as required ($refusal_why) ->"
+    echo "embedded-resource pin (an edited core/data/gen1-tid.json under the repo root; here the windowed one): REFUSED as required ($refusal_why) ->"
     grep -E '^FAIL|failure' "$badroot/out" | head -4 | sed 's/^/      /'
   else
-    echo "negative control (the windowed data file against the C# head's embedded-resource pin): DID NOT REFUSE AS REQUIRED ($refusal_why)"
+    echo "embedded-resource pin (an edited core/data/gen1-tid.json under the repo root; here the windowed one): DID NOT REFUSE AS REQUIRED ($refusal_why)"
     head -5 "$badroot/out" | sed 's/^/      /'
     rm -rf "$badroot"
     exit 1
@@ -432,14 +443,31 @@ if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   okroot=$(mktemp -d); make_root "$okroot" nogen3
   run_capture "$okroot/out" dotnet run --project ../app/Tests -c Release -- --gen1tid gen1tid-vectors.json "$okroot"
   if refusal_is "$okroot/out" "$RUN_STATUS" 1 "${cs_refusal[@]}"; then
-    echo "  control self-check: the unmutated data file with gen3-sid.json missing was ACCEPTED as the pin's refusal - the control passes for the wrong reason"
+    echo "  pin self-check: the unmutated data file with gen3-sid.json missing was ACCEPTED as the pin's refusal - the control passes for the wrong reason"
     rm -rf "$okroot"
     exit 1
   else
-    echo "  control self-check: an unrelated breakage (correct gen1-tid.json, no gen3-sid.json) is not accepted -> $refusal_why"
+    echo "  pin self-check: a breakage that does not touch gen1-tid.json (no gen3-sid.json) is not accepted -> $refusal_why"
     grep -m1 -E 'Exception|FAIL' "$okroot/out" | cut -c1-150 | sed 's/^/      /'
   fi
   rm -rf "$okroot"
+
+  # The limitation, recorded as a check rather than left implicit: an edit with nothing to do with the
+  # $40xx rule - gen1-tid.json cut to its first 400 bytes - must trip the pin in exactly the same way,
+  # because the C# head compares sha1s and never looks inside. If it ever stopped tripping, a broken data
+  # file would be reaching that head silently, so this is required to REFUSE, not required to differ.
+  cutroot=$(mktemp -d); make_root "$cutroot" truncated
+  run_capture "$cutroot/out" dotnet run --project ../app/Tests -c Release -- --gen1tid gen1tid-vectors.json "$cutroot"
+  if refusal_is "$cutroot/out" "$RUN_STATUS" 1 "${cs_refusal[@]}"; then
+    echo "  pin self-check: an unrelated edit (gen1-tid.json truncated to 400 bytes) trips the pin IDENTICALLY -> the pin sees THAT the repo file changed, never WHAT changed"
+    grep -m1 -E '^FAIL' "$cutroot/out" | cut -c1-150 | sed 's/^/      /'
+  else
+    echo "  pin self-check: gen1-tid.json truncated to 400 bytes did NOT trip the embedded-resource pin ($refusal_why) - a broken data file would reach the C# head silently"
+    head -5 "$cutroot/out" | sed 's/^/      /'
+    rm -rf "$cutroot"
+    exit 1
+  fi
+  rm -rf "$cutroot"
 fi
 
 # Negative control (b): tools/gen-gen1-data.py's refusal (check_target_sets). Both runs are fully
