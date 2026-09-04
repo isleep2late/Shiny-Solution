@@ -165,8 +165,17 @@ RNG Solution's registry and tables and embedded in every head.
   including a hunt file without the sentinel; the page's switch driven headless);
   the JS engine vs an algorithmically independent Python reference; the
   JS Gen 4 / Gen 1-2 ports vs vectors emitted by the C# engine; `core/gen1tid.js` vs
-  `tests/gen1tid-vectors.json` (emitted by RNG Solution's Python) with a corrupted vector shown
-  failing; `core/gen2tid.js` vs `tests/gen2tid-vectors.json` (emitted by `tests/gen2_reference.py`
+  `tests/gen1tid-vectors.json` (emitted by RNG Solution's Python; when that checkout is present the
+  file is re-emitted from it and must be byte-identical apart from line 2, the one-line provenance
+  stamp that names RNG Solution's HEAD and legitimately drifts as that repository moves - both stamps
+  must still be the emitter's own line - and the check says so and is skipped when the checkout is
+  absent) with a corrupted vector shown failing, and the three `$40xx` controls that keep the 1-in-712
+  mistake out (the target set windowed back onto the Trainer ID's low byte against the JS head,
+  against the C# head's embedded-resource pin, and against `tools/gen-gen1-data.py`'s refusal): each
+  requires that run's specific refusal - the exit status and the lines the refusing path prints, not
+  merely a non-zero exit - and each is then shown NOT accepting an unrelated breakage of the same run
+  (a repo root whose `gen3-sid.json` is missing; a registry whose Red DMG table is missing), which the
+  non-zero-exit controls accepted as proof; `core/gen2tid.js` vs `tests/gen2tid-vectors.json` (emitted by `tests/gen2_reference.py`
   from the Gen 2 derivation CSVs; when that folder is present the vectors and `gen2-tid.json` are
   re-emitted and must be byte-identical) with a corrupted vector shown failing; the webapp smoke test (`tests/test-webapp.cjs`: the mobile bundle carries the Gen 1
   TID tab, the engine and the embedded data verbatim, and the tab's pure module reproduces the

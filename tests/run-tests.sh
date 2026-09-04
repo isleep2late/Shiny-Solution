@@ -131,6 +131,36 @@ else
 fi
 rm -f "$corrupted" "$corrupted.out"
 
+# tests/gen1tid-vectors.json is RNG Solution's own emission, so like every other oracle-derived artifact here it is
+# re-emitted and byte-compared whenever its oracle is present (read-only: the emitter writes to stdout and nothing
+# else, and PYTHONDONTWRITEBYTECODE keeps even a .pyc out of that checkout). The one line that may legitimately
+# differ is line 2, the "source" provenance stamp, which names RNG Solution's HEAD and drifts as that repo moves;
+# every other byte must match, and both files' line 2 must still be that emitter's stamp.
+RNG_SRC="${RNG_SOLUTION_SRC:-$HOME/AI/Games/RNG-Solution}"
+if [ -f "$RNG_SRC/tests/emit_vectors.py" ]; then
+  reemit=$(mktemp --suffix=.json)
+  ( cd "$RNG_SRC" && PYTHONDONTWRITEBYTECODE=1 python3 tests/emit_vectors.py ) > "$reemit"
+  stamp='^"source": "emitted by RNG Solution tests/emit_vectors\.py \(rngsolution/timeline\.py, gen3\.py, jitter\.py at [^)]*\); '
+  for f in gen1tid-vectors.json "$reemit"; do
+    sed -n '2p' "$f" | grep -qE "$stamp" || {
+      echo "gen1tid vectors: line 2 of $f is not the emitter's source stamp, so the ignored line is not the stamp"
+      sed -n '2p' "$f" | cut -c1-150 | sed 's/^/      /'
+      rm -f "$reemit"; exit 1; }
+  done
+  sed '2d' "$reemit" > "$reemit.re"; sed '2d' gen1tid-vectors.json > "$reemit.have"
+  if cmp -s "$reemit.re" "$reemit.have"; then
+    echo "gen1tid vectors re-emitted from RNG Solution: byte-identical apart from the source stamp (committed $(sed -n '2p' gen1tid-vectors.json | sed 's/.*jitter\.py at \([^)]*\)).*/\1/'), re-emitted $(sed -n '2p' "$reemit" | sed 's/.*jitter\.py at \([^)]*\)).*/\1/'))"
+  else
+    echo "gen1tid vectors re-emitted from RNG Solution: DIFFERS from the committed file outside the source stamp ->"
+    diff "$reemit.have" "$reemit.re" | cut -c1-200 | head -6 | sed 's/^/      /'
+    rm -f "$reemit" "$reemit.re" "$reemit.have"
+    exit 1
+  fi
+  rm -f "$reemit" "$reemit.re" "$reemit.have"
+else
+  echo "no RNG Solution checkout at $RNG_SRC; tests/gen1tid-vectors.json is not re-emitted (the committed copy is used)"
+fi
+
 # Gen 1 Trainer ID / Gen 3 Secret ID / press-jitter engine against the vectors emitted by RNG Solution's
 # Python (tests/emit_vectors.py there; the committed copy is gen1tid-vectors.json).
 node test-gen1tid.cjs gen1tid-vectors.json
@@ -268,22 +298,55 @@ else
   echo "no pret checkout at ~/AI/pret; the citation registry is not regenerated (the committed core/data/citations.json is used)"
 fi
 
-# ---- the $40xx rule: the two checks that keep the 1-in-712 mistake from coming back -----------------
+# ---- the $40xx rule: the three checks that keep the 1-in-712 mistake from coming back ---------------
 # On the Any% save-corruption route only the Trainer ID's HIGH byte reaches the jump pointer (swap 1
 # destroys the low byte before swap 2 copies ($D358, TID-high) into $D36E/$D36F), so the set is kind
 # "highbyte" and every $40xx in a Red/Blue table is route-valid. The bank-$1D sled window
-# ($00-$38 / $3A-$5C) is real but constrains that POINTER's low byte, not the ID's. Both controls below
+# ($00-$38 / $3A-$5C) is real but constrains that POINTER's low byte, not the ID's. The controls below
 # put the old window back on the Trainer ID and require the tooling to reject it.
 # (Caveat carried with the rule: it is emulator-measured only - PyBoy for the runs, gambatte-core for
 # the tables - and unconfirmed on a cartridge; Blue's relaxation is inferred from Red, never swept.)
+#
+# Each control requires the SPECIFIC refusal - the exact exit status and the lines the refusing path
+# prints - and each is then shown NOT accepting an unrelated breakage of the same run. Counting any
+# non-zero exit as proof does not work here: the correct, unmutated gen1-tid.json under a root whose
+# gen3-sid.json is simply missing exits 1 from the JS head (an ENOENT stack trace), 134 from the C#
+# head (an unhandled FileNotFoundException) and 1 from the generator (a traceback over a deleted
+# table), none of which says anything about the $40xx rule.
 
-# Negative control (a): core/data/gen1-tid.json with hi40-corruption reverted to kind 'sled' with the
-# low-byte window must FAIL test-gen1tid.cjs, and is shown failing. The mutated copy goes in a temp
-# repo root (test-gen1tid.cjs's optional second argument), never over the committed file.
-badroot=$(mktemp -d)
-mkdir -p "$badroot/core/data"
-cp ../core/data/gen3-sid.json "$badroot/core/data/"
-python3 - ../core/data/gen1-tid.json "$badroot/core/data/gen1-tid.json" <<'PY_SLED'
+# refusal_is <output file> <status> <required status> <required grep -E pattern>...
+# True only when the run failed exactly the way the refusing path fails; refusal_why says which part
+# matched or which part did not.
+refusal_why=""
+refusal_is() {
+  local out="$1" got="$2" want="$3"; shift 3
+  if [ "$got" != "$want" ]; then
+    refusal_why="exit status $got, wanted $want"
+    return 1
+  fi
+  local pat
+  for pat in "$@"; do
+    if ! grep -qE -- "$pat" "$out"; then
+      refusal_why="exit status $got but the output has no line matching /$pat/"
+      return 1
+    fi
+  done
+  refusal_why="exit status $got and all $# required line(s)"
+  return 0
+}
+
+# run_capture <output file> <command...>: runs it, records RUN_STATUS, and does not trip set -e.
+RUN_STATUS=0
+run_capture() {
+  local out="$1"; shift
+  RUN_STATUS=0
+  "$@" > "$out" 2>&1 || RUN_STATUS=$?
+}
+
+# The mutation both data-file controls plant: hi40-corruption back to kind 'sled' over the bank-$1D
+# low-byte window, i.e. the 1-in-712 rule.
+plant_sled=$(mktemp --suffix=.py)
+cat > "$plant_sled" <<'PY_SLED'
 import json, sys
 d = json.load(open(sys.argv[1]))
 s = d["target_sets"]["hi40-corruption"]
@@ -292,64 +355,147 @@ s["kind"] = "sled"
 s["lo_ranges"] = [["00", "38"], ["3A", "5C"]]
 json.dump(d, open(sys.argv[2], "w"), indent=1, ensure_ascii=False)
 PY_SLED
-if node test-gen1tid.cjs gen1tid-vectors.json "$badroot" > "$badroot/out" 2>&1; then
-  echo "negative control (the \$40xx set windowed back onto the Trainer ID's low byte): DID NOT FAIL"
+
+# make_root <dir> windowed|nogen3 - a temp repo root holding core/data, never the committed one.
+#   windowed: gen3-sid.json copied, gen1-tid.json with the low-byte window planted (the real mutation)
+#   nogen3:   the CORRECT gen1-tid.json and no gen3-sid.json at all (the unrelated breakage)
+make_root() {
+  mkdir -p "$1/core/data"
+  case "$2" in
+    windowed) cp ../core/data/gen3-sid.json "$1/core/data/"
+              python3 "$plant_sled" ../core/data/gen1-tid.json "$1/core/data/gen1-tid.json" ;;
+    nogen3)   cp ../core/data/gen1-tid.json "$1/core/data/" ;;
+  esac
+}
+
+# Negative control (a): core/data/gen1-tid.json with hi40-corruption reverted to kind 'sled' with the
+# low-byte window must FAIL test-gen1tid.cjs with the four Red/Blue tables losing their $40xx offsets
+# and the set describing itself with a low-byte window, and is shown failing. The mutated copy goes in
+# a temp repo root (test-gen1tid.cjs's optional second argument), never over the committed file.
+gen1_refusal=(
+  '^FAIL table red/dmg/hold-start-v1 every \$40xx is route-valid$'
+  '^FAIL table blue/dmg/hold-start-v1 route-valid under hi40-corruption$'
+  '^FAIL describe hi40-corruption$'
+  '^  actual   "hi40-corruption: high byte \$40, low byte \$00-\$38 or \$3A-\$5C"$'
+  '^[0-9]+ failure\(s\) in [0-9]+ checks$'
+)
+badroot=$(mktemp -d); make_root "$badroot" windowed
+run_capture "$badroot/out" node test-gen1tid.cjs gen1tid-vectors.json "$badroot"
+if refusal_is "$badroot/out" "$RUN_STATUS" 1 "${gen1_refusal[@]}"; then
+  echo "negative control (the \$40xx set windowed back onto the Trainer ID's low byte): FAILED as required ($refusal_why) ->"
+  grep -E '^FAIL|failure' "$badroot/out" | head -4 | sed 's/^/      /'
+else
+  echo "negative control (the \$40xx set windowed back onto the Trainer ID's low byte): DID NOT REFUSE AS REQUIRED ($refusal_why)"
+  head -5 "$badroot/out" | sed 's/^/      /'
   rm -rf "$badroot"
   exit 1
-else
-  echo "negative control (the \$40xx set windowed back onto the Trainer ID's low byte): FAILED as required ->"
-  grep -E '^FAIL|failure' "$badroot/out" | head -4 | sed 's/^/      /'
 fi
 rm -rf "$badroot"
+# and the control must not accept an unrelated breakage of the same run: the correct gen1-tid.json
+# under a root with no gen3-sid.json exits non-zero too, which is all the control used to ask for.
+okroot=$(mktemp -d); make_root "$okroot" nogen3
+run_capture "$okroot/out" node test-gen1tid.cjs gen1tid-vectors.json "$okroot"
+if refusal_is "$okroot/out" "$RUN_STATUS" 1 "${gen1_refusal[@]}"; then
+  echo "  control self-check: the unmutated data file with gen3-sid.json missing was ACCEPTED as the \$40xx refusal - the control passes for the wrong reason"
+  rm -rf "$okroot"
+  exit 1
+else
+  echo "  control self-check: an unrelated breakage (correct gen1-tid.json, no gen3-sid.json) is not accepted -> $refusal_why"
+  grep -m1 -E 'Error|FAIL' "$okroot/out" | cut -c1-150 | sed 's/^/      /'
+fi
+rm -rf "$okroot"
 
 # The C# head carries gen1-tid.json as an embedded resource and only compares it, by sha1, with the file under
-# the repo root it is given, so the same mutated copy cannot reach its engine at all: it is caught by that pin.
-# (The C# engine's own "every $40xx is route-valid" assertion runs against the embedded data in
-# app/run-core-tests.sh; this control shows that a hand-edited data file is never used there silently.)
+# the repo root it is given, so the same mutated copy cannot reach its engine at all: it is caught by that pin,
+# with that one check failing and no other. (The C# engine's own "every $40xx is route-valid" assertion runs
+# against the embedded data in app/run-core-tests.sh; this control shows that a hand-edited data file is never
+# used there silently.) Its unrelated breakage exits 134, not 1, which the status check alone now catches.
 if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
   export DOTNET_ROOT="$HOME/.dotnet"
   export PATH="$HOME/.dotnet:$PATH"
-  badroot=$(mktemp -d)
-  mkdir -p "$badroot/core/data"
-  cp ../core/data/gen3-sid.json "$badroot/core/data/"
-  python3 - ../core/data/gen1-tid.json "$badroot/core/data/gen1-tid.json" <<'PY_SLED2'
-import json, sys
-d = json.load(open(sys.argv[1]))
-s = d["target_sets"]["hi40-corruption"]
-assert s["kind"] == "highbyte", "negative control setup: hi40-corruption is not kind 'highbyte' any more"
-s["kind"] = "sled"
-s["lo_ranges"] = [["00", "38"], ["3A", "5C"]]
-json.dump(d, open(sys.argv[2], "w"), indent=1, ensure_ascii=False)
-PY_SLED2
-  if dotnet run --project ../app/Tests -c Release -- --gen1tid gen1tid-vectors.json "$badroot" > "$badroot/out" 2>&1; then
-    echo "negative control (the windowed data file against the C# head's embedded-resource pin): DID NOT FAIL"
+  cs_refusal=(
+    '^FAIL embedded gen1-tid\.json is byte-identical to the repo file$'
+    '^1 failure\(s\) in [0-9]+ gen1tid checks$'
+  )
+  badroot=$(mktemp -d); make_root "$badroot" windowed
+  run_capture "$badroot/out" dotnet run --project ../app/Tests -c Release -- --gen1tid gen1tid-vectors.json "$badroot"
+  if refusal_is "$badroot/out" "$RUN_STATUS" 1 "${cs_refusal[@]}"; then
+    echo "negative control (the windowed data file against the C# head's embedded-resource pin): FAILED as required ($refusal_why) ->"
+    grep -E '^FAIL|failure' "$badroot/out" | head -4 | sed 's/^/      /'
+  else
+    echo "negative control (the windowed data file against the C# head's embedded-resource pin): DID NOT REFUSE AS REQUIRED ($refusal_why)"
+    head -5 "$badroot/out" | sed 's/^/      /'
     rm -rf "$badroot"
     exit 1
-  else
-    echo "negative control (the windowed data file against the C# head's embedded-resource pin): FAILED as required ->"
-    grep -E '^FAIL|failure' "$badroot/out" | head -4 | sed 's/^/      /'
   fi
   rm -rf "$badroot"
+  okroot=$(mktemp -d); make_root "$okroot" nogen3
+  run_capture "$okroot/out" dotnet run --project ../app/Tests -c Release -- --gen1tid gen1tid-vectors.json "$okroot"
+  if refusal_is "$okroot/out" "$RUN_STATUS" 1 "${cs_refusal[@]}"; then
+    echo "  control self-check: the unmutated data file with gen3-sid.json missing was ACCEPTED as the pin's refusal - the control passes for the wrong reason"
+    rm -rf "$okroot"
+    exit 1
+  else
+    echo "  control self-check: an unrelated breakage (correct gen1-tid.json, no gen3-sid.json) is not accepted -> $refusal_why"
+    grep -m1 -E 'Exception|FAIL' "$okroot/out" | cut -c1-150 | sed 's/^/      /'
+  fi
+  rm -rf "$okroot"
 fi
 
 # Negative control (b): tools/gen-gen1-data.py's refusal (check_target_sets). Both runs are fully
 # isolated - the script is copied into a temp tree, so its ROOT / OUT_DIR are that tree and nothing can
 # be written over the committed core/data. First the positive half, so the refusal is not passing for
 # the wrong reason: over the real registry the script must SUCCEED and reproduce both committed files
-# byte for byte. Then the same registry with the Trainer ID set windowed back must make it exit
-# non-zero and write nothing.
+# byte for byte. Then the same registry with the Trainer ID set windowed back must exit 1 printing
+# check_target_sets' own sentence and write nothing - and a registry that is merely missing a table
+# file, which also exits non-zero and also writes nothing, must not be accepted in its place.
 RNG_SRC="${RNG_SOLUTION_SRC:-$HOME/AI/Games/RNG-Solution}"
 if [ -f "$RNG_SRC/rngsolution/data/red/platforms.json" ]; then
+  gen_refusal=(
+    "target set 'hi40-corruption' is kind 'sled' with a restricted low byte"
+    "constrains the jump POINTER's low byte, not the Trainer ID's"
+  )
   gendir=$(mktemp -d)
   mkdir -p "$gendir/tools" "$gendir/rng/rngsolution"
   cp ../tools/gen-gen1-data.py "$gendir/tools/"
   cp -r "$RNG_SRC/rngsolution/data" "$gendir/rng/rngsolution/data"
   python3 "$gendir/tools/gen-gen1-data.py" "$gendir/rng" > /dev/null
-  cmp "$gendir/core/data/gen1-tid.json" ../core/data/gen1-tid.json \
-    && echo "gen1-tid.json regenerated from RNG Solution's registry: byte-identical to the committed file"
-  cmp "$gendir/core/data/gen3-sid.json" ../core/data/gen3-sid.json \
-    && echo "gen3-sid.json regenerated from RNG Solution's registry: byte-identical to the committed file"
+  # The script must have written both files. They are byte-compared with the committed copies only when the
+  # registry it just read is the one those copies record in inputs_sha1: RNG Solution is a separate repository
+  # with its own HEAD, so when its registry has moved the two sha1s are named and the comparison is not claimed
+  # (a `cmp` in an && list prints "differ" and returns non-zero without failing the suite, which is not a check).
+  for f in gen1-tid.json gen3-sid.json; do
+    [ -s "$gendir/core/data/$f" ] || { echo "gen-gen1-data.py over the real registry wrote no $f"; rm -rf "$gendir"; exit 1; }
+  done
+  reg_sha=$(python3 -c 'import hashlib,sys;print(hashlib.sha1(open(sys.argv[1],"rb").read()).hexdigest())' "$gendir/rng/rngsolution/data/red/platforms.json")
+  rec_sha=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["inputs_sha1"]["platforms.json"])' ../core/data/gen1-tid.json)
+  if [ "$reg_sha" = "$rec_sha" ]; then
+    for f in gen1-tid.json gen3-sid.json; do
+      cmp "$gendir/core/data/$f" "../core/data/$f" || { echo "$f regenerated from RNG Solution's registry DIFFERS from the committed file"; rm -rf "$gendir"; exit 1; }
+      echo "$f regenerated from RNG Solution's registry: byte-identical to the committed file"
+    done
+  else
+    echo "RNG Solution's registry has moved since core/data/*.json were generated (rngsolution/data/red/platforms.json is $reg_sha, the committed files record $rec_sha); the regeneration ran and wrote both files, and they are not byte-compared with copies made from a different registry"
+  fi
   rm -rf "$gendir/core"
+
+  # the unrelated breakage first, on a copy of the same registry: Red's DMG table deleted
+  cutdir=$(mktemp -d)
+  mkdir -p "$cutdir/tools" "$cutdir/rng/rngsolution"
+  cp ../tools/gen-gen1-data.py "$cutdir/tools/"
+  cp -r "$gendir/rng/rngsolution/data" "$cutdir/rng/rngsolution/data"
+  rm -f "$cutdir/rng/rngsolution/data/red/dmg.csv"
+  run_capture "$cutdir/out" python3 "$cutdir/tools/gen-gen1-data.py" "$cutdir/rng"
+  if refusal_is "$cutdir/out" "$RUN_STATUS" 1 "${gen_refusal[@]}"; then
+    echo "  control self-check: a registry merely missing red/dmg.csv was ACCEPTED as the \$40xx refusal - the control passes for the wrong reason"
+    rm -rf "$cutdir" "$gendir"
+    exit 1
+  else
+    echo "  control self-check: an unrelated breakage (registry without red/dmg.csv) is not accepted -> $refusal_why"
+    grep -m1 -E 'Error|error' "$cutdir/out" | cut -c1-150 | sed 's/^/      /'
+  fi
+  rm -rf "$cutdir"
+
   python3 - "$gendir/rng/rngsolution/data/red/platforms.json" <<'PY_REG'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -359,12 +505,9 @@ s["kind"] = "sled"
 s["lo_ranges"] = [["00", "38"], ["3A", "5C"]]
 json.dump(d, open(sys.argv[1], "w"), indent=1, ensure_ascii=False)
 PY_REG
-  if python3 "$gendir/tools/gen-gen1-data.py" "$gendir/rng" > "$gendir/out" 2>&1; then
-    echo "negative control (gen-gen1-data.py over a registry that windows the Trainer ID's low byte): DID NOT REFUSE"
-    rm -rf "$gendir"
-    exit 1
-  else
-    echo "negative control (gen-gen1-data.py over a registry that windows the Trainer ID's low byte): REFUSED as required ->"
+  run_capture "$gendir/out" python3 "$gendir/tools/gen-gen1-data.py" "$gendir/rng"
+  if refusal_is "$gendir/out" "$RUN_STATUS" 1 "${gen_refusal[@]}"; then
+    echo "negative control (gen-gen1-data.py over a registry that windows the Trainer ID's low byte): REFUSED as required ($refusal_why) ->"
     head -2 "$gendir/out" | fold -w 150 | sed 's/^/      /'
     if [ -e "$gendir/core" ]; then
       echo "      but it wrote files: $(ls -R "$gendir/core")"
@@ -372,11 +515,17 @@ PY_REG
       exit 1
     fi
     echo "      and wrote nothing"
+  else
+    echo "negative control (gen-gen1-data.py over a registry that windows the Trainer ID's low byte): DID NOT REFUSE AS REQUIRED ($refusal_why)"
+    head -5 "$gendir/out" | sed 's/^/      /'
+    rm -rf "$gendir"
+    exit 1
   fi
   rm -rf "$gendir"
 else
   echo "no RNG Solution checkout at $RNG_SRC; tools/gen-gen1-data.py is not exercised"
 fi
+rm -f "$plant_sled"
 
 # The desktop wizard panel is pinned to the web tab through tests/wizard-panel-vectors.json (what webapp/wizard-ui.js computes
 # for its self-test scenarios and 20 random wanted-IV searches; app/run-core-tests.sh checks WizardSupport.cs against it). A
