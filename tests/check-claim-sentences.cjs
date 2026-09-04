@@ -109,6 +109,13 @@ function unqualifiedClaims(unit) {
 // here: the reader cannot open the thing the sentence rests on. Every unit is judged, not only the
 // ones that make a claim - "Evidence: /tmp/x" asserts nothing by itself and is exactly the sentence
 // that misleads.
+// Round 6 finding E widened the patterns from /tmp to ~/ too. The one exemption is the class of ~/
+// path that is not a citation at all: the files the tools write on the READER'S machine
+// (runtime_path_patterns - ~/.rng-solution/config.json and the like). Saying those are "not
+// committed" would be saying something false about the reader's own state.
+function isRuntimePath(text) {
+  return (RULE.runtime_path_patterns || []).some((q) => new RegExp("^(?:" + q + ")$").test(text));
+}
 function uncommittedPathCitations(unit) {
   const w = RULE.proximity_chars, bad = [];
   for (const pattern of RULE.uncommitted_path_patterns) {
@@ -116,16 +123,19 @@ function uncommittedPathCitations(unit) {
     let m;
     while ((m = re.exec(unit)) !== null) {
       if (m[0] === "") { re.lastIndex++; continue; }
+      if (isRuntimePath(m[0])) continue;
       const window = unit.slice(Math.max(0, m.index - w), m.index + m[0].length + w);
       if (!RULE.uncommitted_qualifier_patterns.some((q) => new RegExp(q, "i").test(window))) bad.push([m[0], m.index]);
     }
   }
   return bad;
 }
-// every /tmp path the unit names, qualified or not: a rule with nothing to judge is not a rule
+// every path outside both repositories the unit names, qualified or not: a rule with nothing to
+// judge is not a rule
 function countPaths(unit) {
   let n = 0;
-  for (const pattern of RULE.uncommitted_path_patterns) n += (unit.match(new RegExp(pattern, "g")) || []).length;
+  for (const pattern of RULE.uncommitted_path_patterns)
+    for (const hit of unit.match(new RegExp(pattern, "g")) || []) if (!isRuntimePath(hit)) n++;
   return n;
 }
 

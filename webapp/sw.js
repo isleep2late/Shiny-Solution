@@ -13,7 +13,7 @@
 // BUILD is stamped by webapp/sync-core.sh (a hash of the shipped sources, written here and into
 // index.html): a changed sw.js installs as a new worker, precaches into new caches and, at activate,
 // deletes every shiny-* cache of another build, so a new sync invalidates the old copy.
-const BUILD = "8bbb179c6e60";
+const BUILD = "afdf32e17dfb";
 const SHELL_CACHE = "shiny-shell-" + BUILD;
 const DATA_CACHE = "shiny-data-" + BUILD;
 const INDEX = "index.html";

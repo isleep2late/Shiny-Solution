@@ -53,7 +53,11 @@ fs.writeFileSync(process.argv[2], JSON.stringify(a));
   fi
   rm -f "$cross_in" "$cross_out" "$cross_out.bad" "$cross_out.log"
 else
-  echo "dotnet not found; skipping gen4 parity vectors, the JS/C# timer cross-check, the C# gen5 checks, the JS/C# generator cross-check and the seedtime4 cross-check"
+  # Round 6 finding F: a plain echo left DEGRADED_LOG empty, so the final banner still printed
+  # "ALL TESTS PASSED, ALL NEGATIVE CONTROLS FAILED AS REQUIRED, ALL CROSS-REPO GUARDS RAN" with the
+  # whole C# half never run. A skip that the summary cannot see is a silent over-claim.
+  guard_degraded "the C# half (gen4 parity vectors, the JS/C# timer, generator and seedtime4 cross-checks, the C# gen5 checks)" \
+    "dotnet not found: the desktop head's engines were NOT compared with the JavaScript ones"
   node test-timers.cjs timer-vectors.json
   node test-gen5.cjs gen5-vectors.json gen5-random.json
   node test-generators.cjs generators-vectors.json
@@ -308,7 +312,13 @@ if [ -d "$HOME/AI/pret/pokeemerald" ]; then
   fi
   rm -f "$facts_bad" "$facts_bad.json" "$facts_bad.out"
 else
-  echo "no pret checkout at ~/AI/pret; the citation registry is not regenerated (the committed core/data/citations.json is used)"
+  # Round 6 finding F. This branch skipped the citation regeneration AND its two negative controls
+  # (the citation that no longer matches its source, and the range starting on a blank line), and the
+  # summary saw none of it: with HOME pointed elsewhere the suite printed "ALL TESTS PASSED, ALL
+  # NEGATIVE CONTROLS FAILED AS REQUIRED, ALL CROSS-REPO GUARDS RAN" and exited 0 with the citation
+  # half never run.
+  guard_degraded "the citation registry (core/data/citations.json regenerated from docs/FACTS.md, with its two negative controls)" \
+    "no pret checkout at ~/AI/pret: the committed citations.json was used as-is and was NOT re-derived, and neither control ran"
 fi
 
 # ---- the $40xx rule: the three checks that keep the 1-in-712 mistake from coming back ---------------
@@ -1523,20 +1533,26 @@ process.exit(bad ? 1 : 0);
 ' "$ph/measure"
   rm -rf "$ph"
 else
-  echo "google-chrome not found; skipping the browser self-test"
+  # Round 6 finding F: the browser self-test is the only check of the rendered page, and skipping it
+  # quietly let the banner claim a complete run.
+  guard_degraded "the browser self-test (the web head rendered in Chrome: tabs, panels, the phone layout)" \
+    "google-chrome not found: nothing rendered the web head in a real browser"
 fi
 
 # ---- the summary: a run that could not run a guard says so, and does not pass quietly ----------
 echo
 if [ -s "$DEGRADED_LOG" ]; then
   n=$(wc -l < "$DEGRADED_LOG")
-  echo "!!! $n CROSS-REPO GUARD(S) COULD NOT RUN IN THIS SUITE - IT DID NOT CHECK WHAT THEY CHECK !!!"
+  echo "!!! $n GUARD(S) COULD NOT RUN IN THIS SUITE - IT DID NOT CHECK WHAT THEY CHECK !!!"
   cat "$DEGRADED_LOG"
   if [ "${SHINY_ALLOW_DEGRADED_GUARDS:-0}" = "1" ]; then
-    echo "TESTS PASSED, NEGATIVE CONTROLS FAILED AS REQUIRED, BUT $n CROSS-REPO GUARD(S) DID NOT RUN (accepted: SHINY_ALLOW_DEGRADED_GUARDS=1)"
+    echo "TESTS PASSED, NEGATIVE CONTROLS FAILED AS REQUIRED, BUT $n GUARD(S) DID NOT RUN (accepted: SHINY_ALLOW_DEGRADED_GUARDS=1)"
     exit 0
   fi
-  echo "SUITE INCOMPLETE: $n cross-repo guard(s) did not run. Fix the cause, or accept an unchecked run with SHINY_ALLOW_DEGRADED_GUARDS=1."
+  echo "SUITE INCOMPLETE: $n guard(s) did not run. Fix the cause, or accept an unchecked run with SHINY_ALLOW_DEGRADED_GUARDS=1."
   exit 1
 fi
-echo "ALL TESTS PASSED, ALL NEGATIVE CONTROLS FAILED AS REQUIRED, ALL CROSS-REPO GUARDS RAN"
+# Round 6 finding F: this line used to be reachable with the whole C# half, the citation
+# regeneration (and its two negative controls) or the browser self-test never run, because those
+# three branches announced their skip with a plain echo that DEGRADED_LOG never saw.
+echo "ALL TESTS PASSED, ALL NEGATIVE CONTROLS FAILED AS REQUIRED, EVERY GUARD IN THIS SUITE RAN"

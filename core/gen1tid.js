@@ -419,6 +419,48 @@
     return "";
   }
 
+  // The DESCRIPTOR the three functions above take, built HERE and nowhere else.
+  //
+  // Round 6 finding A. Round 5 moved the DECISION into this file, and the website duly called
+  // derivationTag / derivationLabel / derivationSentence - but it still built the object it passed
+  // them, field for field, in src/app/rng-solution/page.tsx, and the site's own backstop
+  // (tools/check-evidence-display.cjs) built a THIRD copy of the same literal to compare against.
+  // So the page could hard-wire verifiedEvidence to Blue's fixture string, keep all three calls,
+  // test no membership and write no bare phrase, and the PUBLIC page would print
+  // "[3x cold-boot verified] ... What ships as that evidence: tests/fixtures/blue-gba-triple.csv"
+  // for Red's 358 / 743 / 1131 and 517 / 878 - the retracted claim plus a false citation - with the
+  // guard green. A guard that reimplements what it guards is not a guard, and neither is a shared
+  // decision fed a descriptor every head writes itself.
+  //
+  // So: which methodology a game plays on a console family, which target sets are in force, which
+  // offsets were re-derived and WHAT THE EVIDENCE IS (methodology first, console family as the
+  // fallback) are all decided here. A head passes the game, the methodology id and the target-set
+  // keys; it never writes verifiedEvidence.
+  function methodologyIdFor(data, gameKey, familyKey) {
+    var g = data.games[gameKey];
+    if (!g) fail("no game " + JSON.stringify(gameKey) + " in the data");
+    var want = gameKey + "/" + familyKey + "/hold-start-v1";
+    if (data.methodologies[want]) return want;
+    var ids = g.methodologies || [];
+    for (var i = 0; i < ids.length; i++)
+      if ((data.methodologies[ids[i]] || {}).console_id === familyKey) return ids[i];
+    return ids[0];
+  }
+  function derivationPlatform(data, gameKey, methodologyId, targetSetKeys) {
+    var m = methodology(data, methodologyId);
+    var family = data.families[m.console_id] || {};
+    var t = m.timing || {};
+    // strict: an unusable target-set key raises here, as targetSetsFor always did, so a head that
+    // wants a fallback calls this function again with null keys rather than writing its own object.
+    return {
+      table: tableFor(data, methodologyId),
+      targetSets: targetSetsFor(data, gameKey, targetSetKeys && targetSetKeys.length ? targetSetKeys : null),
+      verifiedTargets: (t.verified_targets || []).slice(),
+      verifiedEvidence: t.verified_targets_evidence || family.verified_targets_evidence || "",
+      verifiedNote: t.verified_targets_note || family.verified_targets_note || ""
+    };
+  }
+
   function invert(table, tid) {
     tid = checkTid(tid);
     return tableEntries(table).filter(function (e) { return e[1] === tid; }).map(function (e) { return e[0]; });
@@ -1222,6 +1264,7 @@
     FIXTURE_PREFIX: FIXTURE_PREFIX, VERIFIED_TAG: VERIFIED_TAG, VERIFIED_OFF_REPO_TAG: VERIFIED_OFF_REPO_TAG,
     ONE_DERIVATION_TAG: ONE_DERIVATION_TAG, verifiedEvidenceInRepo: verifiedEvidenceInRepo, verifiedTag: verifiedTag,
     derivationTag: derivationTag, derivationLabel: derivationLabel, derivationSentence: derivationSentence,
+    methodologyIdFor: methodologyIdFor, derivationPlatform: derivationPlatform,
     nearestOffset: nearestOffset, decodeTable: decodeTable, tableEntries: tableEntries,
     errorFrames: errorFrames, isOutlier: isOutlier, impliedCorrection: impliedCorrection, makeSample: makeSample,
     splitByMethodology: splitByMethodology, isDuplicate: isDuplicate, addSample: addSample, dropLast: dropLast, dropLastUnder: dropLastUnder,

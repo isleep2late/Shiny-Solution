@@ -125,7 +125,11 @@
       status = m.status_short || "emulator-derived, no hardware sample yet";
       validation = m.validation || "";
     }
-    var table = G.tableFor(data, mid);
+    // The derivation descriptor - the table, the sets in force, the re-derived offsets, the
+    // EVIDENCE and its note - is built by the engine (round 6 finding A: every head that built it
+    // itself could hard-wire the evidence while still calling derivationTag).
+    var dp = G.derivationPlatform(data, gameKey, mid, targetSetKeys);
+    var table = dp.table;
     var entries = G.tableEntries(table);
     return {
       key: platformKey, name: spec.name, gameKey: gameKey, gameName: g.name || gameKey, game: g,
@@ -135,13 +139,11 @@
       anchors: (spec.anchors || ["menu", "poweron"]).slice(), anchorNotes: spec.anchor_notes || {}, focusNote: spec.focus_note || "",
       resetKey: spec.reset, resetModel: data.reset_models[spec.reset], resetStatus: spec.reset_status || "",
       defaults: data.defaults, anchorNames: data.anchor_names || {},
-      targetSets: G.targetSetsFor(data, gameKey, targetSetKeys && targetSetKeys.length ? targetSetKeys : null),
+      targetSets: dp.targetSets,
       visibleLagFrames: Number(m.timing.visible_lag_frames || 0), visibleLagNote: m.timing.visible_lag_note || "",
-      verifiedTargets: (m.timing.verified_targets || []).slice(),
-      // the methodology's own evidence and note, else the console family's (tools/gen-gen1-data.py
-      // already resolves the family fallback into timing; the family lookup is the belt on it)
-      verifiedEvidence: m.timing.verified_targets_evidence || family.verified_targets_evidence || "",
-      verifiedNote: m.timing.verified_targets_note || family.verified_targets_note || ""
+      // the methodology's own evidence and note, else the console family's - resolved by
+      // G.derivationPlatform, which is the only place that decision is made
+      verifiedTargets: dp.verifiedTargets, verifiedEvidence: dp.verifiedEvidence, verifiedNote: dp.verifiedNote
     };
   }
 

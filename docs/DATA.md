@@ -52,6 +52,7 @@ dropped in without a rebuild. A generation is parsed on first use (the tab's gam
 ## Regeneration
 
 ```
+# ~/AI/pret below is the uncommitted local pret clones, not part of either repository
 python3 tools/gen-guide-data.py                     # writes core/data/*.json from ~/AI/pret
 python3 tools/gen-guide-data.py --check             # regenerates in memory, fails if core/data differs
 python3 tools/gen-guide-data.py --pokefinder /tmp/PokeFinder/Core/Resources/EncounterTables   # a scratch clone, not committed
@@ -80,7 +81,8 @@ every extra against PokeFinder, prints the known deliberate catalogue difference
 (`KNOWN_DELIBERATE` in the script) separately from real mismatches, returns exit 1 when a
 real mismatch exists, and removes its temporary directory.
 
-Inputs (read-only): `~/AI/pret/{pokeruby,pokeemerald,pokefirered,pokeplatinum,pokeheartgold,pokediamond}`.
+Inputs (read-only, and not committed in either repository):
+`~/AI/pret/{pokeruby,pokeemerald,pokefirered,pokeplatinum,pokeheartgold,pokediamond}`.
 PokeFinder's `EncounterTableGenerator` submodule is only needed for `--pokefinder`; the
 generator imports it in a subprocess with `PYTHONDONTWRITEBYTECODE=1` and writes its
 `.bin` tables to a temporary directory (deleted afterwards), never into the clone. It also
@@ -367,7 +369,7 @@ Azelf, Mesprit and Cresselia roamers).
 ## `citations.json`: the decomp citation registry
 
 Generated from `docs/FACTS.md` by `tools/gen-citations.py` (`python3 tools/gen-citations.py core/data/citations.json`,
-pret at `~/AI/pret` or `--pret`). One entry per distinct citation, sorted by citation:
+pret at `~/AI/pret` or `--pret`; those clones are not committed in either repository). One entry per distinct citation, sorted by citation:
 
 | key | content |
 |---|---|

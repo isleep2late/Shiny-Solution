@@ -58,8 +58,14 @@
     "SAMPLE"
   ],
   "uncommitted_path_patterns": [
-    "/tmp/[^ )`,;'\"\\]]+"
+    "/tmp/[^ )`,;'\"\\]]+",
+    "~/[^ )`,;'\"\\]]+"
   ],
+  "runtime_path_patterns": [
+    "~/\\.rng-solution(/[^ )`,;'\"\\]]*)?",
+    "~/\\.shiny-solution(/[^ )`,;'\"\\]]*)?"
+  ],
+  "runtime_path_rule": "Round 6 finding E widened uncommitted_path_patterns from /tmp to ~/ as well, because gen1-tid.json's bank16-family-inferred provenance read 'INFERRED from ~/AI/speedrun-research/RESEARCH.md round-4 section 5.6' - a directory on the author's machine, in neither repository, no qualifier - and was rendered on the CLI, on both Shiny Solution heads and on the public page, for a target set the page lets the user SELECT. The exemption here is the one class of ~/ path that is NOT a citation: the files the tools THEMSELVES write on the reader's own machine (~/.rng-solution/config.json, the calibration and the pins). Those are not evidence a reader is sent to and cannot open - they are the reader's own state, created by running the tool - so requiring 'not committed' beside them would say something false. Anything else under ~/ is a citation to a path the reader has no copy of, and must say so.",
   "uncommitted_qualifier_patterns": [
     "not committed",
     "uncommitted",
