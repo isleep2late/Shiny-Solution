@@ -576,6 +576,24 @@ static class Gen1TidChecks
             Check("no sets in force means nothing is route-valid", "no", Gen1Tid.Verdict(0x4003, Array.Empty<TargetSet>()));
             Check("Yellow has no set accepting $4027", "no", Gen1Tid.Verdict(0x4027, DATA.TargetSetsFor("yellow")));
             Check("Yellow route-valid targets under its sets", Array.Empty<int[]>(), Gen1Tid.RouteValidTargets(DATA.Methodology("yellow/gba/hold-start-v1").Table, DATA.TargetSetsFor("yellow")).Select(x => new[] { x.Offset, x.Tid }).ToArray());
+
+            // The "sled" kind stays representable for a GENUINE pointer-route window, and this is the only place
+            // it is exercised: no shipped Trainer ID set uses it (on the save-corruption route the ID's low byte
+            // never reaches the jump pointer, so that set is kind "highbyte"), and tools/gen-gen1-data.py refuses
+            // a 'sled' Trainer ID set in the registry. The separate TID-free route derives its jump-pointer low
+            // byte from a typed name character and really is confined to the bank-$1D sled ($00-$38 / $3A-$5C),
+            // so the kind must keep working. tests/test-gen1tid.cjs checks the same set in JS.
+            using (var sledDoc = JsonDocument.Parse("{\"kind\":\"sled\",\"hi\":\"40\",\"lo_ranges\":[[\"00\",\"38\"],[\"3A\",\"5C\"]]," +
+                                                    "\"name\":\"bank-$1D sled window on a jump pointer low byte (not a Trainer ID rule)\"}"))
+            {
+                var sled = new TargetSet("bank1d-pointer-window", sledDoc.RootElement);
+                Check("sled kind describe", "bank1d-pointer-window: high byte $40, low byte $00-$38 or $3A-$5C", sled.Describe());
+                foreach (var (tid, want) in new (int, bool)[] { (0x4000, true), (0x4038, true), (0x4039, false), (0x403A, true),
+                    (0x405C, true), (0x405D, false), (0x40FF, false), (0x3F38, false), (0x4138, false) })
+                    Check($"sled kind accepts ${tid:X4}", want, sled.Accepts(tid));
+                Check("sled kind verdict on a windowed ID", "RUN", Gen1Tid.Verdict(0x4038, new[] { sled }));
+                Check("sled kind verdict on an ID outside the window", "no", Gen1Tid.Verdict(0x4039, new[] { sled }));
+            }
             Refuses("Verdict without sets", () => Gen1Tid.Verdict(0x4003, null));
             Refuses("VerdictTextFor without sets", () => Gen1Tid.VerdictTextFor(0x4003, null));
             Refuses("SetsAccepting without sets", () => Gen1Tid.SetsAccepting(0x4003, null));

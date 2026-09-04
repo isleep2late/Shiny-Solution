@@ -162,7 +162,7 @@ public sealed class TargetSet
     {
         if (Kind == "list") return Key + ": " + string.Join(", ", Tids.Select(t => $"${t:X4} ({t})"));
         string hi = (Hi ?? 0).ToString("X2");
-        if (Kind == "highbyte") return Key + ": high byte $" + hi + ", any low byte ($" + hi + "00-$" + hi + "FF)";
+        if (Kind == "highbyte") return Key + ": high byte $" + hi + " (any $" + hi + "00-$" + hi + "FF; the Trainer ID's low byte never reaches the jump pointer)";
         return Key + ": high byte $" + hi + ", low byte " + string.Join(" or ", LoRanges.Select(r => $"${r.Lo:X2}-${r.Hi:X2}"));
     }
 }
@@ -295,7 +295,7 @@ public static class Gen1Tid
     public static readonly IReadOnlyDictionary<string, string> VerdictText = new Dictionary<string, string>
     {
         ["RUN"] = "route-valid for Any% save corruption",
-        ["no"] = "not route-valid (the $40xx route needs a $40 high byte: $4000-$40FF)"
+        ["no"] = "not route-valid (the route needs a $40 high byte: $4000-$40FF)"
     };
 
     // The owner's $40xx set as a set object (Red and Blue list it; Yellow does not). The whole rule is the HIGH

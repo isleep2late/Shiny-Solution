@@ -268,6 +268,116 @@ else
   echo "no pret checkout at ~/AI/pret; the citation registry is not regenerated (the committed core/data/citations.json is used)"
 fi
 
+# ---- the $40xx rule: the two checks that keep the 1-in-712 mistake from coming back -----------------
+# On the Any% save-corruption route only the Trainer ID's HIGH byte reaches the jump pointer (swap 1
+# destroys the low byte before swap 2 copies ($D358, TID-high) into $D36E/$D36F), so the set is kind
+# "highbyte" and every $40xx in a Red/Blue table is route-valid. The bank-$1D sled window
+# ($00-$38 / $3A-$5C) is real but constrains that POINTER's low byte, not the ID's. Both controls below
+# put the old window back on the Trainer ID and require the tooling to reject it.
+# (Caveat carried with the rule: it is emulator-measured only - PyBoy for the runs, gambatte-core for
+# the tables - and unconfirmed on a cartridge; Blue's relaxation is inferred from Red, never swept.)
+
+# Negative control (a): core/data/gen1-tid.json with hi40-corruption reverted to kind 'sled' with the
+# low-byte window must FAIL test-gen1tid.cjs, and is shown failing. The mutated copy goes in a temp
+# repo root (test-gen1tid.cjs's optional second argument), never over the committed file.
+badroot=$(mktemp -d)
+mkdir -p "$badroot/core/data"
+cp ../core/data/gen3-sid.json "$badroot/core/data/"
+python3 - ../core/data/gen1-tid.json "$badroot/core/data/gen1-tid.json" <<'PY_SLED'
+import json, sys
+d = json.load(open(sys.argv[1]))
+s = d["target_sets"]["hi40-corruption"]
+assert s["kind"] == "highbyte", "negative control setup: hi40-corruption is not kind 'highbyte' any more"
+s["kind"] = "sled"
+s["lo_ranges"] = [["00", "38"], ["3A", "5C"]]
+json.dump(d, open(sys.argv[2], "w"), indent=1, ensure_ascii=False)
+PY_SLED
+if node test-gen1tid.cjs gen1tid-vectors.json "$badroot" > "$badroot/out" 2>&1; then
+  echo "negative control (the \$40xx set windowed back onto the Trainer ID's low byte): DID NOT FAIL"
+  rm -rf "$badroot"
+  exit 1
+else
+  echo "negative control (the \$40xx set windowed back onto the Trainer ID's low byte): FAILED as required ->"
+  grep -E '^FAIL|failure' "$badroot/out" | head -4 | sed 's/^/      /'
+fi
+rm -rf "$badroot"
+
+# The C# head carries gen1-tid.json as an embedded resource and only compares it, by sha1, with the file under
+# the repo root it is given, so the same mutated copy cannot reach its engine at all: it is caught by that pin.
+# (The C# engine's own "every $40xx is route-valid" assertion runs against the embedded data in
+# app/run-core-tests.sh; this control shows that a hand-edited data file is never used there silently.)
+if command -v dotnet >/dev/null 2>&1 || [ -x "$HOME/.dotnet/dotnet" ]; then
+  export DOTNET_ROOT="$HOME/.dotnet"
+  export PATH="$HOME/.dotnet:$PATH"
+  badroot=$(mktemp -d)
+  mkdir -p "$badroot/core/data"
+  cp ../core/data/gen3-sid.json "$badroot/core/data/"
+  python3 - ../core/data/gen1-tid.json "$badroot/core/data/gen1-tid.json" <<'PY_SLED2'
+import json, sys
+d = json.load(open(sys.argv[1]))
+s = d["target_sets"]["hi40-corruption"]
+assert s["kind"] == "highbyte", "negative control setup: hi40-corruption is not kind 'highbyte' any more"
+s["kind"] = "sled"
+s["lo_ranges"] = [["00", "38"], ["3A", "5C"]]
+json.dump(d, open(sys.argv[2], "w"), indent=1, ensure_ascii=False)
+PY_SLED2
+  if dotnet run --project ../app/Tests -c Release -- --gen1tid gen1tid-vectors.json "$badroot" > "$badroot/out" 2>&1; then
+    echo "negative control (the windowed data file against the C# head's embedded-resource pin): DID NOT FAIL"
+    rm -rf "$badroot"
+    exit 1
+  else
+    echo "negative control (the windowed data file against the C# head's embedded-resource pin): FAILED as required ->"
+    grep -E '^FAIL|failure' "$badroot/out" | head -4 | sed 's/^/      /'
+  fi
+  rm -rf "$badroot"
+fi
+
+# Negative control (b): tools/gen-gen1-data.py's refusal (check_target_sets). Both runs are fully
+# isolated - the script is copied into a temp tree, so its ROOT / OUT_DIR are that tree and nothing can
+# be written over the committed core/data. First the positive half, so the refusal is not passing for
+# the wrong reason: over the real registry the script must SUCCEED and reproduce both committed files
+# byte for byte. Then the same registry with the Trainer ID set windowed back must make it exit
+# non-zero and write nothing.
+RNG_SRC="${RNG_SOLUTION_SRC:-$HOME/AI/Games/RNG-Solution}"
+if [ -f "$RNG_SRC/rngsolution/data/red/platforms.json" ]; then
+  gendir=$(mktemp -d)
+  mkdir -p "$gendir/tools" "$gendir/rng/rngsolution"
+  cp ../tools/gen-gen1-data.py "$gendir/tools/"
+  cp -r "$RNG_SRC/rngsolution/data" "$gendir/rng/rngsolution/data"
+  python3 "$gendir/tools/gen-gen1-data.py" "$gendir/rng" > /dev/null
+  cmp "$gendir/core/data/gen1-tid.json" ../core/data/gen1-tid.json \
+    && echo "gen1-tid.json regenerated from RNG Solution's registry: byte-identical to the committed file"
+  cmp "$gendir/core/data/gen3-sid.json" ../core/data/gen3-sid.json \
+    && echo "gen3-sid.json regenerated from RNG Solution's registry: byte-identical to the committed file"
+  rm -rf "$gendir/core"
+  python3 - "$gendir/rng/rngsolution/data/red/platforms.json" <<'PY_REG'
+import json, sys
+d = json.load(open(sys.argv[1]))
+s = d["target_sets"]["hi40-corruption"]
+assert s["kind"] == "highbyte", "negative control setup: hi40-corruption is not kind 'highbyte' any more"
+s["kind"] = "sled"
+s["lo_ranges"] = [["00", "38"], ["3A", "5C"]]
+json.dump(d, open(sys.argv[1], "w"), indent=1, ensure_ascii=False)
+PY_REG
+  if python3 "$gendir/tools/gen-gen1-data.py" "$gendir/rng" > "$gendir/out" 2>&1; then
+    echo "negative control (gen-gen1-data.py over a registry that windows the Trainer ID's low byte): DID NOT REFUSE"
+    rm -rf "$gendir"
+    exit 1
+  else
+    echo "negative control (gen-gen1-data.py over a registry that windows the Trainer ID's low byte): REFUSED as required ->"
+    head -2 "$gendir/out" | fold -w 150 | sed 's/^/      /'
+    if [ -e "$gendir/core" ]; then
+      echo "      but it wrote files: $(ls -R "$gendir/core")"
+      rm -rf "$gendir"
+      exit 1
+    fi
+    echo "      and wrote nothing"
+  fi
+  rm -rf "$gendir"
+else
+  echo "no RNG Solution checkout at $RNG_SRC; tools/gen-gen1-data.py is not exercised"
+fi
+
 # The desktop wizard panel is pinned to the web tab through tests/wizard-panel-vectors.json (what webapp/wizard-ui.js computes
 # for its self-test scenarios and 20 random wanted-IV searches; app/run-core-tests.sh checks WizardSupport.cs against it). A
 # re-emit from the tab's module must be byte-identical to the committed file, so the file always says what the tab says now.

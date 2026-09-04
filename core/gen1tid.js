@@ -298,7 +298,10 @@
     if (ts.kind === "list") {
       return ts.key + ": " + ts.tids.map(function (t) { return "$" + hex(t, 4) + " (" + t + ")"; }).join(", ");
     }
-    if (ts.kind === "highbyte") return ts.key + ": high byte $" + hex(ts.hi, 2) + ", any low byte ($" + hex(ts.hi, 2) + "00-$" + hex(ts.hi, 2) + "FF)";
+    if (ts.kind === "highbyte") {
+      return ts.key + ": high byte $" + hex(ts.hi, 2) + " (any $" + hex(ts.hi, 2) + "00-$" + hex(ts.hi, 2) +
+        "FF; the Trainer ID's low byte never reaches the jump pointer)";
+    }
     return ts.key + ": high byte $" + hex(ts.hi, 2) + ", low byte " +
       ts.loRanges.map(function (r) { return "$" + hex(r[0], 2) + "-$" + hex(r[1], 2); }).join(" or ");
   }
@@ -329,7 +332,7 @@
 
   var VERDICT_TEXT = {
     "RUN": "route-valid for Any% save corruption",
-    "no": "not route-valid (the $40xx route needs a $40 high byte: $4000-$40FF)"
+    "no": "not route-valid (the route needs a $40 high byte: $4000-$40FF)"
   };
 
   function verdictText(tid, sets) {

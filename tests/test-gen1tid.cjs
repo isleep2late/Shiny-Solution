@@ -8,10 +8,15 @@ const fs = require("fs");
 const path = require("path");
 const G = require(path.join(__dirname, "..", "core", "gen1tid.js"));
 
+// usage: node test-gen1tid.cjs [gen1tid-vectors.json] [repo-root]
+// The optional repo root (default this checkout) is where core/data/gen1-tid.json and
+// core/data/gen3-sid.json are read from, the same argument the C# head takes (--gen1tid
+// <vectors> <repo-root>), so a negative control can hand both heads a mutated data file.
 const vectorsPath = process.argv[2] || path.join(__dirname, "gen1tid-vectors.json");
+const dataRoot = process.argv[3] || path.join(__dirname, "..");
 const V = JSON.parse(fs.readFileSync(vectorsPath, "utf8"));
-const DATA = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "core", "data", "gen1-tid.json"), "utf8"));
-const SID = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "core", "data", "gen3-sid.json"), "utf8"));
+const DATA = JSON.parse(fs.readFileSync(path.join(dataRoot, "core", "data", "gen1-tid.json"), "utf8"));
+const SID = JSON.parse(fs.readFileSync(path.join(dataRoot, "core", "data", "gen3-sid.json"), "utf8"));
 
 let failures = 0;
 let checks = 0;
@@ -73,6 +78,8 @@ function checkCase(label, c, fn) {
     mismatch(label, c.result, got);
   }
 }
+
+const hex4 = (n) => n.toString(16).toUpperCase().padStart(4, "0");
 
 const tables = {};
 for (const id of Object.keys(DATA.methodologies)) tables[id] = G.tableFor(DATA, id);
@@ -373,6 +380,27 @@ for (const c of V.verify) {
   check("no sets in force means nothing is route-valid", "no", G.verdict(0x4003, []));
   check("Yellow has no set accepting $4027", "no", G.verdict(0x4027, G.targetSetsFor(DATA, "yellow")));
   check("Yellow route-valid targets under its sets", [], G.routeValidTargets(tables["yellow/gba/hold-start-v1"], G.targetSetsFor(DATA, "yellow")));
+
+  // The "sled" kind stays representable for a GENUINE pointer-route window, and this is the only
+  // place it is exercised: no shipped Trainer ID set uses it (on the save-corruption route the ID's
+  // low byte never reaches the jump pointer, so that set is kind "highbyte"), and
+  // tools/gen-gen1-data.py refuses a 'sled' Trainer ID set in the registry. The separate TID-free
+  // route derives its jump-pointer low byte from a typed name character and really is confined to
+  // the bank-$1D sled ($00-$38 / $3A-$5C), so the kind must keep working. The C# head checks the
+  // same set in app/Tests/Gen1TidChecks.cs.
+  {
+    const sled = G.makeTargetSet("bank1d-pointer-window", {
+      kind: "sled", hi: "40", lo_ranges: [["00", "38"], ["3A", "5C"]],
+      name: "bank-$1D sled window on a jump pointer low byte (not a Trainer ID rule)"
+    });
+    check("sled kind describe", "bank1d-pointer-window: high byte $40, low byte $00-$38 or $3A-$5C", G.setDescribe(sled));
+    for (const [tid, want] of [[0x4000, true], [0x4038, true], [0x4039, false], [0x403A, true], [0x405C, true],
+      [0x405D, false], [0x40FF, false], [0x3F38, false], [0x4138, false]]) {
+      check(`sled kind accepts $${hex4(tid)}`, want, G.setAccepts(sled, tid));
+    }
+    check("sled kind verdict on a windowed ID", "RUN", G.verdict(0x4038, [sled]));
+    check("sled kind verdict on an ID outside the window", "no", G.verdict(0x4039, [sled]));
+  }
   for (const bad of ["", " ", "abc", "$4003", NaN, Infinity, -Infinity, null, undefined, true, {}, [], 358n, 358.5, -1]) {
     refuses(`schedule offset ${typeof bad === "bigint" ? bad + "n" : JSON.stringify(bad) ?? String(bad)}`, () => G.schedule("menu", bad, 200));
   }
