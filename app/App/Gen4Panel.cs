@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using ShinySolution.Core;
 
@@ -47,20 +46,16 @@ public sealed class Gen4Panel : UserControl
     readonly Label _flipResult = Ui.L("");
 
     readonly Gen4Timer _model = new();
-    Stopwatch? _watch;
-    System.Windows.Forms.Timer? _uiTimer;
-    volatile bool _cancelled;
-    volatile bool _running;
+    // the two-phase countdown with the beeps, shared with the wizard tab (CountdownController.cs)
+    readonly PhaseCountdown _countdown;
     double _p1, _p2;
     int _targetSecondLoaded = -1;
     uint _targetDelayLoaded;
 
     public Gen4Panel()
     {
-        _model.CalibratedDelay = SettingsStore.Get("gen4.calibratedDelay", 500);
-        _model.CalibratedSecond = SettingsStore.Get("gen4.calibratedSecond", 14);
-        _calDelay.Value = (decimal)Math.Round(_model.CalibratedDelay, 1);
-        _calSecond.Value = (decimal)_model.CalibratedSecond;
+        _countdown = new PhaseCountdown(_timerDisplay, _timerPhase);
+        LoadCalibration();
 
         var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
         var groups = new Control[]
@@ -100,6 +95,8 @@ public sealed class Gen4Panel : UserControl
         };
         for (int i = groups.Length - 1; i >= 0; i--) scroll.Controls.Add(groups[i]);
         Controls.Add(scroll);
+        // a mode change swaps the store: the calibrated delay and second are re-read from the mode's own (AppMode.Scoped)
+        AppMode.Changed += _ => { LoadCalibration(); _calResult.Text = $"{AppMode.Label} mode: its own calibration"; UpdateIdleDisplay(); };
     }
 
     static DateTimePicker MakePicker(string format) => new()
@@ -173,7 +170,7 @@ public sealed class Gen4Panel : UserControl
 
     void UpdateIdleDisplay()
     {
-        if (_targetSecondLoaded < 0 || _running) return;
+        if (_targetSecondLoaded < 0 || _countdown.Running) return;
         (_p1, _p2) = _model.Phases();
         _timerPhase.Text = $"phase 1: {TimerMath.FmtMs(_p1)}   phase 2: {TimerMath.FmtMs(_p2)}";
         _timerDisplay.Text = TimerMath.FmtMs(_p1 + _p2);
@@ -181,90 +178,37 @@ public sealed class Gen4Panel : UserControl
 
     void StartTimer()
     {
-        if (_targetSecondLoaded < 0 || _running) return;
+        if (_targetSecondLoaded < 0 || _countdown.Running) return;
         (_p1, _p2) = _model.Phases();
         if (_p2 <= 0)
         {
             _timerPhase.Text = "phase 2 is not positive — check the calibration values";
             return;
         }
-        _cancelled = false;
-        _running = true;
-        _watch = Stopwatch.StartNew();
-        _uiTimer = new System.Windows.Forms.Timer { Interval = 33 };
-        _uiTimer.Tick += (_, _) => Tick();
-        _uiTimer.Start();
-        new Thread(BeepWorker) { IsBackground = true }.Start();
-    }
-
-    void Tick()
-    {
-        if (_watch is null) return;
-        double e = _watch.Elapsed.TotalMilliseconds;
-        if (e < _p1)
-        {
-            _timerPhase.Text = "phase 1 (boot the DS, get to the Continue screen)";
-            _timerDisplay.Text = TimerMath.FmtMs(_p1 - e);
-        }
-        else if (e < _p1 + _p2)
-        {
-            _timerPhase.Text = "phase 2 (press A on Continue at zero)";
-            _timerDisplay.Text = TimerMath.FmtMs(_p1 + _p2 - e);
-        }
-        else
-        {
-            _timerDisplay.Text = "00:00.000";
-            _uiTimer?.Stop();
-            _uiTimer = null;
-            _running = false;
-        }
-    }
-
-    void BeepWorker()
-    {
-        if (!SleepUntil(_p1)) return;
-        BeepPlayer.PlayLong();
-        for (int s = 5; s >= 1; s--)
-        {
-            double at = _p1 + _p2 - s * 1000;
-            if (at <= CurrentMs()) continue;
-            if (!SleepUntil(at)) return;
-            BeepPlayer.PlayShort();
-        }
-        if (SleepUntil(_p1 + _p2) && !_cancelled) BeepPlayer.PlayLong();
-    }
-
-    double CurrentMs() => _watch?.Elapsed.TotalMilliseconds ?? double.MaxValue;
-
-    bool SleepUntil(double at)
-    {
-        while (true)
-        {
-            var w = _watch;
-            if (_cancelled || w is null) return false;
-            double left = at - w.Elapsed.TotalMilliseconds;
-            if (left <= 0) return true;
-            Thread.Sleep(left > 60 ? 25 : 1);
-        }
+        _countdown.Start(_p1, _p2, "phase 1 (boot the DS, get to the Continue screen)", "phase 2 (press A on Continue at zero)");
     }
 
     void CancelTimer()
     {
-        _cancelled = true;
-        _running = false;
-        _uiTimer?.Stop();
-        _uiTimer = null;
-        _watch = null;
+        _countdown.Cancel();
         UpdateIdleDisplay();
+    }
+
+    void LoadCalibration()
+    {
+        _model.CalibratedDelay = SettingsStore.Get(AppMode.Scoped("gen4.calibratedDelay"), 500);
+        _model.CalibratedSecond = SettingsStore.Get(AppMode.Scoped("gen4.calibratedSecond"), 14);
+        _calDelay.Value = (decimal)Math.Clamp(Math.Round(_model.CalibratedDelay, 1), (double)_calDelay.Minimum, (double)_calDelay.Maximum);
+        _calSecond.Value = (decimal)Math.Clamp(_model.CalibratedSecond, (double)_calSecond.Minimum, (double)_calSecond.Maximum);
     }
 
     void SaveCalibration()
     {
         _model.CalibratedDelay = (double)_calDelay.Value;
         _model.CalibratedSecond = (double)_calSecond.Value;
-        SettingsStore.Set("gen4.calibratedDelay", _model.CalibratedDelay);
-        SettingsStore.Set("gen4.calibratedSecond", _model.CalibratedSecond);
-        _calResult.Text = "calibration saved";
+        SettingsStore.Set(AppMode.Scoped("gen4.calibratedDelay"), _model.CalibratedDelay);
+        SettingsStore.Set(AppMode.Scoped("gen4.calibratedSecond"), _model.CalibratedSecond);
+        _calResult.Text = $"calibration saved [{AppMode.Label} mode]";
         UpdateIdleDisplay();
     }
 
@@ -278,8 +222,8 @@ public sealed class Gen4Panel : UserControl
         _model.Calibrate((uint)_hitDelay.Value);
         _model.CalibratedDelay = Math.Clamp(_model.CalibratedDelay, (double)_calDelay.Minimum, (double)_calDelay.Maximum);
         _calDelay.Value = (decimal)Math.Round(_model.CalibratedDelay, 1);
-        SettingsStore.Set("gen4.calibratedDelay", _model.CalibratedDelay);
-        _calResult.Text = $"calibrated delay is now {_model.CalibratedDelay:F1}";
+        SettingsStore.Set(AppMode.Scoped("gen4.calibratedDelay"), _model.CalibratedDelay);
+        _calResult.Text = $"calibrated delay is now {_model.CalibratedDelay:F1} [{AppMode.Label} mode]";
         UpdateIdleDisplay();
     }
 

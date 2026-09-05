@@ -48,6 +48,10 @@ if platform.system() in ("Windows", "Darwin"):
     path_to_mgba_root = Path("./mgba-src").absolute()
     path_to_mgba_build = Path("./mgba-src/build").absolute()
 elif platform.system() == "Linux":
+    # The /tmp defaults below are only the fallback when MGBA_ROOT / MGBA_BUILD are unset (this
+    # script always sets them). They are a scratch build tree created on your own machine, they
+    # are not committed in either repository, and they are not evidence for anything this
+    # repository claims: they hold mGBA's own sources and build output.
     path_to_mgba_root = Path(os.environ.get("MGBA_ROOT", "/tmp/mgba-src")).absolute()
     path_to_mgba_build = Path(os.environ.get("MGBA_BUILD", "/tmp/mgba-src/build")).absolute()
 else:

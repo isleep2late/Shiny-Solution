@@ -4,25 +4,42 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shiny-Solution</title>
+<meta name="theme-color" content="#101418">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="app.css">
+<script>
+// Every uncaught error and unhandled rejection is written into #page-errors (hidden until the first one), so a
+// headless load of the page or of the mobile bundle can read them from the DOM.
+window.addEventListener("error", function (e) { var el = document.getElementById("page-errors"); if (el) { el.hidden = false; el.textContent += (e.message || String(e)) + (e.filename ? " (" + e.filename + ":" + e.lineno + ")" : "") + "\n"; } });
+window.addEventListener("unhandledrejection", function (e) { var el = document.getElementById("page-errors"); if (el) { el.hidden = false; el.textContent += "unhandled rejection: " + (e.reason && e.reason.message || String(e.reason)) + "\n"; } });
+</script>
 </head>
 <body>
 <header>
   <h1>Shiny-Solution</h1>
-  <p>RNG manipulation calculators &amp; timers for Pokémon Gens 1–4 — no emulator required. Decomp-verified math.</p>
+  <p>RNG manipulation calculators &amp; timers for Pokémon Gens 1–4 — no emulator required. Decomp-verified math. Gen 1 Trainer ID cues (Red / Blue / Yellow) and the Emerald / FireRed / LeafGreen Secret ID search under the Gen 1 TID tab; Gen 2 Trainer ID / Lucky ID cues (Gold / Silver / Crystal, emulator-derived: no hardware sample yet) under the Gen 2 TID tab.</p>
 </header>
 <nav id="tabs">
   <button data-tab="g3timer" class="active">Gen 3 Timer</button>
   <button data-tab="g3check">Gen 3 Checker</button>
   <button data-tab="g4">Gen 4</button>
   <button data-tab="g12">Gen 1/2 DVs</button>
+  <button data-tab="g1tid">Gen 1 TID</button>
+  <button data-tab="g2tid">Gen 2 TID</button>
+  <button data-tab="wizard">Wizard (Gen 3/4)</button>
   <button data-tab="about">About</button>
 </nav>
+<div id="mode-bar">
+  <div id="mode-banner" hidden>PRACTICE / HUNT mode - tools that read the capture are enabled; not for submitted runs</div>
+  <label class="check" id="mode-toggle"><input id="mode-practice" type="checkbox"> PRACTICE / HUNT mode (off = RUN, the default: your own button press and the outcome you type, nothing reads the game; on = practice, calibration and hunting only, with its own calibration store)</label>
+</div>
 <main>
   <section id="tab-g3timer" class="tab active">
     <div class="card">
       <h2>Find TID targets (dead-battery Ruby/Sapphire, seed 0x5A0)</h2>
-      <div class="row">
+      <div class="row primary">
         <label>Target TID <input id="tid-target" type="number" min="0" max="65535" value="7777"></label>
         <label>Search window (minutes from power-on) <input id="tid-minutes" type="number" min="1" max="120" value="15"></label>
         <button id="tid-search">Find targets</button>
@@ -75,7 +92,7 @@
   <section id="tab-g3check" class="tab">
     <div class="card">
       <h2>Shiny checker — is this PID shiny for my IDs?</h2>
-      <div class="row">
+      <div class="row primary">
         <label>PID (hex) <input id="ck-pid" class="mono" value="00000000"></label>
         <label>TID <input id="ck-tid" type="number" min="0" max="65535" value="0"></label>
         <label>SID <input id="ck-sid" type="number" min="0" max="65535" value="0"></label>
@@ -97,7 +114,7 @@
   <section id="tab-g4" class="tab">
     <div class="card">
       <h2>Seed &amp; TID/SID calculator (D/P/Pt/HG/SS)</h2>
-      <div class="row">
+      <div class="row primary">
         <label>Boot date/time <input id="g4-date" type="datetime-local" step="1" value="2026-01-01T10:00:00"></label>
         <label>Delay <input id="g4-delay" type="number" min="0" max="65535" value="600"></label>
         <label>Elm skips <input id="g4-skips" type="number" min="0" max="50" value="0"></label>
@@ -135,7 +152,7 @@
       <p id="g4-clock-note" class="result"></p>
       <p id="g4-phase"></p>
       <div id="g4-display" class="bigtime">--:--.---</div>
-      <div class="row">
+      <div class="row primary">
         <button id="g4-start">Start at clock confirm</button>
         <button id="g4-cancel">Cancel</button>
         <label>calibrated delay <input id="g4-cald" type="number" step="0.1" value="500"></label>
@@ -158,7 +175,7 @@
   <section id="tab-g12" class="tab">
     <div class="card">
       <h2>Gen 2 shiny DV checker (also: will my Gen 1 mon be shiny in Gen 2?)</h2>
-      <div class="row">
+      <div class="row primary">
         <label>Attack DV <input id="dv-atk" type="number" min="0" max="15" value="10"></label>
         <label>Defense DV <input id="dv-def" type="number" min="0" max="15" value="10"></label>
         <label>Speed DV <input id="dv-spe" type="number" min="0" max="15" value="10"></label>
@@ -174,6 +191,389 @@
       app driving mGBA, not this web version.</p>
     </div>
   </section>
+  <section id="tab-g1tid" class="tab">
+    <div class="card">
+      <h2>1. Gen 1 Trainer ID (Red / Blue / Yellow): the one timed A press on NEW GAME</h2>
+      <p id="g1-rules"></p>
+      <p>TARGET mode: you say which Trainer ID (or which table offset) you want, the tool says what to do,
+      cues the one timed press, and learns from the ID you type afterwards. Every prediction names its
+      methodology, the input protocol it is valid under; the protocol's steps ARE the methodology.</p>
+      <div class="row">
+        <label>Game <select id="g1-game"></select></label>
+        <label>Console or emulator <select id="g1-platform"></select></label>
+        <label id="g1-methodology-row">Methodology <select id="g1-methodology"></select></label>
+        <div class="field">Target sets in force <span id="g1-targetsets" class="checks"></span></div>
+      </div>
+      <p id="g1-status" class="result pre"></p>
+      <details><summary>Methodology, validity conditions and target sets</summary><pre id="g1-methodology-text" class="text"></pre></details>
+    </div>
+    <div class="card">
+      <h2>2. Target</h2>
+      <p>Route-valid Trainer IDs under the target sets in force (click a row to aim at it), or type a Trainer ID for another category, or any offset.</p>
+      <div id="g1-targets-table"></div>
+      <p id="g1-table-note" class="hint"></p>
+      <div class="row primary">
+        <label>Trainer ID you want (decimal like 16387, or hex $4003) <input id="g1-tid" class="mono" value="16387"></label>
+        <button id="g1-find">Find press times</button>
+        <label>or any offset <input id="g1-offset" type="number" min="0" max="5999" value="358"></label>
+        <button id="g1-use-offset" class="secondary">Aim at offset</button>
+      </div>
+      <pre id="g1-invert" class="text"></pre>
+      <div id="g1-invert-buttons" class="row"></div>
+      <p id="g1-target-info" class="result">Target: none yet</p>
+    </div>
+    <div class="card">
+      <h2>3. Anchor and correction</h2>
+      <div class="row">
+        <label>Anchor: when will you press the anchor button? <select id="g1-anchor"></select></label>
+        <label>Correction (ms) <input id="g1-correction" type="number" step="0.1"></label>
+        <button id="g1-correction-reset" class="secondary">Use the calibrated one</button>
+        <label>Count-in beeps <input id="g1-beeps" type="number" min="0" max="10" value="4"></label>
+        <label>Spacing (s) <input id="g1-spacing" type="number" min="0.2" step="0.1" value="1.0"></label>
+      </div>
+      <p id="g1-correction-note" class="result pre"></p>
+      <pre id="g1-protocol" class="text"></pre>
+      <pre id="g1-schedule" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>4. Cue</h2>
+      <p>Press ANCHOR (or Space with nothing focused) at the anchor moment the protocol names. The beeps play
+      from one pre-rendered buffer on the audio clock, every tone on an exact sample; the screen flashes with
+      each beep, and the long high beep is the A press. Space again cancels.</p>
+      <div id="g1-display" class="bigtime">--</div>
+      <div class="row primary">
+        <button id="g1-anchor-btn" disabled>ANCHOR (Space)</button>
+        <button id="g1-cancel" class="secondary">Cancel</button>
+      </div>
+      <p id="g1-phit" class="hint"></p>
+      <pre id="g1-cue-log" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>5. What did you get?</h2>
+      <div class="row">
+        <label>Trainer ID you got (decimal as on the status screen, e.g. 16387, or hex $4003) <input id="g1-got" class="mono"></label>
+        <label class="check"><input id="g1-force" type="checkbox"> force (add even if it looks like a duplicate or is more than 60 frames out)</label>
+        <button id="g1-record">Record</button>
+        <button id="g1-drop-last" class="secondary">Drop last</button>
+        <button id="g1-clear" class="secondary">Clear (this methodology)</button>
+      </div>
+      <pre id="g1-outcome" class="text"></pre>
+      <h3>Your timing: spread, P(hit), attempts per hit, drift</h3>
+      <pre id="g1-stats" class="text"></pre>
+      <p class="hint">Samples are kept in this browser per console and anchor, each with its methodology id and the mode it was made in (RUN or PRACTICE / HUNT, each mode in its own store); only samples under the active methodology made in the mode in force are averaged, the rest are listed as ignored. The record is the same shape as RNG Solution's config.json "calibration" block plus "mode".</p>
+    </div>
+    <div class="card">
+      <h2>Save-corruption reset metronome (RESET then A, or A then power off)</h2>
+      <div class="row">
+        <label>Which save are you interrupting? <select id="g1-reset-preset"><option value="route">the real route: cleared save, NEW GAME, first save</option><option value="practice-save">saving over a valid file with the same Trainer ID (practice save): +50 ms</option></select></label>
+        <label>Adjust (frames) <input id="g1-reset-adjust" type="number" step="0.5" value="0"></label>
+        <button id="g1-reset-save-adjust" class="secondary">Remember the adjust</button>
+        <label>Pairs <input id="g1-reset-pairs" type="number" min="1" max="200" value="15"></label>
+        <label>Cadence (s) <input id="g1-reset-cadence" type="number" min="0.5" step="0.5" value="2"></label>
+        <label>Interval override (ms; blank = the centre) <input id="g1-reset-interval" type="number" step="0.1"></label>
+      </div>
+      <p id="g1-reset-note" class="hint"></p>
+      <pre id="g1-reset-text" class="text"></pre>
+      <div id="g1-reset-display" class="bigtime">--</div>
+      <div class="row primary">
+        <button id="g1-reset-start">Start the metronome</button>
+        <button id="g1-reset-stop" class="secondary">Stop</button>
+      </div>
+      <pre id="g1-reset-log" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>Verify (moderators): is a Trainer ID consistent with a hand-measured press time?</h2>
+      <div class="row">
+        <label>Trainer ID in the run <input id="g1-verify-tid" class="mono"></label>
+        <label>Menu to press (s, measured from the video) <input id="g1-verify-s" type="number" step="0.001"></label>
+        <label>Measured from <select id="g1-verify-from"><option value="press">the press itself (button overlay, hand cam)</option><option value="visible">its first visible effect on the game screen (the lag is subtracted)</option></select></label>
+        <label>Tolerance (frames) <input id="g1-verify-tol" type="number" min="0" max="30" value="3"></label>
+        <button id="g1-verify">Verify</button>
+      </div>
+      <pre id="g1-verify-out" class="text"></pre>
+    </div>
+    <div class="card" id="sid-card">
+      <h2>Emerald / FireRed / LeafGreen: the Secret ID from a typed Trainer ID</h2>
+      <p>These games cannot have their Trainer ID chosen: it is the raw Timer1 count at the instant the player
+      naming screen finishes fading out. That count seeds the RNG, which then advances once per VBlank until the
+      Secret ID is rolled, so SID = high 16 bits of LCRNG^(k+1)(TID) with k the VBlank count from the seed to the
+      roll. [TARGET] The Trainer ID is human input: read it off the Trainer Card and type it; nothing reads the game.
+      The press cue pins k to a window of 27 instead of 1201; a pin (a PID you can see is shiny or not) narrows the list to one.</p>
+      <div class="row">
+        <label>Game <select id="sid-game"></select></label>
+        <label>OPTIONS text speed <select id="sid-speed"><option value="">(choose)</option><option value="fast">fast</option><option value="mid">mid</option><option value="slow">slow</option></select></label>
+        <label>Player name length <input id="sid-namelen" type="number" min="1" max="7" value="7"></label>
+        <label id="sid-rival-row">Rival name path <select id="sid-rival"><option value="newname">NEW NAME, a 1-letter rival (the PSR route)</option><option value="preset">preset name: DOWN then A</option></select></label>
+      </div>
+      <details><summary>Methodology and validity conditions</summary><pre id="sid-methodology-text" class="text"></pre></details>
+      <h3>Cue the presses after naming (optional)</h3>
+      <div class="row primary">
+        <label>Margin (frames after each box is ready) <input id="sid-margin" type="number" min="0" max="120" value="30"></label>
+        <button id="sid-prepare" class="secondary">Show the cue protocol</button>
+        <button id="sid-cue-btn" disabled>ANCHOR: A on OK (Space)</button>
+        <button id="sid-cancel" class="secondary">Cancel</button>
+      </div>
+      <div id="sid-display" class="bigtime">--</div>
+      <pre id="sid-protocol" class="text"></pre>
+      <pre id="sid-cue-log" class="text"></pre>
+      <h3>Candidates</h3>
+      <div class="row">
+        <label>Trainer ID you got (Trainer Card IDNo) <input id="sid-tid" class="mono"></label>
+        <label>k min <input id="sid-kmin" type="number" min="0"></label>
+        <label>k max <input id="sid-kmax" type="number" min="0"></label>
+        <label>TSV filter <input id="sid-tsv" type="number" min="0" max="8191"></label>
+        <label>Rows to show (0 = all) <input id="sid-limit" type="number" min="0" value="60"></label>
+        <button id="sid-run">List candidates</button>
+      </div>
+      <div class="row">
+        <label>Known shiny PIDs (hex, not stored) <input id="sid-shiny-pid" class="mono"></label>
+        <label>Known non-shiny PIDs (hex, not stored) <input id="sid-nonshiny-pid" class="mono"></label>
+        <label class="check"><input id="sid-nopins" type="checkbox"> ignore the stored pins</label>
+      </div>
+      <div class="row">
+        <label>Pin a PID (hex) <input id="sid-pin-pid" class="mono"></label>
+        <label>Note <input id="sid-pin-note"></label>
+        <button id="sid-pin-shiny" class="secondary">Pin: it IS shiny</button>
+        <button id="sid-pin-nonshiny" class="secondary">Pin: NOT shiny</button>
+        <button id="sid-pins-clear" class="secondary">Clear the pins for this ID</button>
+      </div>
+      <p id="sid-pin-out" class="result"></p>
+      <pre id="sid-out" class="text"></pre>
+      <div id="sid-table"></div>
+    </div>
+  </section>
+  <section id="tab-g2tid" class="tab">
+    <div class="card">
+      <h2>1. Gen 2 Trainer ID / Lucky ID (Gold / Silver / Crystal): the one timed A tap on NEW GAME</h2>
+      <p id="g2-rules"></p>
+      <p>TARGET mode: you say which bin (or which Trainer ID / Lucky ID) you want, the tool says what to do, cues the one
+      timed tap, and learns from the IDs you type afterwards. The target is a 4-frame poll bin (0-598) counted from the
+      NEW GAME / OPTION box you can see, not a frame; every prediction names its methodology, the input protocol it is
+      valid under, and the RTC state its table belongs to. The protocol's steps ARE the methodology.</p>
+      <div class="row">
+        <label>Game <select id="g2-game"></select></label>
+        <label>Console or emulator <select id="g2-platform"></select></label>
+        <label id="g2-methodology-row">Methodology <select id="g2-methodology"></select></label>
+        <label>RTC state of the cartridge <select id="g2-state"></select></label>
+        <div class="field">Target sets in force <span id="g2-targetsets" class="checks"></span></div>
+      </div>
+      <p id="g2-status" class="result pre"></p>
+      <details><summary>Methodology, validity conditions, target sets, and every methodology of this game verbatim</summary><pre id="g2-methodology-text" class="text"></pre></details>
+    </div>
+    <div class="card">
+      <h2>2. Target</h2>
+      <p>Bins that give a route target under the target sets in force (click a row to aim at it; a row in another RTC state switches the state, and is first boot only), or type a Trainer ID (and the Lucky ID if you want a pair), or any bin.</p>
+      <div id="g2-targets-table"></div>
+      <p id="g2-table-note" class="hint"></p>
+      <div class="row primary">
+        <label>Trainer ID you want (decimal like 20322, or hex $4F62) <input id="g2-tid" class="mono" value="20322"></label>
+        <label>Lucky ID (optional) <input id="g2-lid" class="mono"></label>
+        <button id="g2-find">Find bins</button>
+        <label>or any bin (0-598) <input id="g2-bin" type="number" min="0" max="598" value="300"></label>
+        <button id="g2-use-bin" class="secondary">Aim at bin</button>
+      </div>
+      <pre id="g2-find-out" class="text"></pre>
+      <div id="g2-find-buttons" class="row"></div>
+      <p id="g2-target-info" class="result">Target: none yet</p>
+    </div>
+    <div class="card">
+      <h2>3. Anchor and correction</h2>
+      <div class="row">
+        <label>Anchor: when will you press the anchor button? <select id="g2-anchor"></select></label>
+        <label>Correction (ms) <input id="g2-correction" type="number" step="0.1"></label>
+        <button id="g2-correction-reset" class="secondary">Use the calibrated one</button>
+        <label>Count-in beeps <input id="g2-beeps" type="number" min="0" max="10" value="4"></label>
+        <label>Spacing (s) <input id="g2-spacing" type="number" min="0.2" step="0.1" value="1.0"></label>
+      </div>
+      <p id="g2-correction-note" class="result pre"></p>
+      <pre id="g2-protocol" class="text"></pre>
+      <pre id="g2-schedule" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>4. Cue</h2>
+      <p>Press ANCHOR (or Space with nothing focused) at the anchor moment the protocol names. The beeps play from one
+      pre-rendered buffer on the audio clock (the Gen 1 tab's player: one AudioContext for the page), every tone on an
+      exact sample; the screen flashes with each beep, and the long high beep is the A tap. Space again cancels.</p>
+      <div id="g2-display" class="bigtime">--</div>
+      <div class="row primary">
+        <button id="g2-anchor-btn" disabled>ANCHOR (Space)</button>
+        <button id="g2-cancel" class="secondary">Cancel</button>
+      </div>
+      <p id="g2-phit" class="hint"></p>
+      <pre id="g2-cue-log" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>5. What did you get?</h2>
+      <div class="row">
+        <label>Trainer ID you got (decimal as on the Trainer Card, or hex $4F62) <input id="g2-got" class="mono"></label>
+        <label>Lucky ID you got (optional; the Radio Tower lottery screen) <input id="g2-got-lid" class="mono"></label>
+        <label class="check"><input id="g2-force" type="checkbox"> force (add even if it looks like a duplicate or is more than 15 bins out)</label>
+        <button id="g2-record">Record</button>
+        <button id="g2-drop-last" class="secondary">Drop last</button>
+        <button id="g2-clear" class="secondary">Clear (this methodology)</button>
+      </div>
+      <pre id="g2-outcome" class="text"></pre>
+      <h3>Your timing: spread, P(hit), attempts per hit, drift</h3>
+      <pre id="g2-stats" class="text"></pre>
+      <p class="hint">Samples are kept in this browser per console and anchor under shinySolution.gen2tid.calibration, each with its methodology id, the RTC state it inverted in and the mode it was made in (RUN or PRACTICE / HUNT, each mode in its own store); only samples under the active methodology made in the mode in force are averaged, the rest are listed as ignored. The hit and the aim are bin centres: the outlier guard is 60 frames = 15 bins.</p>
+    </div>
+    <div class="card">
+      <h2>Invert: which state and bin gave these IDs?</h2>
+      <p>A typed Trainer ID (and Lucky ID) against the tables of this console: every candidate (table, bin), whether it recurs after the first boot, and the ambiguity statistics of the scope.</p>
+      <div class="row">
+        <label>Trainer ID <input id="g2-invert-tid" class="mono"></label>
+        <label>Lucky ID (optional) <input id="g2-invert-lid" class="mono"></label>
+        <label>Scope <select id="g2-invert-scope"></select></label>
+        <button id="g2-invert">Invert</button>
+      </div>
+      <pre id="g2-invert-out" class="text"></pre>
+      <div id="g2-invert-buttons" class="row"></div>
+    </div>
+    <div class="card">
+      <h2>Verify (moderators): are these IDs consistent with a hand-measured tap time?</h2>
+      <div class="row">
+        <label>Trainer ID in the run <input id="g2-verify-tid" class="mono"></label>
+        <label>Lucky ID (optional) <input id="g2-verify-lid" class="mono"></label>
+        <label>Visible menu box to the A press (s, measured from the video) <input id="g2-verify-s" type="number" step="0.001"></label>
+        <button id="g2-verify">Verify</button>
+      </div>
+      <pre id="g2-verify-out" class="text"></pre>
+    </div>
+  </section>
+  <section id="tab-wizard" class="tab">
+    <div class="card">
+      <h2>1. Wanted-IVs wizard (Gen 3 / Gen 4): from the Pokemon you want to the frame, the seed and the procedure</h2>
+      <p>TARGET mode, human input only: pick the game, the encounter and the outcome you want; the wizard lists the
+      (PID, IVs) frames that satisfy it from the game's seed model, the times and delays that reach them, the timer
+      and a numbered procedure, then learns from what you type after the attempt. Every output names the seed model it
+      runs under and that model's validation status. Nothing here reads a capture.</p>
+      <div class="row">
+        <label>Game <select id="wz-game"></select></label>
+        <label>Console <select id="wz-console"></select></label>
+        <label id="wz-seed-row">Seed (hex) <input id="wz-seed" class="mono" value="00000000"><span id="wz-seed-note" class="hint"></span></label>
+      </div>
+      <p id="wz-model" class="result pre"></p>
+      <p id="wz-status" class="result pre"></p>
+    </div>
+    <div class="card hidden" id="wz-encounter-card">
+      <h2>2. Encounter and wanted outcome</h2>
+      <div class="row">
+        <label>Encounter <select id="wz-kind"><option value="static">static / gift (the catalogue)</option><option value="wild">wild slot (the encounter tables)</option></select></label>
+        <label id="wz-static-row">Entry <select id="wz-static"></select></label>
+      </div>
+      <div class="row" id="wz-wild-row">
+        <label>Map / table <select id="wz-table"></select></label>
+        <label>Kind <select id="wz-enc-kind"></select></label>
+        <label id="wz-time-row">Time of day <select id="wz-time"><option value="morning">morning (the base table)</option><option value="day">day</option><option value="night">night</option></select></label>
+        <label>Species <select id="wz-species"></select></label>
+      </div>
+      <p id="wz-encounter-note" class="hint"></p>
+      <div class="row">
+        <label id="wz-method-row">Method <select id="wz-method"><option value="M1">Method 1 (no VBlank skip)</option><option value="M2">Method 2 / H-2 (a VBlank between PID and IVs)</option><option value="M4">Method 4 / H-4 (a VBlank between the IV words)</option></select></label>
+        <label id="wz-lead-row">Lead <select id="wz-lead"></select></label>
+        <label id="wz-lead-nature-row" style="display:none">Lead nature <select id="wz-lead-nature"></select></label>
+        <label id="wz-lead-gender-row" style="display:none">Lead gender <select id="wz-lead-gender"><option value="F">female</option><option value="M">male</option></select></label>
+        <label id="wz-lead-level-row" style="display:none">Lead level <input id="wz-lead-level" type="number" min="1" max="100" value="50"></label>
+      </div>
+      <p id="wz-lead-note" class="hint"></p>
+      <h3>Wanted IVs (min / max per stat), nature, ability, gender, shiny</h3>
+      <div class="row">
+        <label>HP <input id="wz-min-hp" type="number" min="0" max="31" value="0"><input id="wz-max-hp" type="number" min="0" max="31" value="31"></label>
+        <label>Atk <input id="wz-min-atk" type="number" min="0" max="31" value="0"><input id="wz-max-atk" type="number" min="0" max="31" value="31"></label>
+        <label>Def <input id="wz-min-def" type="number" min="0" max="31" value="0"><input id="wz-max-def" type="number" min="0" max="31" value="31"></label>
+        <label>SpA <input id="wz-min-spa" type="number" min="0" max="31" value="0"><input id="wz-max-spa" type="number" min="0" max="31" value="31"></label>
+        <label>SpD <input id="wz-min-spd" type="number" min="0" max="31" value="0"><input id="wz-max-spd" type="number" min="0" max="31" value="31"></label>
+        <label>Spe <input id="wz-min-spe" type="number" min="0" max="31" value="0"><input id="wz-max-spe" type="number" min="0" max="31" value="31"></label>
+      </div>
+      <div class="row">
+        <label>Nature <select id="wz-nature"></select></label>
+        <label id="wz-ability-row">Ability <select id="wz-ability"></select></label>
+        <label id="wz-gender-row">Gender <select id="wz-gender"><option value="">any</option><option value="M">male</option><option value="F">female</option></select></label>
+        <label class="check"><input id="wz-shiny" type="checkbox"> shiny (needs the IDs)</label>
+        <label>Trainer ID <input id="wz-tid" type="number" min="0" max="65535"></label>
+        <label>Secret ID <input id="wz-sid" type="number" min="0" max="65535"></label>
+      </div>
+      <p id="wz-wanted-note" class="hint"></p>
+      <div class="row" id="wz-gen3-window">
+        <label>Search horizon (minutes after the seed, at most 240) <input id="wz-minutes" type="number" min="1" max="240" value="60"></label>
+      </div>
+      <div class="row" id="wz-gen4-window">
+        <label>Frame limit (0..2000) <input id="wz-maxframe" type="number" min="0" max="2000" value="100"></label>
+        <label>Years <input id="wz-year-min" type="number" min="2000" max="2099" value="2000"><input id="wz-year-max" type="number" min="2000" max="2099" value="2099"></label>
+        <label>Delay window <input id="wz-delay-min" type="number" min="0" max="16777215" value="0"><input id="wz-delay-max" type="number" min="0" max="16777215" value="65535"></label>
+        <label>Target delay (nearest first) <input id="wz-delay-target" type="number" min="0" max="16777215" value="600"></label>
+      </div>
+      <div class="row primary"><button id="wz-search">Search</button></div>
+      <pre id="wz-search-out" class="text"></pre>
+      <div id="wz-results"></div>
+      <p id="wz-target-info" class="result">Target: none yet (click a row)</p>
+    </div>
+    <div class="card">
+      <h2>3. Result card and procedure</h2>
+      <pre id="wz-card" class="text"></pre>
+      <pre id="wz-procedure" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>4. Timer</h2>
+      <p>The page's two-phase countdown (the Gen 4 tab's) over EonTimer's models from core/timers.js: Gen 3 a pre-timer
+      then the target frame in milliseconds plus the calibration; Gen 4 the delay model with the calibrated delay and
+      second. Start it (or press Space with nothing focused) at the moment the procedure names; Space again cancels.</p>
+      <div class="row" id="wz-timer-gen3">
+        <label>Pre-timer (ms) <input id="wz-pretimer" type="number" min="0" step="100" value="5000"></label>
+        <label>Calibration (ms) <input id="wz-cal3" type="number" step="0.1" value="0"></label>
+      </div>
+      <div class="row" id="wz-timer-gen4">
+        <label>Calibrated delay <input id="wz-cald" type="number" step="1" value="500"></label>
+        <label>Calibrated second <input id="wz-cals" type="number" min="0" max="59" value="14"></label>
+        <label>Frame you are at after loading <input id="wz-current-frame" type="number" min="0" value="0"></label>
+        <label>Party members <input id="wz-party" type="number" min="1" max="6" value="1"></label>
+      </div>
+      <div class="row" id="wz-hgss-row">
+        <span class="field">Roamers active on the save (each re-rolls once on continue)</span>
+        <label class="check"><input id="wz-roam-raikou" type="checkbox"> Raikou</label>
+        <label class="check"><input id="wz-roam-entei" type="checkbox"> Entei</label>
+        <label class="check"><input id="wz-roam-lati" type="checkbox"> Latias / Latios</label>
+      </div>
+      <p id="wz-timer-note" class="result pre"></p>
+      <p id="wz-phase"></p>
+      <div id="wz-display" class="bigtime">--:--.---</div>
+      <div class="row primary">
+        <button id="wz-start">Start (Space)</button>
+        <button id="wz-cancel" class="secondary">Cancel</button>
+      </div>
+      <pre id="wz-timer-log" class="text"></pre>
+    </div>
+    <div class="card">
+      <h2>5. What did you get?</h2>
+      <div id="wz-got-gen3">
+        <div class="row">
+          <label>Nature <select id="wz-got-nature"></select></label>
+          <label>IVs HP/Atk/Def/SpA/SpD/Spe
+            <span class="row"><input id="wz-got-iv-hp" type="number" min="0" max="31"><input id="wz-got-iv-atk" type="number" min="0" max="31"><input id="wz-got-iv-def" type="number" min="0" max="31"><input id="wz-got-iv-spa" type="number" min="0" max="31"><input id="wz-got-iv-spd" type="number" min="0" max="31"><input id="wz-got-iv-spe" type="number" min="0" max="31"></span></label>
+        </div>
+        <div class="row">
+          <label>or the six stats at the level (HP/Atk/Def/SpA/SpD/Spe)
+            <span class="row"><input id="wz-got-stat-hp" type="number" min="1"><input id="wz-got-stat-atk" type="number" min="1"><input id="wz-got-stat-def" type="number" min="1"><input id="wz-got-stat-spa" type="number" min="1"><input id="wz-got-stat-spd" type="number" min="1"><input id="wz-got-stat-spe" type="number" min="1"></span></label>
+          <button id="wz-record3">Find the frame I hit and calibrate</button>
+        </div>
+      </div>
+      <div id="wz-got-gen4">
+        <div class="row">
+          <label><span id="wz-got-calls-label">Coin flips you got (H/T, in order)</span> <input id="wz-got-calls" class="mono" size="30"></label>
+          <label>delay +- <input id="wz-delay-range" type="number" min="1" max="2000" value="100"></label>
+          <label>second +- <input id="wz-second-range" type="number" min="0" max="30" value="1"></label>
+          <button id="wz-record4">Find the delay I hit and calibrate</button>
+          <button id="wz-calrows" class="secondary">Show the neighbouring delays</button>
+        </div>
+        <pre id="wz-calrows-out" class="text"></pre>
+      </div>
+      <div class="row"><button id="wz-clear" class="secondary">Clear (this game, console, seed model and mode)</button></div>
+      <pre id="wz-outcome" class="text"></pre>
+      <p class="hint">Calibration samples are kept in this browser under shinySolution.wizard.calibration per game and console, each
+      stamped with the seed model and the mode it was made in (RUN or PRACTICE / HUNT, each mode its own store); only samples
+      of the mode in force under the active seed model are in force, the rest are listed as left out.</p>
+    </div>
+  </section>
   <section id="tab-about" class="tab">
     <div class="card">
       <h2>About</h2>
@@ -181,6 +581,12 @@
       here was verified against the pret decompilations. This web version covers everything that
       needs no emulator: searchers, calculators, checkers and calibrated timers for real-hardware
       manipulation.</p>
+      <p>Modes: RUN is the default and is human input only (an anchor press, a typed outcome; run-legal).
+      PRACTICE / HUNT is turned on with the switch above the tabs and shows a banner on every tab while it is
+      on; it keeps its own calibration stores, and every record and cue log says which mode it was made in.
+      This page has no tool that reads a capture: those live only in <code>webapp/hunt/</code> (never bundled
+      into the site, the phone bundle or the desktop builds without an explicit <code>--with-hunt</code>) and
+      in RNG Solution's <code>watch --practice</code>.</p>
       <p>The full desktop version additionally drives the mGBA emulator for frame-perfect
       automatic manipulation (Gen 3) and automated savestate hunting (Gen 1/2):</p>
       <ul id="download-list">
@@ -192,13 +598,44 @@
     </div>
   </section>
 </main>
+<div id="g1-flash"></div>
+<pre id="page-errors" class="text" hidden></pre>
 <footer>
   <p>GBA timing: 59.7275 fps. NDS timing: 59.8261 fps. All timing error is absorbed by the calibration loops.</p>
+  <p id="sw-status">offline copy: not registered</p>
 </footer>
 <script src="rng.js"></script>
 <script src="gen4.js"></script>
 <script src="gen12.js"></script>
+<script src="gen1tid.js"></script>
+<script src="timers.js"></script>
+<script src="gen5.js"></script>
+<script src="seedtime4.js"></script>
+<script src="generators.js"></script>
+<script src="gen2tid.js"></script>
+<script src="gen1-data.js"></script>
 <script src="downloads.js"></script>
+<script src="mode.js"></script>
+<script src="footnotes.js"></script>
 <script src="app.js"></script>
+<script src="gen1tid-ui.js"></script>
+<script src="gen2tid-ui.js"></script>
+<script src="wizard-ui.js"></script>
+<script>window.SHINY_BUILD = "001c7d26f1b0";</script>
+<script id="sw-register">
+// The offline copy: sw.js is registered over http or https only. Under file:// (the Electron app, the headless
+// self-tests) nothing is registered and the status line says so; the mobile bundle has this element stripped
+// (build-mobile-bundle.mjs) and says so through SHINY_NO_SERVICE_WORKER. #sw-status reports the controller so a
+// second load can be checked from the DOM: "controlled" once the worker serves the page, else "registered".
+(function () {
+  var el = document.getElementById("sw-status");
+  function say(text) { if (el) el.textContent = "offline copy: " + text + " (build " + window.SHINY_BUILD + ")"; }
+  if (window.SHINY_NO_SERVICE_WORKER) return say("not registered: " + window.SHINY_NO_SERVICE_WORKER);
+  if (!/^https?:$/.test(location.protocol)) return say("not registered under " + location.protocol + " (the service worker needs http or https)");
+  if (!("serviceWorker" in navigator)) return say("not available in this browser");
+  function state() { say(navigator.serviceWorker.controller ? "controlled by " + navigator.serviceWorker.controller.scriptURL.replace(/^.*\//, "") + ", the page and the wizard tables opened so far work offline" : "registered, this load came from the network; the next one is served by sw.js"); }
+  navigator.serviceWorker.register("sw.js").then(function () { state(); navigator.serviceWorker.addEventListener("controllerchange", state); }, function (err) { var c = navigator.serviceWorker.controller; say(c ? "controlled by " + c.scriptURL.replace(/^.*\//, "") + ", the page and the wizard tables opened so far work offline (the update check failed: " + (err && err.message || err) + ")" : "registration failed: " + (err && err.message || err)); });
+})();
+</script>
 </body>
 </html>

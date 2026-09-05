@@ -1,0 +1,19 @@
+{
+  "description": "One Gen 1 TID calibration store (RNG Solution's config.json shape plus 'when' and 'mode') holding two RUN samples and one PRACTICE / HUNT sample for the same console, anchor and methodology. The RUN correction must be the mean of the two RUN samples only, and the practice sample must be listed as ignored; the PRACTICE correction is the practice sample alone. tests/run-tests.sh and app/run-core-tests.sh also feed a corrupted copy (the practice sample restamped 'run') and show the check failing.",
+  "methodology": "red/gba/hold-start-v1",
+  "platform": "gse",
+  "anchor": "menu",
+  "store": {
+    "gse/menu": {
+      "samples": [
+        { "tid": 16387, "aimed": 358, "hit": 358, "correction_used_ms": 200.0, "implied_ms": 200.0, "attempt": "r1", "note": "", "player": "webaudio", "methodology": "red/gba/hold-start-v1", "when": "2026-09-03 10:00:00", "mode": "run" },
+        { "tid": 16434, "aimed": 358, "hit": 360, "correction_used_ms": 200.0, "implied_ms": 233.4854, "attempt": "r2", "note": "", "player": "webaudio", "methodology": "red/gba/hold-start-v1", "when": "2026-09-03 10:01:00", "mode": "run" },
+        { "tid": 16411, "aimed": 358, "hit": 400, "correction_used_ms": 200.0, "implied_ms": 903.1934, "attempt": "p1", "note": "lag learned from the capture", "player": "hunt-watch", "methodology": "red/gba/hold-start-v1", "when": "2026-09-03 11:00:00", "mode": "practice" }
+      ]
+    }
+  },
+  "expected": {
+    "run": { "n": 2, "correction_ms": 216.7427, "ignored_by_mode": 1, "note_contains": "recorded in PRACTICE / HUNT mode, not RUN" },
+    "practice": { "n": 1, "correction_ms": 903.1934, "ignored_by_mode": 2, "note_contains": "recorded in RUN mode, not PRACTICE / HUNT" }
+  }
+}

@@ -1,0 +1,2 @@
+# RNG Solution's PNG-poll fixture is carried byte for byte, CRLF line endings included (the loader splits on either ending)
+tests/fixtures/hunt/gen1-gba-hd-menu/frames.csv whitespace=cr-at-eol

@@ -1,0 +1,16 @@
+{
+ "box_frames": 102,
+ "detector": "gba-hd/wholebox-v1",
+ "expected_raw": 22,
+ "fixture": "gen1-gba-hd-menu",
+ "game_fps": 59.72750056960583,
+ "geometry": "320x180 GBA HD quarter scale",
+ "kind": "png-poll",
+ "menu_t": 0.5,
+ "methodology": "red/gba/hold-start-v1",
+ "note": "raw = span * FPS - 80 = offset + visible lag; predict with lag_frames = 9 gives offset 13 ($B178)",
+ "offset": 13,
+ "poll_hz": 125.0,
+ "tid_hex": "B178",
+ "visible_lag_frames": 9
+}

@@ -16,8 +16,88 @@ void Check<T>(string label, T actual, T expected)
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json>");
+    Console.Error.WriteLine("usage: ShinySolution.Tests <path-to-vectors.json> | --emit-gen4-vectors <out.json> | --gen1tid <gen1tid-vectors.json> <repo-root> [citations.json] | --generators <generators-vectors.json> [cross-out.json] | --check-timer-vectors <timer-vectors.json> | --emit-timer-parity <out.json> [count] [seed] | --gen5 <gen5-vectors.json> | --emit-gen5-random <out.json> | --emit-gen1-claims <out.json> [gen1-tid.json|-] [citations.json] | --mode-wall <mode-wall-fixture.json> | --gen2tid <gen2tid-vectors.json> <repo-root> | --gen2tid-panel <gen2tid-panel-vectors.json> [citations.json] | --wizard-panel <wizard-panel-vectors.json> [citations.json] | --seedtime4 <seedtime4-vectors.json> | --seedtime4-cross <inputs.json> <out.json>");
     return 2;
+}
+
+if (args[0] == "--mode-wall")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --mode-wall <mode-wall-fixture.json>");
+        return 2;
+    }
+    return ModeWallChecks.Run(args[1]);
+}
+
+if (args[0] == "--wizard-panel")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --wizard-panel <wizard-panel-vectors.json> [citations.json]");
+        return 2;
+    }
+    return WizardPanelChecks.Run(args[1], args.Length > 2 ? args[2] : null);
+}
+
+if (args[0] == "--gen2tid-panel")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --gen2tid-panel <gen2tid-panel-vectors.json> [citations.json]");
+        return 2;
+    }
+    return Gen2TidPanelChecks.Run(args[1], args.Length > 2 ? args[2] : null);
+}
+
+if (args[0] == "--gen2tid")
+{
+    if (args.Length < 3)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --gen2tid <gen2tid-vectors.json> <repo-root>");
+        return 2;
+    }
+    return Gen2TidChecks.Run(args[1], args[2]);
+}
+
+if (args[0] == "--gen1tid")
+{
+    if (args.Length < 3)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --gen1tid <gen1tid-vectors.json> <repo-root> [citations.json]");
+        return 2;
+    }
+    return Gen1TidChecks.Run(args[1], args[2], args.Length > 3 ? args[3] : null);
+}
+
+if (args[0] == "--generators")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --generators <generators-vectors.json> [cross-out.json]");
+        return 2;
+    }
+    return GeneratorTests.Run(args[1], args.Length > 2 ? args[2] : null);
+}
+
+if (args[0] == "--seedtime4")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --seedtime4 <seedtime4-vectors.json>");
+        return 2;
+    }
+    return SeedTime4Checks.Run(args[1]);
+}
+
+if (args[0] == "--seedtime4-cross")
+{
+    if (args.Length < 3)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --seedtime4-cross <inputs.json> <out.json>");
+        return 2;
+    }
+    return SeedTime4Checks.Cross(args[1], args[2]);
 }
 
 if (args[0] == "--emit-gen4-vectors")
@@ -47,6 +127,38 @@ if (args[0] == "--emit-gen4-vectors")
         .Select(r => new { r.Second, r.Delay, r.SeedValue, r.Tid, r.Sid }).ToList();
     File.WriteAllText(args[1], JsonSerializer.Serialize(new { seedCases, tidSids, flips, elm, timers, search }));
     Console.WriteLine($"gen4 vectors written to {args[1]}");
+    return 0;
+}
+
+if (args[0] == "--check-timer-vectors")
+{
+    return TimerChecks.CheckVectors(args[1]);
+}
+
+if (args[0] == "--emit-timer-parity")
+{
+    TimerChecks.EmitParity(args[1], args.Length > 2 ? int.Parse(args[2]) : 200, args.Length > 3 ? uint.Parse(args[3]) : 20260903u);
+    return 0;
+}
+
+if (args[0] == "--gen5")
+{
+    return ShinySolution.Tests.Gen5Checks.Run(args[1]);
+}
+
+if (args[0] == "--emit-gen1-claims")
+{
+    if (args.Length < 2)
+    {
+        Console.Error.WriteLine("usage: ShinySolution.Tests --emit-gen1-claims <out.json> [gen1-tid.json] [citations.json]");
+        return 2;
+    }
+    return Gen1ClaimsEmit.Run(args[1], args.Length > 2 && args[2] != "-" ? args[2] : null, args.Length > 3 ? args[3] : null);
+}
+
+if (args[0] == "--emit-gen5-random")
+{
+    ShinySolution.Tests.Gen5Checks.EmitRandom(args[1]);
     return 0;
 }
 

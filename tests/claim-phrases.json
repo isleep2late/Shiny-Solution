@@ -1,0 +1,134 @@
+{
+  "what_this_is": "The claim-sentence rule, shared byte-for-byte by RNG Solution (tests/claim_sentences.py, tests/test_claims.py) and Shiny Solution (tests/check-claim-sentences.cjs). Both repositories keep an identical copy and each guard fails if the sibling checkout's copy differs, so the rule cannot drift between them the way the round-1 retraction did.",
+  "the_rule": "A user-facing unit of text that ASSERTS a multi-boot derivation, or that two independent harnesses / derivations agree, must, in that same unit, NAME WHAT SHIPS from it - and must not cite a scratch path outside both repositories as its evidence without saying that path is not committed. The per-offset tags are checked elsewhere (RNG tests/test_games.py VerificationClaims, Shiny tests/check-verification-claims.cjs) and are stripped out before matching here: this guard is about the SENTENCES beside them, which is the surface every earlier round left unqualified after qualifying the prose.",
+  "strip_characters": "*`_",
+  "proximity_chars": 600,
+  "proximity": "The qualifier must be NEAR the claim, not merely somewhere in the same unit: a ships phrase must occur within proximity_chars characters (either side) of each claim match. A long rendered listing is one unit, and a footer at the bottom of it does not qualify a sentence at the top.",
+  "unit": "a blank-line separated block of a rendered command's output or of a prose file; a Markdown table row (a line starting with |) is a unit on its own; a JSON string value is a unit on its own. Whitespace is collapsed to single spaces before matching, so a word-wrapped sentence matches the same as an unwrapped one, and the characters in strip_characters are dropped, so Markdown emphasis inside a phrase (in **neither repository**) does not hide it.",
+  "tag_literals": [
+    "[3x cold-boot verified off-repository: no derivation fixture here]",
+    "[3x cold-boot verified]",
+    "[extended sweep, one derivation]"
+  ],
+  "claim_patterns": [
+    "three (other |further |independent )?cold boots",
+    "three cold-boot re-derivations",
+    "three further cold boots",
+    "three independent full derivations",
+    "three-derivation claim",
+    "re-derived byte-identically",
+    "re-derived from independent cold boots",
+    "independent cold boots",
+    "triple[ -]cold-boot verified",
+    "triple[ -]verified",
+    "3x cold-boot verified",
+    "byte-identical tables",
+    "fourth full derivation",
+    "two independent harnesses",
+    "two harnesses",
+    "independent harness",
+    "independent (cold-boot |full )?re-?derivations?",
+    "independent derivations?"
+  ],
+  "ships_patterns": [
+    "SAMPLE",
+    "sample of",
+    "is a sample",
+    "row sample",
+    "what ships",
+    "ships as evidence",
+    "shipped evidence",
+    "sample ships",
+    "-triple\\.csv",
+    "\\*-triple\\.csv",
+    "holdfrom",
+    "not in this repository",
+    "not in the repository",
+    "not in either repository",
+    "in neither repository",
+    "outside both repositories",
+    "off-repository",
+    "no derivation fixture",
+    "committed in (this repository|RNG Solution|Shiny Solution|either repository|both repositories)",
+    "committed here",
+    "not committed",
+    "uncommitted"
+  ],
+  "ships_patterns_case_sensitive": [
+    "SAMPLE"
+  ],
+  "uncommitted_path_patterns": [
+    "/tmp/[^ )`,;'\"\\]]+",
+    "~/[^ )`,;'\"\\]]+"
+  ],
+  "runtime_path_patterns": [
+    "~/\\.rng-solution(/[^ )`,;'\"\\]]*)?",
+    "~/\\.shiny-solution(/[^ )`,;'\"\\]]*)?"
+  ],
+  "runtime_path_rule": "Round 6 finding E widened uncommitted_path_patterns from /tmp to ~/ as well, because gen1-tid.json's bank16-family-inferred provenance read 'INFERRED from ~/AI/speedrun-research/RESEARCH.md round-4 section 5.6' - a directory on the author's machine, in neither repository, no qualifier - and was rendered on the CLI, on both Shiny Solution heads and on the public page, for a target set the page lets the user SELECT. The exemption here is the one class of ~/ path that is NOT a citation: the files the tools THEMSELVES write on the reader's own machine (~/.rng-solution/config.json, the calibration and the pins). Those are not evidence a reader is sent to and cannot open - they are the reader's own state, created by running the tool - so requiring 'not committed' beside them would say something false. Anything else under ~/ is a citation to a path the reader has no copy of, and must say so.",
+  "uncommitted_qualifier_patterns": [
+    "not committed",
+    "uncommitted",
+    "not shipped",
+    "ephemeral",
+    "not in this repository",
+    "not in the repository",
+    "not in either repository",
+    "in neither repository",
+    "outside both repositories",
+    "off-repository",
+    "scratch directory",
+    "scratch clone",
+    "no derivation fixture"
+  ],
+  "uncommitted_path_rule": "EVERY judged unit - not only the ones that make a derivation claim - must say, within proximity_chars of any path it names outside both repositories (a /tmp scratch directory), that the path is not committed. Round 5 finding D: 'rng-solution sid' printed 'emulator-measured ... by TWO INDEPENDENT HARNESSES (tools/gba-sid-harness ...; /tmp/gen3sid ...)' while docs/FACTS.md already said the second one was not committed - the prose was qualified, the rendered string was not, for the fourth time. The rule is not restricted to claim-bearing units because 'Evidence: /tmp/x' asserts nothing by itself and is exactly the sentence that misleads.",
+  "surfaces": "The guard must read the EVIDENCE FILES it sends readers to, not only the prose about them. Round 5 finding C: RNG Solution's table_header_units walked rngsolution/data only, so an unqualified derivation sentence planted as line 2 of tests/fixtures/blue-gba-triple.csv passed unchanged - and the 'Rows: every route-valid offset plus every 50th offset' line in both Yellow triple fixtures had survived three rounds of retraction while the registry note beside it said the opposite. Both guards now walk tests/fixtures too, and both cover the Gen 3 'sid' surface and gen3-sid.json.",
+  "governed_surfaces_rule": "Round 7 finding R7-4: the list that decides WHAT is governed was itself governed by nothing. Setting RNG Solution's PROVENANCE_DIRS to a single directory - deleting tools/gen1-tid-tables, the directory docs/FACTS.md sends a reader to for the Blue and Yellow derivations, and round 6 finding C's whole subject - passed the suite at exit 0, because the only backstop was a total-unit floor that ONE directory clears by itself. The surfaces are therefore pinned HERE, in the rule both repositories hold byte-identical copies of and the website reads, rather than beside the list each guard keeps. A surface may be added freely; dropping one from a guard's list, or letting a pinned surface go missing or empty, is a failure in every repository at once.",
+  "governed_surfaces": {
+    "rng_solution": {
+      "docs": [
+        "README.md",
+        "docs/FACTS.md",
+        "docs/ALL_GENERATIONS_FEASIBILITY.md",
+        "docs/RNG_GUIDE_DESIGN.md",
+        "tools/gba-sid-harness/RESULTS.md",
+        "tools/gen3-sid-savestate-harness/README.md"
+      ],
+      "provenance_dirs": [
+        "tools/gen1-tid-tables",
+        "tools/gba-sid-harness",
+        "tools/gen3-sid-savestate-harness"
+      ],
+      "fixture_suffixes": [
+        ".md",
+        ".json",
+        ".csv",
+        ".log",
+        ".jsonl",
+        ".py"
+      ]
+    },
+    "shiny_solution": {
+      "docs": [
+        "README.md",
+        "USAGE.md",
+        "docs/FACTS.md",
+        "docs/DATA.md"
+      ],
+      "provenance_dirs": [
+        "tests/harness"
+      ]
+    },
+    "website": {
+      "source_dirs": [
+        "src/app/rng-solution",
+        "src/app/shiny-solution"
+      ],
+      "data_files": [
+        "gen1-tid.json",
+        "gen2-tid.json",
+        "gen3-sid.json"
+      ]
+    }
+  }
+}
