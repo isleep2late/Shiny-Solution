@@ -39,7 +39,11 @@ build=$( {
   grep -v 'window.SHINY_BUILD = "' index.html
   grep -v '^const BUILD = "' sw.js
 } | sha256sum | cut -c1-12)
-sed -i "s/^const BUILD = \"[0-9a-f]*\";/const BUILD = \"$build\";/" sw.js
-sed -i "s/<script>window.SHINY_BUILD = \"[0-9a-f]*\";<\/script>/<script>window.SHINY_BUILD = \"$build\";<\/script>/" index.html
+# sed -i needs a suffix argument on BSD sed (the macOS CI runner): bare -i made it read "sw.js" as the
+# suffix and fail with "unterminated substitute pattern", which is what stopped the v0.3.2 mac build.
+# -i.bak works on GNU and BSD alike; the backups are removed right after.
+sed -i.bak "s/^const BUILD = \"[0-9a-f]*\";/const BUILD = \"$build\";/" sw.js
+sed -i.bak "s/<script>window.SHINY_BUILD = \"[0-9a-f]*\";<\/script>/<script>window.SHINY_BUILD = \"$build\";<\/script>/" index.html
+rm -f sw.js.bak index.html.bak
 grep -q "^const BUILD = \"$build\";" sw.js && grep -q "window.SHINY_BUILD = \"$build\";" index.html || { echo "sync-core.sh: the build stamp was not written" >&2; exit 1; }
 echo "build stamp $build (sw.js, index.html)"
