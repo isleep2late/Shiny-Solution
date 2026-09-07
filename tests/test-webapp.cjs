@@ -139,7 +139,7 @@ const rsched = U.buildSchedule(gbpReset, "reset", 358, 100, 4, 1.0);
 assert("reset anchor adds the fade and stall", near(rsched.menu, G.framesToSeconds(1553) + G.resetAnchorExtraSeconds(DATA.reset_models["gbp-fade"])));
 const rproto = U.protocolLines(gbpReset, "reset", 358, rsched, 100, 4, 1.0).join("\n");
 assert("reset protocol names the GameCube RESET button", rproto.includes("the GameCube RESET button"));
-assert("reset protocol carries the GBP note", rproto.includes("NOTE: NOT yet validated on a GameCube"));
+assert("reset protocol carries the GBP note (the platform's validation text from gen1-tid.json)", rproto.includes("NOTE: " + gbpReset.validation) && gbpReset.validation.includes("3 of 3"));
 const dmg = U.resolve(DATA, "red", "dmg", null, null);
 const psched = U.buildSchedule(dmg, "poweron", 517, 100, 4, 1.0);
 const pproto = U.protocolLines(dmg, "poweron", 517, psched, 100, 4, 1.0).join("\n");
@@ -249,8 +249,8 @@ assert("Gen 1 target line marked", U.describeTarget(plat, 358).endsWith(" [3x co
 }
 assert("Gen 1 schedule A cue marked", sl.endsWith(" [^2]"));
 const vl = U.verifyLines(gbp, 16387, 7.333, false, 3, null).lines;
-assert("Gen 1 verify carries the table and roll footnotes and lists those two", vl.includes("  the table produces it at offset 358 [^2] [^4]") && vl.some((l) => l.startsWith("  [^2] EMPIRICAL (no decomp line; ") && l.endsWith("GameCube Game Boy Player: UNVALIDATED on this console")) && vl.some((l) => l.startsWith("  [^4] pokered/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: ")) && vl.filter((l) => /^  \[\^/.test(l)).length === 2);
-assert("Gen 1 status words: GSE exact, GBA HD 5 of 5, DMG 5 of 6, Game Boy Player and Yellow EMPIRICAL", U.statusWord(plat) === "EMULATOR-EXACT" && U.statusWord(U.resolve(DATA, "red", "gba-hd")) === "HARDWARE-VALIDATED 5 of 5" && U.statusWord(dmg) === "HARDWARE-VALIDATED 5 of 6" && U.statusWord(gbp) === "EMPIRICAL" && U.statusWord(U.resolve(DATA, "yellow", "gba-hd")) === "EMPIRICAL" && U.statusWord(U.resolve(DATA, "blue", "gse")) === "EMPIRICAL");
+assert("Gen 1 verify carries the table and roll footnotes and lists those two", vl.includes("  the table produces it at offset 358 [^2] [^4]") && vl.some((l) => l.startsWith("  [^2] " + U.statusWord(gbp) + " (no decomp line; ") && l.endsWith("GameCube Game Boy Player: " + gbp.status)) && vl.some((l) => l.startsWith("  [^4] pokered/engine/movie/oak_speech/init_player_data.asm:1-10 (docs/FACTS.md: ")) && vl.filter((l) => /^  \[\^/.test(l)).length === 2);
+assert("Gen 1 status words: GSE exact, GBA HD 5 of 5, DMG 5 of 6, Game Boy Player 3 of 3, Yellow EMPIRICAL", U.statusWord(plat) === "EMULATOR-EXACT" && U.statusWord(U.resolve(DATA, "red", "gba-hd")) === "HARDWARE-VALIDATED 5 of 5" && U.statusWord(dmg) === "HARDWARE-VALIDATED 5 of 6" && U.statusWord(gbp) === "HARDWARE-VALIDATED 3 of 3" && U.statusWord(U.resolve(DATA, "yellow", "gba-hd")) === "EMPIRICAL" && U.statusWord(U.resolve(DATA, "blue", "gse")) === "EMPIRICAL");
 {
   const yellow = U.resolve(DATA, "yellow", "gba-hd");
   const yProto = U.protocolLines(yellow, "menu", 358, U.buildSchedule(yellow, "menu", 358, 200, 4, 1.0), 200, 4, 1.0);
