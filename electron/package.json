@@ -1,7 +1,7 @@
 {
   "name": "shiny-solution-lite",
   "productName": "Shiny Solution",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "RNG manipulation calculators and timers for Pokemon Gens 1-4 (decomp-verified)",
   "main": "main.js",
   "license": "GPL-3.0",
