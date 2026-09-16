@@ -39,7 +39,32 @@ for (const t of v.timers) {
   check(`timer p1 ${t.td}/${t.ts}`, phases.phase1Ms, t.p1);
   check(`timer p2 ${t.td}/${t.ts}`, phases.phase2Ms, t.p2);
   check(`minutesBefore ${t.td}/${t.ts}`, gen4.minutesBefore(t.td, t.ts), t.minutesBefore);
+  // minutesBefore has to describe the timer the user actually runs. It used to do its
+  // own arithmetic with the calibration dropped, so it disagreed with these very phases
+  // for 9.4% of (delay, second) pairs at the app's default calibration - and the number
+  // is printed beside the countdown as how far to set the DS clock back, so being one
+  // minute out fails the manip silently. The vector above pins the uncalibrated value;
+  // this pins the thing that actually matters.
+  const spanned = Math.floor((phases.phase1Ms + phases.phase2Ms) / 60000);
+  check(`minutesBefore agrees with phases ${t.td}/${t.ts}`, gen4.minutesBefore(t.td, t.ts, t.cd, t.cs), spanned);
   check(`calibrate ${t.td}/${t.ts}`, gen4.calibrate(t.cd, t.td, t.td + 40), t.calibrated);
+}
+
+// The exact pair the old code got wrong, kept as a named case because none of the
+// three timer vectors above happens to be one of the 26,516 (of 282,060) that
+// disagreed: at the app's default calibration (500 / 14) the timer for delay 300 at
+// second 19 spans a whole minute, and minutesBefore used to say zero.
+{
+  const p = gen4.timerPhases(300, 19, 500, 14);
+  check("minutesBefore 300/19 agrees with its phases", gen4.minutesBefore(300, 19, 500, 14), Math.floor((p.phase1Ms + p.phase2Ms) / 60000));
+  check("minutesBefore 300/19 is 1 minute", gen4.minutesBefore(300, 19, 500, 14), 1);
+}
+
+// An out-of-range calibrated second used to spin `while (p1 < 14000) p1 += 60000`
+// forever, hanging the tab rather than showing a bad number.
+for (const bad of [Infinity, -Infinity, NaN]) {
+  const p = gen4.timerPhases(600, 45, 500, bad);
+  check(`timerPhases returns on ${bad}`, isFinite(p.phase1Ms), false);
 }
 
 {

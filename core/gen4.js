@@ -116,19 +116,31 @@
     return toMs(calibratedDelay) - calibratedSecond * 1000.0;
   }
 
+  // Phase 1 is wound forward a whole minute at a time until it is long enough to
+  // start the DS in. A non-finite p1 never reaches 14000, so the wind has to be
+  // guarded rather than looped: an out-of-range calibrated second used to hang
+  // the tab outright.
+  function windForward(p1) {
+    if (!isFinite(p1)) return NaN;
+    return p1 + Math.max(0, Math.ceil((14000 - p1) / 60000)) * 60000;
+  }
+
   function timerPhases(targetDelay, targetSecond, calibratedDelay, calibratedSecond) {
     var calibration = calibrationMs(calibratedDelay, calibratedSecond);
     var p2 = toMs(targetDelay) - calibration;
-    var p1 = targetSecond * 1000.0 + calibration + 200.0 - toMs(targetDelay);
-    while (p1 < 14000) p1 += 60000;
+    var p1 = windForward(targetSecond * 1000.0 + calibration + 200.0 - toMs(targetDelay));
     return { phase1Ms: p1, phase2Ms: p2 };
   }
 
-  function minutesBefore(targetDelay, targetSecond) {
-    var p2 = toMs(targetDelay);
-    var p1 = targetSecond * 1000.0 + 200.0 - toMs(targetDelay);
-    while (p1 < 14000) p1 += 60000;
-    return Math.floor((p1 + p2) / 60000.0);
+  // How many minutes the whole timer spans, which is what the user sets the DS
+  // clock back by. It MUST be read off the same phases the countdown runs, not
+  // recomputed: this used to do its own arithmetic with the calibration silently
+  // dropped, so for 9.4% of (delay, second) pairs at the default calibration it
+  // printed a number one minute away from the timer sitting beside it - and a DS
+  // clock set one minute out fails the manip with nothing to show why.
+  function minutesBefore(targetDelay, targetSecond, calibratedDelay, calibratedSecond) {
+    var p = timerPhases(targetDelay, targetSecond, calibratedDelay || 0, calibratedSecond || 0);
+    return Math.floor((p.phase1Ms + p.phase2Ms) / 60000.0);
   }
 
   function calibrate(calibratedDelay, targetDelay, hitDelay) {
