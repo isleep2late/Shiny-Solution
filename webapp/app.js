@@ -363,8 +363,8 @@
       $("g4-tid-results").innerHTML = "<p class='result'>No seed in that window yields the target TID — widen the delay range.</p>";
       return;
     }
-    renderTable($("g4-tid-results"), ["Second", "Delay", "Seed", "TID", "SID"], hits.map(function (h) {
-      return { data: h, cells: [h.second, h.delay, ("0000000" + h.seed.toString(16).toUpperCase()).slice(-8), h.tid, h.sid] };
+    renderTable($("g4-tid-results"), ["Second", "Delay", "Seed", "TID", "SID", "Cute Charm"], hits.map(function (h) {
+      return { data: h, cells: [h.second, h.delay, ("0000000" + h.seed.toString(16).toUpperCase()).slice(-8), h.tid, h.sid, g4CuteCharmLabel(h.tid, h.sid)] };
     }), function (row) {
       var h = row.data;
       g4state.second = h.second;
@@ -376,8 +376,27 @@
       $("g4-target-info").textContent = "target: boot second " + h.second + ", delay " + h.delay +
         ", seed " + ("0000000" + h.seed.toString(16).toUpperCase()).slice(-8) + " (TID " + h.tid + " / SID " + h.sid + ")";
       g4ClockNote();
+      $("g4-cc").innerHTML = g4CuteCharmNote(h.tid, h.sid);
       g4Idle();
     });
+  }
+
+  // Cute Charm (wild encounters): the game builds the PID from the nature for a forced opposite gender
+  // (pokemon.c sub_02074128), so shininess depends only on TID^SID - see docs/FACTS.md "Cute Charm".
+  function g4CuteCharmLabel(tid, sid) {
+    var cc = gen4.cuteCharm(tid, sid);
+    if (!cc.best) return "\u2014";
+    return Math.round(cc.best.chance * 100) + "% (" + (cc.best.lead === "male" ? "\u2642" : "\u2640") + " lead)";
+  }
+  function g4CuteCharmNote(tid, sid) {
+    var cc = gen4.cuteCharm(tid, sid);
+    var esc = function (x) { return String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;"); };
+    if (!cc.groups.length) return "Cute Charm: TID " + tid + " / SID " + sid + " (TID^SID " + (tid ^ sid) + ", TSV " + cc.tsv + ") is in no group - no shiny boost from a Cute Charm lead.";
+    var natureName = function (n) { return core.NATURES ? core.NATURES[n] : n; };
+    return "Cute Charm shinies with TID " + tid + " / SID " + sid + " (TID^SID " + (tid ^ sid) + ", TSV " + cc.tsv + "): " + cc.groups.map(function (g) {
+      return esc((g.lead === "male" ? "male" : "female") + " lead vs " + g.ratio + ": natures " + g.natures.map(natureName).join(", ") +
+        " - " + (g.chance * 100).toFixed(1) + "% of encounters" + (g.genderMismatch.length ? " (natures " + g.genderMismatch.map(natureName).join(", ") + " arrive female)" : ""));
+    }).join("; ") + ". Wild encounters only, both-gender species only.";
   }
 
   function g4ShinySearch() {
