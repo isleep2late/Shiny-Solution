@@ -619,4 +619,7 @@ boot; the Trainer ID is a fixed number of advances after that. So a TID target i
 3. **Boot seed & TID/SID calculator** - the seed and the ID rows for one boot, to check a result.
 
 Everything in this tab is a port of PokeFinder (Admiral-Fish) verified against its vectors; there
-is no Gen 5 decompilation, so unlike Gens 1-4 nothing is line-cited to game code.
+is no Gen 5 decompilation, so unlike Gens 1-4 nothing is line-cited to game code. It has been checked
+end to end on melonDS 1.1 (2026-09-16): two calibration boots gave the profile Timer0 0xBBD / VCount
+0x5A / VFrame 5 / GxStat 6 (MAC 00:09:BF:11:22:33, the emulator's built-in firmware), and booting White
+at the second the tab predicted produced exactly the predicted TID 43084 / SID 1621 on the first try.
