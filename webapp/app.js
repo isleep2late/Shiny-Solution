@@ -565,7 +565,7 @@
     return m ? { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5], s: m[6] === undefined ? 0 : +m[6] } : null;
   }
   function g5Profile() {
-    return { game: $("g5-game").value, language: $("g5-lang").value, dsType: $("g5-ds").value, mac: $("g5-mac").value.replace(/[^0-9a-f]/gi, ""),
+    return { game: $("g5-game").value, language: $("g5-lang").value, dsType: $("g5-ds").value, mac: BigInt("0x" + ($("g5-mac").value.replace(/[^0-9a-f]/gi, "") || "0")),
       vframe: Number($("g5-vframe").value), gxstat: Number($("g5-gxstat").value), vcount: g5Hex($("g5-vcount").value),
       timer0Min: g5Hex($("g5-t0min").value), timer0Max: g5Hex($("g5-t0max").value), keypresses: [true, false, false, false, false, false, false, false, false] };
   }
