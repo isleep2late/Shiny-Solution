@@ -179,15 +179,15 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <h2>Console profile (Black / White / Black 2 / White 2)</h2>
       <p class="note">The seed is fixed once at boot: the DS clock to the second, Timer0 and VCount (per console), the MAC and the
         buttons held while booting. Trainer ID is a fixed number of advances later - no delay, no timer, only the boot second.
-        Timer0 / VCount / VFrame are placeholders until you calibrate them below from a TID you already got.</p>
+        The defaults are melonDS 1.1 with its built-in firmware, measured (Timer0 0xBBD, VCount 0x5A, VFrame 5, GxStat 6, MAC 00:09:BF:11:22:33); a real DS needs its own values - calibrate below from a TID you already got.</p>
       <div class="row">
         <label>Game <select id="g5-game"><option value="black">Black</option><option value="white" selected>White</option><option value="black2">Black 2</option><option value="white2">White 2</option></select></label>
         <label>Language <select id="g5-lang"><option value="english" selected>English</option><option value="french">French</option><option value="german">German</option><option value="italian">Italian</option><option value="japanese">Japanese</option><option value="korean">Korean</option><option value="spanish">Spanish</option></select></label>
         <label>Console <select id="g5-ds"><option value="ds" selected>DS / DS Lite</option><option value="dsi">DSi</option><option value="3ds">3DS</option></select></label>
         <label>MAC (hex; melonDS default shown) <input id="g5-mac" class="mono" value="0009BF112233"></label>
-        <label>Timer0 from (hex) <input id="g5-t0min" class="mono" size="5" value="C79"></label>
-        <label>to <input id="g5-t0max" class="mono" size="5" value="C7A"></label>
-        <label>VCount (hex) <input id="g5-vcount" class="mono" size="3" value="5F"></label>
+        <label>Timer0 from (hex) <input id="g5-t0min" class="mono" size="5" value="BBD"></label>
+        <label>to <input id="g5-t0max" class="mono" size="5" value="BBD"></label>
+        <label>VCount (hex) <input id="g5-vcount" class="mono" size="3" value="5A"></label>
         <label>VFrame <input id="g5-vframe" type="number" min="0" max="15" value="5"></label>
         <label>GxStat <input id="g5-gxstat" type="number" min="0" max="15" value="6"></label>
       </div>
@@ -196,7 +196,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <h2>Boot seed &amp; TID/SID calculator</h2>
       <div class="row primary">
         <label>Boot date/time <input id="g5-date" type="datetime-local" step="1" value="2026-09-16T12:00:00"></label>
-        <label>Timer0 (hex) <input id="g5-calc-t0" class="mono" size="5" value="C79"></label>
+        <label>Timer0 (hex) <input id="g5-calc-t0" class="mono" size="5" value="BBD"></label>
         <button id="g5-calc">Compute</button>
       </div>
       <p id="g5-calc-out" class="result mono"></p>

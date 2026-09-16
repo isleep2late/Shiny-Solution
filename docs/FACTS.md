@@ -1566,8 +1566,13 @@ date and clock minute (`Core/Gen5/Searchers/IDSearcher5.cpp:63-90`). Validators:
   (`SHA1.cpp:304-334,400-820`), the SHA-1 seed cache and IV cache files
   (`Core/Gen5/SHA1Cache.cpp`, `IVCache.cpp`), the C-Gear seed (writeup "Seed Generation (C-Gear)"),
   the multi-threaded searcher wrappers, and every encounter / egg / Dream Radar generator.
-- **No hardware sample** and no emulator trace: melonDS / DeSmuME Timer0 and VCount are
-  whatever the community profiles say (design doc 3.6).
+- **melonDS 1.1 profile, measured 2026-09-16 (EMPIRICAL):** two direct-boot launches of White (US)
+  with the built-in firmware (MAC `00:09:BF:11:22:33`, `SPI_Firmware.h` DEFAULT_MAC) saved TIDs
+  45961/5101 and 34468/64630; `profileSearch` over Timer0 0x000-0x1FFF, VCount 0x10-0x70, VFrame
+  0-15, GxStat 6 reproduces both with **Timer0 0xBBD, VCount 0x5A, VFrame 5, GxStat 6**, row 0 -
+  Timer0 stable across boots. Launch phases .000 and .497 bracket the game's clock read to 0.5-1.0 s
+  after launch. DeSmuME's MAC is `00:09:BF:12:34:56` (pokemonrng.com); its Timer0/VCount were not
+  measured here. No hardware sample.
 
 # Generators (Gen 3 / Gen 4 encounter engines)
 
