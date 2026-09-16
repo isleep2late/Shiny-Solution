@@ -631,6 +631,15 @@ SID = high 16 (`pokeplatinum/src/game_start.c:144-172`,
 `pokeheartgold/src/overlay_36.c:186-202`). TID manip therefore targets the seed hit at that
 moment, not the title-screen seed.
 
+## Parity of the reachable delay (EMPIRICAL, melonDS)
+
+Twelve Platinum runs on melonDS 1.1 that pressed A on the closing TV quote at wall-clock frames
+spanning three frames produced seed delays 11001, 11241 and 11243 only - never an even delay -
+and presses sorted into two-frame-wide bins. The intro's screen fades and the TV app's counters
+step every second frame, so from that press only one parity of `vblankCounter` is reachable at
+`InitRNG()`. A target of the wrong parity cannot be hit from that press however well it is timed;
+the Gen 4 tab says so under a loaded target. Hardware may differ in which parity, not in the fact.
+
 ## Starters and gifts
 
 Classic Method 1 on the LCRNG — the same four calls as Gen 3 (PID low, PID high, IV word 1,
@@ -639,6 +648,41 @@ IV word 2), MT not involved (`pokeheartgold/src/pokemon.c:188-243`,
 order Chikorita (+1..+4), Cyndaquil (+5..+8), Totodile (+9..+12); DPPt rolls at the
 give-script after the briefcase choice. Shiny rule: `(SID^TID^PIDhi^PIDlo) < 8`
 (`pokeheartgold/src/pokemon.c:68-70`).
+
+
+## Cute Charm and the TID/SID that make it a shiny machine
+
+Wild encounters only, DPPt and HGSS. With a Cute Charm lead the game rolls `LCRNG_RandMod(3) > 0`
+(2/3) to force the encounter to the OPPOSITE gender of the lead, and then does not roll a
+personality at all - it builds one (`pokeplatinum/src/overlay006/wild_encounters.c` CreateWildMon
+-> `pokemon.c` sub_02074088 -> sub_02074128; `pokeheartgold/src/pokemon.c`
+GenPersonalityByGenderAndNature is the same code):
+
+```
+forced female:  pid = nature                              (0..24)
+forced male:    pid = 25 * (floor(ratio / 25) + 1) + nature   ratio 31 -> 50..74, 63 -> 75..99,
+                                                             127 -> 150..174, 191 -> 200..224, 225 -> 250..274
+```
+
+Species with a single gender or none are skipped. Every such PID is below 65536, so the Gen 4
+shiny rule `(TID ^ SID ^ PIDhi ^ PIDlo) < 8` collapses to `((TID ^ SID) >> 3) == (PID >> 3)`:
+a TID/SID pair is shiny for the natures of exactly ONE group, and the odds per opposite-gender
+encounter are `2/3 * (natures in the group) / 25`.
+
+| lead | target ratio | forced PIDs | TSV = (TID^SID)>>3 that hits | natures per TSV (chance) |
+|---|---|---|---|---|
+| male | any two-gender species | 0-24 | 0, 1, 2, 3 | 8, 8, 8, 1 (21.3 %, 21.3 %, 21.3 %, 2.7 %) |
+| female | 87.5 % male | 50-74 | 6, 7, 8, 9 | 6, 8, 8, 3 (16 %, 21.3 %, 21.3 %, 8 %) |
+| female | 75 % male | 75-99 | 9, 10, 11, 12 | 5, 8, 8, 4 |
+| female | 50 % male | 150-174 | 18, 19, 20, 21 | 2, 8, 8, 7 |
+| female | 25 % male | 200-224 | 25, 26, 27, 28 | 8, 8, 8, 1 |
+| female | 12.5 % male | 250-274 | 31, 32, 33, 34 | natures 6-24 pass 255: the low byte wraps under the ratio and the mon comes out FEMALE (still shiny) |
+
+Engine: `cuteCharm(tid, sid)` (groups, natures, PIDs, chance, the wrap flag) and `cuteCharmTable()`.
+Community source: Smogon, "DPP/HGSS RNG Manipulation Guide Part 5 - Cute Charm TID/SID"; its
+worked example 20101/20101 = "Male Lead Shiny Group 1, PIDs 0x00-0x07" is `cuteCharm(20101, 20101)`
+here (TSV 0, natures 0-7), pinned by a test. There is no Shiny Charm in Gen 4; this is the
+TID/SID-dependent shiny boost the community means when it says certain IDs make shinies easier.
 
 ## Seed verification
 
@@ -1522,8 +1566,13 @@ date and clock minute (`Core/Gen5/Searchers/IDSearcher5.cpp:63-90`). Validators:
   (`SHA1.cpp:304-334,400-820`), the SHA-1 seed cache and IV cache files
   (`Core/Gen5/SHA1Cache.cpp`, `IVCache.cpp`), the C-Gear seed (writeup "Seed Generation (C-Gear)"),
   the multi-threaded searcher wrappers, and every encounter / egg / Dream Radar generator.
-- **No hardware sample** and no emulator trace: melonDS / DeSmuME Timer0 and VCount are
-  whatever the community profiles say (design doc 3.6).
+- **melonDS 1.1 profile, measured 2026-09-16 (EMPIRICAL):** two direct-boot launches of White (US)
+  with the built-in firmware (MAC `00:09:BF:11:22:33`, `SPI_Firmware.h` DEFAULT_MAC) saved TIDs
+  45961/5101 and 34468/64630; `profileSearch` over Timer0 0x000-0x1FFF, VCount 0x10-0x70, VFrame
+  0-15, GxStat 6 reproduces both with **Timer0 0xBBD, VCount 0x5A, VFrame 5, GxStat 6**, row 0 -
+  Timer0 stable across boots. Launch phases .000 and .497 bracket the game's clock read to 0.5-1.0 s
+  after launch. DeSmuME's MAC is `00:09:BF:12:34:56` (pokemonrng.com); its Timer0/VCount were not
+  measured here. No hardware sample.
 
 # Generators (Gen 3 / Gen 4 encounter engines)
 

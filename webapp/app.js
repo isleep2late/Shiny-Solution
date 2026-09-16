@@ -1,6 +1,7 @@
 (function () {
   var core = window.ShinyCore;
   var gen4 = window.ShinyGen4;
+  var gen5 = window.ShinyGen5;
   var gen12 = window.ShinyGen12;
   var SEED = core.DEAD_BATTERY_SEED_RS;
   var MODE = window.ShinyMode;                 // webapp/mode.js: RUN by default, PRACTICE / HUNT explicit
@@ -363,8 +364,8 @@
       $("g4-tid-results").innerHTML = "<p class='result'>No seed in that window yields the target TID — widen the delay range.</p>";
       return;
     }
-    renderTable($("g4-tid-results"), ["Second", "Delay", "Seed", "TID", "SID"], hits.map(function (h) {
-      return { data: h, cells: [h.second, h.delay, ("0000000" + h.seed.toString(16).toUpperCase()).slice(-8), h.tid, h.sid] };
+    renderTable($("g4-tid-results"), ["Second", "Delay", "Seed", "TID", "SID", "Cute Charm"], hits.map(function (h) {
+      return { data: h, cells: [h.second, h.delay, ("0000000" + h.seed.toString(16).toUpperCase()).slice(-8), h.tid, h.sid, g4CuteCharmLabel(h.tid, h.sid)] };
     }), function (row) {
       var h = row.data;
       g4state.second = h.second;
@@ -375,10 +376,28 @@
       $("g4-shsid").value = h.sid;
       $("g4-target-info").textContent = "target: boot second " + h.second + ", delay " + h.delay +
         ", seed " + ("0000000" + h.seed.toString(16).toUpperCase()).slice(-8) + " (TID " + h.tid + " / SID " + h.sid + ")";
-      var mb = gen4.minutesBefore(h.delay, h.second);
-      $("g4-clock-note").textContent = "Set the DS clock " + mb + " minute(s) BEFORE the target minute — the countdown spans that long, so the A press lands inside the target minute.";
+      g4ClockNote();
+      $("g4-cc").innerHTML = g4CuteCharmNote(h.tid, h.sid) + " Parity: if the delays you hit are always odd (or always even), only that parity is reachable from your press - pick a target of the same parity (this one is " + (h.delay % 2 ? "odd" : "even") + ").";
       g4Idle();
     });
+  }
+
+  // Cute Charm (wild encounters): the game builds the PID from the nature for a forced opposite gender
+  // (pokemon.c sub_02074128), so shininess depends only on TID^SID - see docs/FACTS.md "Cute Charm".
+  function g4CuteCharmLabel(tid, sid) {
+    var cc = gen4.cuteCharm(tid, sid);
+    if (!cc.best) return "\u2014";
+    return Math.round(cc.best.chance * 100) + "% (" + (cc.best.lead === "male" ? "\u2642" : "\u2640") + " lead)";
+  }
+  function g4CuteCharmNote(tid, sid) {
+    var cc = gen4.cuteCharm(tid, sid);
+    var esc = function (x) { return String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;"); };
+    if (!cc.groups.length) return "Cute Charm: TID " + tid + " / SID " + sid + " (TID^SID " + (tid ^ sid) + ", TSV " + cc.tsv + ") is in no group - no shiny boost from a Cute Charm lead.";
+    var natureName = function (n) { return core.NATURES ? core.NATURES[n] : n; };
+    return "Cute Charm shinies with TID " + tid + " / SID " + sid + " (TID^SID " + (tid ^ sid) + ", TSV " + cc.tsv + "): " + cc.groups.map(function (g) {
+      return esc((g.lead === "male" ? "male" : "female") + " lead vs " + g.ratio + ": natures " + g.natures.map(natureName).join(", ") +
+        " - " + (g.chance * 100).toFixed(1) + "% of encounters" + (g.genderMismatch.length ? " (natures " + g.genderMismatch.map(natureName).join(", ") + " arrive female)" : ""));
+    }).join("; ") + ". Wild encounters only, both-gender species only.";
   }
 
   function g4ShinySearch() {
@@ -402,6 +421,21 @@
 
   function g4Phases() {
     return gen4.timerPhases(g4state.delay, g4state.second, Number($("g4-cald").value), Number($("g4-cals").value));
+  }
+
+  // The DS clock offset must come from the SAME phases the countdown runs, and be
+  // recomputed whenever the calibration moves - calibrating after an attempt rewrites
+  // g4-cald, which used to leave this note showing the previous minute count.
+  function g4ClockNote() {
+    if (!g4state || g4state.delay == null) return;
+    // mb is EonTimer's figure (calibration 0), so it matches what a user sees there.
+    // span is what the calibrated timer really runs; when the two differ, say so -
+    // the DS clock has to go by span, and silently showing either alone is wrong.
+    var mb = gen4.minutesBefore(g4state.delay, g4state.second);
+    var span = gen4.minutesSpanned(g4state.delay, g4state.second,
+      Number($("g4-cald").value), Number($("g4-cals").value));
+    $("g4-clock-note").textContent = "Set the DS clock " + mb + " minute(s) BEFORE the target minute — the countdown spans that long, so the A press lands inside the target minute."
+    if (span !== mb) $("g4-clock-note").textContent += " With your calibration the timer actually spans " + span + " minute(s): set the DS clock by " + span + ", not " + mb + ". EonTimer shows " + mb + " because it works this out at calibration 0.";
   }
 
   function g4Idle() {
@@ -431,6 +465,7 @@
     $("g4-cald").value = Math.round(next * 10) / 10;
     localStorage.setItem(g4CaldKey(), String(next));
     $("g4-cal-result").textContent = "calibrated delay is now " + (Math.round(next * 10) / 10) + modeTag();
+    g4ClockNote();
     g4Idle();
   }
 
@@ -522,7 +557,61 @@
   $("st-calibrate").addEventListener("click", calibrateStarter);
   $("ck-check").addEventListener("click", checkPid);
   $("m1-run").addEventListener("click", runMethod1);
+
+  // ---- Gen 5: boot seed, TID targets by second, profile calibration (core/gen5.js, a PokeFinder port) ----
+  function g5Hex(v) { var t = String(v).trim(); return /^0x/i.test(t) || /[a-f]/i.test(t) ? parseInt(t, 16) : Number(t); }
+  function g5Parts(id) {
+    var m = String($(id).value).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+    return m ? { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5], s: m[6] === undefined ? 0 : +m[6] } : null;
+  }
+  function g5Profile() {
+    return { game: $("g5-game").value, language: $("g5-lang").value, dsType: $("g5-ds").value, mac: BigInt("0x" + ($("g5-mac").value.replace(/[^0-9a-f]/gi, "") || "0")),
+      vframe: Number($("g5-vframe").value), gxstat: Number($("g5-gxstat").value), vcount: g5Hex($("g5-vcount").value),
+      timer0Min: g5Hex($("g5-t0min").value), timer0Max: g5Hex($("g5-t0max").value), keypresses: [true, false, false, false, false, false, false, false, false] };
+  }
+  function g5Calc() {
+    var d = g5Parts("g5-date"); if (!d) return;
+    var p = g5Profile();
+    var seed = gen5.initialSeed({ game: p.game, language: p.language, dsType: p.dsType, mac: p.mac, vframe: p.vframe, gxstat: p.gxstat,
+      timer0: g5Hex($("g5-calc-t0").value), vcount: p.vcount, year: d.y, month: d.mo, day: d.d, hour: d.h, minute: d.mi, second: d.s, buttons: 0 });
+    $("g5-calc-out").textContent = "seed " + gen5.hex64(seed) + "  |  new-game advances " + gen5.initialAdvancesID(seed, p.game);
+    renderTable($("g5-calc-rows"), ["Row", "Advance", "TID", "SID", "TSV"], gen5.idRows(seed, p.game, 0, 3).map(function (r, i) {
+      return { data: r, cells: [i, r.advances, r.tid, r.sid, r.tsv] };
+    }));
+  }
+  function g5TidSearch() {
+    var d = g5Parts("g5-tdate"); if (!d) return;
+    var sid = $("g5-sid").value === "" ? null : Number($("g5-sid").value);
+    var tid = $("g5-tid").value === "" ? null : Number($("g5-tid").value);   // blank: list what every second of the minute gives
+    var hits = gen5.searchTid(g5Profile(), d.y, d.mo, d.d, d.h, d.mi, 0, 59, tid, sid, tid === null ? 0 : 3, tid === null ? 60 : 40);
+    if (!hits.length) { $("g5-tid-results").innerHTML = "<p class='result'>No boot second in that minute gives this TID with this profile - try the next minute or a wider Timer0 range.</p>"; return; }
+    renderTable($("g5-tid-results"), ["Second", "Timer0", "Buttons", "Seed", "Row", "TID", "SID"], hits.map(function (h) {
+      return { data: h, cells: [h.second, h.timer0.toString(16).toUpperCase(), h.buttons ? gen5.buttonNames(h.buttons).join("+") : "none", gen5.hex64(h.seed), h.noCount, h.tid, h.sid] };
+    }));
+  }
+  function g5Calibrate() {
+    var d = g5Parts("g5-cdate"); if (!d || $("g5-ctid").value === "") return;
+    var p = g5Profile(); var tid = Number($("g5-ctid").value); var sid = $("g5-csid").value === "" ? null : Number($("g5-csid").value);
+    $("g5-cal-results").innerHTML = "<p class='result'>searching...</p>";
+    setTimeout(function () {
+      var res = gen5.profileSearch({ game: p.game, language: p.language, dsType: p.dsType, mac: p.mac, buttons: 0,
+        year: d.y, month: d.mo, day: d.d, hour: d.h, minute: d.mi, minSecond: Number($("g5-csmin").value), maxSecond: Number($("g5-csmax").value),
+        minVCount: g5Hex($("g5-cvcmin").value), maxVCount: g5Hex($("g5-cvcmax").value), minTimer0: g5Hex($("g5-ct0min").value), maxTimer0: g5Hex($("g5-ct0max").value),
+        minGxStat: p.gxstat, maxGxStat: p.gxstat, minVFrame: Number($("g5-cvfmin").value), maxVFrame: Number($("g5-cvfmax").value) },
+        function (seed) { return gen5.idRows(seed, p.game, 0, 3).some(function (r) { return r.tid === tid && (sid === null || r.sid === sid); }); });
+      if (!res.length) { $("g5-cal-results").innerHTML = "<p class='result'>Nothing in those ranges reproduces that TID - widen Timer0/VCount, check the MAC, or include the SID.</p>"; return; }
+      renderTable($("g5-cal-results"), ["Timer0", "VCount", "VFrame", "GxStat", "Second", "Row"], res.slice(0, 40).map(function (r) {
+        var rows = gen5.idRows(r.seed, p.game, 0, 3); var i = -1;
+        rows.forEach(function (x, k) { if (i < 0 && x.tid === tid && (sid === null || x.sid === sid)) i = k; });
+        return { data: r, cells: [r.timer0.toString(16).toUpperCase(), r.vcount.toString(16).toUpperCase(), r.vframe, r.gxstat, r.second, i] };
+      }));
+    }, 10);
+  }
+
   $("g4-calc").addEventListener("click", g4Calc);
+  $("g5-calc").addEventListener("click", g5Calc);
+  $("g5-tid-search").addEventListener("click", g5TidSearch);
+  $("g5-calibrate").addEventListener("click", g5Calibrate);
   $("g4-tid-search").addEventListener("click", g4TidSearch);
   $("g4-sh-search").addEventListener("click", g4ShinySearch);
   $("g4-start").addEventListener("click", g4Start);

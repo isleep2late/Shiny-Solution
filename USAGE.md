@@ -371,6 +371,18 @@ The tab gives you targets, a two-phase timer, and seed verification:
    HGSS starters: all three are rolled when the selection scene opens — Chikorita occupies
    advances 1–4, Cyndaquil 5–8, Totodile 9–12.
 
+### Gen 4: Cute Charm TID/SID (the ID-dependent shiny boost)
+
+There is no Shiny Charm in Gen 4. What the community means by "some Trainer IDs make shinies
+easier" is Cute Charm: with a Cute Charm lead the game forces 2/3 of wild encounters to the
+opposite gender and BUILDS their PID from the nature (`pokemon.c` sub_02074128; identical in
+HGSS), so shininess depends only on TID^SID. The Gen 4 tab's TID target table shows each hit's
+best Cute Charm chance, a loaded target lists its groups (lead gender, target species ratio,
+natures, chance per encounter), and the **Cute Charm TID/SID shinies** card checks any pair and
+unfolds every TID^SID group. The best pairs (TID^SID 0-23, male lead) turn about one wild
+encounter in five shiny for eight natures. Wild encounters only; single-gender and genderless
+species are exempt.
+
 ## Wanted-IVs wizard (Gen 3 / Gen 4): from the Pokemon you want to the frame, the seed and the procedure
 
 TARGET mode, human input only, in the web app's **Wizard (Gen 3/4)** tab (the same page in the
@@ -588,3 +600,26 @@ available without installing anything:
 Only the Windows desktop app drives mGBA for automatic manipulation; everything else is
 the assisted toolset. The math is identical everywhere (parity-tested against the C#
 engine every test run, and against RNG Solution's Python for the Gen 1 engine).
+
+## Gen 5 (Black / White / Black 2 / White 2)
+
+The Gen 5 tab has no timer, because the game seeds its RNG once, at boot, from the DS clock to the
+second, Timer0 and VCount (which differ per console), the MAC address and the buttons held during
+boot; the Trainer ID is a fixed number of advances after that. So a TID target is a boot second:
+
+1. **Console profile** - the values the seed depends on. They are placeholders until you have
+   calibrated them: start any game at a clock you noted, read the Trainer Card, and run
+   **Calibrate the profile from a TID you got** over a Timer0 / VCount / VFrame range. The rows
+   that come back are your console's profile; copy them into the fields.
+2. **Find TID targets by boot second** - type the TID you want (and SID, if you care) and a clock
+   minute; every second of that minute is searched across the profile's Timer0 range. Use a hit by
+   setting the DS clock, keeping the C-Gear off, and turning the game on so it boots on that
+   second; then start a new game. Row 0 is the plain new game; rows 1-3 follow community guides
+   that tie them to answering "No" to Juniper that many times (not verified here).
+3. **Boot seed & TID/SID calculator** - the seed and the ID rows for one boot, to check a result.
+
+Everything in this tab is a port of PokeFinder (Admiral-Fish) verified against its vectors; there
+is no Gen 5 decompilation, so unlike Gens 1-4 nothing is line-cited to game code. It has been checked
+end to end on melonDS 1.1 (2026-09-16): two calibration boots gave the profile Timer0 0xBBD / VCount
+0x5A / VFrame 5 / GxStat 6 (MAC 00:09:BF:11:22:33, the emulator's built-in firmware), and booting White
+at the second the tab predicted produced exactly the predicted TID 43084 / SID 1621 on the first try.
