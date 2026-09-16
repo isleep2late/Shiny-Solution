@@ -631,6 +631,15 @@ SID = high 16 (`pokeplatinum/src/game_start.c:144-172`,
 `pokeheartgold/src/overlay_36.c:186-202`). TID manip therefore targets the seed hit at that
 moment, not the title-screen seed.
 
+## Parity of the reachable delay (EMPIRICAL, melonDS)
+
+Twelve Platinum runs on melonDS 1.1 that pressed A on the closing TV quote at wall-clock frames
+spanning three frames produced seed delays 11001, 11241 and 11243 only - never an even delay -
+and presses sorted into two-frame-wide bins. The intro's screen fades and the TV app's counters
+step every second frame, so from that press only one parity of `vblankCounter` is reachable at
+`InitRNG()`. A target of the wrong parity cannot be hit from that press however well it is timed;
+the Gen 4 tab says so under a loaded target. Hardware may differ in which parity, not in the fact.
+
 ## Starters and gifts
 
 Classic Method 1 on the LCRNG — the same four calls as Gen 3 (PID low, PID high, IV word 1,

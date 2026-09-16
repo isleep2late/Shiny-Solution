@@ -377,7 +377,7 @@
       $("g4-target-info").textContent = "target: boot second " + h.second + ", delay " + h.delay +
         ", seed " + ("0000000" + h.seed.toString(16).toUpperCase()).slice(-8) + " (TID " + h.tid + " / SID " + h.sid + ")";
       g4ClockNote();
-      $("g4-cc").innerHTML = g4CuteCharmNote(h.tid, h.sid);
+      $("g4-cc").innerHTML = g4CuteCharmNote(h.tid, h.sid) + " Parity: if the delays you hit are always odd (or always even), only that parity is reachable from your press - pick a target of the same parity (this one is " + (h.delay % 2 ? "odd" : "even") + ").";
       g4Idle();
     });
   }
@@ -582,7 +582,8 @@
   function g5TidSearch() {
     var d = g5Parts("g5-tdate"); if (!d) return;
     var sid = $("g5-sid").value === "" ? null : Number($("g5-sid").value);
-    var hits = gen5.searchTid(g5Profile(), d.y, d.mo, d.d, d.h, d.mi, 0, 59, Number($("g5-tid").value), sid, 3, 40);
+    var tid = $("g5-tid").value === "" ? null : Number($("g5-tid").value);   // blank: list what every second of the minute gives
+    var hits = gen5.searchTid(g5Profile(), d.y, d.mo, d.d, d.h, d.mi, 0, 59, tid, sid, tid === null ? 0 : 3, tid === null ? 60 : 40);
     if (!hits.length) { $("g5-tid-results").innerHTML = "<p class='result'>No boot second in that minute gives this TID with this profile - try the next minute or a wider Timer0 range.</p>"; return; }
     renderTable($("g5-tid-results"), ["Second", "Timer0", "Buttons", "Seed", "Row", "TID", "SID"], hits.map(function (h) {
       return { data: h, cells: [h.second, h.timer0.toString(16).toUpperCase(), h.buttons ? gen5.buttonNames(h.buttons).join("+") : "none", gen5.hex64(h.seed), h.noCount, h.tid, h.sid] };
