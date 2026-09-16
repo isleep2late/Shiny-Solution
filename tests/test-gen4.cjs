@@ -46,18 +46,23 @@ for (const t of v.timers) {
   // minute out fails the manip silently. The vector above pins the uncalibrated value;
   // this pins the thing that actually matters.
   const spanned = Math.floor((phases.phase1Ms + phases.phase2Ms) / 60000);
-  check(`minutesBefore agrees with phases ${t.td}/${t.ts}`, gen4.minutesBefore(t.td, t.ts, t.cd, t.cs), spanned);
+  check(`minutesSpanned agrees with phases ${t.td}/${t.ts}`, gen4.minutesSpanned(t.td, t.ts, t.cd, t.cs), spanned);
+  // and minutesBefore stays EonTimer's calibration-0 figure (gen4Timer.ts:25-29)
+  const eon = gen4.timerPhases(t.td, t.ts, 0, 0);
+  check(`minutesBefore is the calibration-0 span ${t.td}/${t.ts}`, gen4.minutesBefore(t.td, t.ts), Math.floor((eon.phase1Ms + eon.phase2Ms) / 60000));
   check(`calibrate ${t.td}/${t.ts}`, gen4.calibrate(t.cd, t.td, t.td + 40), t.calibrated);
 }
 
-// The exact pair the old code got wrong, kept as a named case because none of the
-// three timer vectors above happens to be one of the 26,516 (of 282,060) that
-// disagreed: at the app's default calibration (500 / 14) the timer for delay 300 at
-// second 19 spans a whole minute, and minutesBefore used to say zero.
+// The pair where EonTimer's figure and the calibrated span part ways, kept by name
+// because none of the three timer vectors above is one of the 26,516 (of 282,060)
+// that do: at the default calibration (500 / 14), delay 300 at second 19 winds p1
+// across the 14 s minimum, so the calibrated timer spans a whole minute while the
+// calibration-0 figure EonTimer shows is zero. Both must be reported, and the UI
+// must show both when they differ - a DS clock set by the wrong one misses the seed.
 {
-  const p = gen4.timerPhases(300, 19, 500, 14);
-  check("minutesBefore 300/19 agrees with its phases", gen4.minutesBefore(300, 19, 500, 14), Math.floor((p.phase1Ms + p.phase2Ms) / 60000));
-  check("minutesBefore 300/19 is 1 minute", gen4.minutesBefore(300, 19, 500, 14), 1);
+  check("minutesBefore 300/19 is EonTimer's 0", gen4.minutesBefore(300, 19), 0);
+  check("minutesSpanned 300/19 @500/14 is 1", gen4.minutesSpanned(300, 19, 500, 14), 1);
+  check("the two differ here, by design", gen4.minutesBefore(300, 19) !== gen4.minutesSpanned(300, 19, 500, 14), true);
 }
 
 // An out-of-range calibrated second used to spin `while (p1 < 14000) p1 += 60000`

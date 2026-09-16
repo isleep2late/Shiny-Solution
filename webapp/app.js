@@ -408,9 +408,14 @@
   // g4-cald, which used to leave this note showing the previous minute count.
   function g4ClockNote() {
     if (!g4state || g4state.delay == null) return;
-    var mb = gen4.minutesBefore(g4state.delay, g4state.second,
+    // mb is EonTimer's figure (calibration 0), so it matches what a user sees there.
+    // span is what the calibrated timer really runs; when the two differ, say so -
+    // the DS clock has to go by span, and silently showing either alone is wrong.
+    var mb = gen4.minutesBefore(g4state.delay, g4state.second);
+    var span = gen4.minutesSpanned(g4state.delay, g4state.second,
       Number($("g4-cald").value), Number($("g4-cals").value));
-    $("g4-clock-note").textContent = "Set the DS clock " + mb + " minute(s) BEFORE the target minute — the countdown spans that long, so the A press lands inside the target minute.";
+    $("g4-clock-note").textContent = "Set the DS clock " + mb + " minute(s) BEFORE the target minute — the countdown spans that long, so the A press lands inside the target minute."
+    if (span !== mb) $("g4-clock-note").textContent += " With your calibration the timer actually spans " + span + " minute(s): set the DS clock by " + span + ", not " + mb + ". EonTimer shows " + mb + " because it works this out at calibration 0.";
   }
 
   function g4Idle() {

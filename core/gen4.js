@@ -132,14 +132,26 @@
     return { phase1Ms: p1, phase2Ms: p2 };
   }
 
-  // How many minutes the whole timer spans, which is what the user sets the DS
-  // clock back by. It MUST be read off the same phases the countdown runs, not
-  // recomputed: this used to do its own arithmetic with the calibration silently
-  // dropped, so for 9.4% of (delay, second) pairs at the default calibration it
-  // printed a number one minute away from the timer sitting beside it - and a DS
-  // clock set one minute out fails the manip with nothing to show why.
-  function minutesBefore(targetDelay, targetSecond, calibratedDelay, calibratedSecond) {
-    var p = timerPhases(targetDelay, targetSecond, calibratedDelay || 0, calibratedSecond || 0);
+  // EonTimer's "minutes before target": the span at calibration 0. EonTimer computes
+  // it that way on purpose (gen4Timer.ts:25-29; docs/FACTS.md:1314) and this has to
+  // keep matching it, so that someone cross-checking against the community's timer
+  // sees the same figure here. It is derived from timerPhases rather than restated,
+  // so the two cannot drift. It is NOT always what the calibrated timer spans - see
+  // minutesSpanned, and show both when they differ.
+  function minutesBefore(targetDelay, targetSecond) {
+    var p = timerPhases(targetDelay, targetSecond, 0, 0);
+    return Math.floor((p.phase1Ms + p.phase2Ms) / 60000.0);
+  }
+
+  // What the CALIBRATED timer really spans, read off the same phases the countdown
+  // runs. Calibration cancels out of p1 + p2 exactly - except that p1 is wound up to
+  // the 14 s minimum AFTER calibration is applied (delayTimer.ts:9-22, same order as
+  // here), so when calibration carries p1 across that threshold the total jumps by a
+  // whole minute. At the default 500 / 14 that happens for 9.4% of (delay, second)
+  // pairs. When it does, the DS clock has to go by THIS number: the RTC at the press
+  // is the RTC at timer start plus the real span, not the calibration-0 one.
+  function minutesSpanned(targetDelay, targetSecond, calibratedDelay, calibratedSecond) {
+    var p = timerPhases(targetDelay, targetSecond, calibratedDelay, calibratedSecond);
     return Math.floor((p.phase1Ms + p.phase2Ms) / 60000.0);
   }
 
@@ -174,6 +186,7 @@
     calibrationMs: calibrationMs,
     timerPhases: timerPhases,
     minutesBefore: minutesBefore,
+    minutesSpanned: minutesSpanned,
     calibrate: calibrate,
     searchShinyFromSeed: searchShinyFromSeed
   };
