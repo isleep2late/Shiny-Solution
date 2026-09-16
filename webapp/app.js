@@ -1,6 +1,7 @@
 (function () {
   var core = window.ShinyCore;
   var gen4 = window.ShinyGen4;
+  var gen5 = window.ShinyGen5;
   var gen12 = window.ShinyGen12;
   var SEED = core.DEAD_BATTERY_SEED_RS;
   var MODE = window.ShinyMode;                 // webapp/mode.js: RUN by default, PRACTICE / HUNT explicit
@@ -556,7 +557,60 @@
   $("st-calibrate").addEventListener("click", calibrateStarter);
   $("ck-check").addEventListener("click", checkPid);
   $("m1-run").addEventListener("click", runMethod1);
+
+  // ---- Gen 5: boot seed, TID targets by second, profile calibration (core/gen5.js, a PokeFinder port) ----
+  function g5Hex(v) { var t = String(v).trim(); return /^0x/i.test(t) || /[a-f]/i.test(t) ? parseInt(t, 16) : Number(t); }
+  function g5Parts(id) {
+    var m = String($(id).value).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+    return m ? { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5], s: m[6] === undefined ? 0 : +m[6] } : null;
+  }
+  function g5Profile() {
+    return { game: $("g5-game").value, language: $("g5-lang").value, dsType: $("g5-ds").value, mac: $("g5-mac").value.replace(/[^0-9a-f]/gi, ""),
+      vframe: Number($("g5-vframe").value), gxstat: Number($("g5-gxstat").value), vcount: g5Hex($("g5-vcount").value),
+      timer0Min: g5Hex($("g5-t0min").value), timer0Max: g5Hex($("g5-t0max").value), keypresses: [true, false, false, false, false, false, false, false, false] };
+  }
+  function g5Calc() {
+    var d = g5Parts("g5-date"); if (!d) return;
+    var p = g5Profile();
+    var seed = gen5.initialSeed({ game: p.game, language: p.language, dsType: p.dsType, mac: p.mac, vframe: p.vframe, gxstat: p.gxstat,
+      timer0: g5Hex($("g5-calc-t0").value), vcount: p.vcount, year: d.y, month: d.mo, day: d.d, hour: d.h, minute: d.mi, second: d.s, buttons: 0 });
+    $("g5-calc-out").textContent = "seed " + gen5.hex64(seed) + "  |  new-game advances " + gen5.initialAdvancesID(seed, p.game);
+    renderTable($("g5-calc-rows"), ["Row", "Advance", "TID", "SID", "TSV"], gen5.idRows(seed, p.game, 0, 3).map(function (r, i) {
+      return { data: r, cells: [i, r.advances, r.tid, r.sid, r.tsv] };
+    }));
+  }
+  function g5TidSearch() {
+    var d = g5Parts("g5-tdate"); if (!d) return;
+    var sid = $("g5-sid").value === "" ? null : Number($("g5-sid").value);
+    var hits = gen5.searchTid(g5Profile(), d.y, d.mo, d.d, d.h, d.mi, 0, 59, Number($("g5-tid").value), sid, 3, 40);
+    if (!hits.length) { $("g5-tid-results").innerHTML = "<p class='result'>No boot second in that minute gives this TID with this profile - try the next minute or a wider Timer0 range.</p>"; return; }
+    renderTable($("g5-tid-results"), ["Second", "Timer0", "Buttons", "Seed", "Row", "TID", "SID"], hits.map(function (h) {
+      return { data: h, cells: [h.second, h.timer0.toString(16).toUpperCase(), h.buttons ? gen5.buttonNames(h.buttons).join("+") : "none", gen5.hex64(h.seed), h.noCount, h.tid, h.sid] };
+    }));
+  }
+  function g5Calibrate() {
+    var d = g5Parts("g5-cdate"); if (!d || $("g5-ctid").value === "") return;
+    var p = g5Profile(); var tid = Number($("g5-ctid").value); var sid = $("g5-csid").value === "" ? null : Number($("g5-csid").value);
+    $("g5-cal-results").innerHTML = "<p class='result'>searching...</p>";
+    setTimeout(function () {
+      var res = gen5.profileSearch({ game: p.game, language: p.language, dsType: p.dsType, mac: p.mac, buttons: 0,
+        year: d.y, month: d.mo, day: d.d, hour: d.h, minute: d.mi, minSecond: Number($("g5-csmin").value), maxSecond: Number($("g5-csmax").value),
+        minVCount: g5Hex($("g5-cvcmin").value), maxVCount: g5Hex($("g5-cvcmax").value), minTimer0: g5Hex($("g5-ct0min").value), maxTimer0: g5Hex($("g5-ct0max").value),
+        minGxStat: p.gxstat, maxGxStat: p.gxstat, minVFrame: Number($("g5-cvfmin").value), maxVFrame: Number($("g5-cvfmax").value) },
+        function (seed) { return gen5.idRows(seed, p.game, 0, 3).some(function (r) { return r.tid === tid && (sid === null || r.sid === sid); }); });
+      if (!res.length) { $("g5-cal-results").innerHTML = "<p class='result'>Nothing in those ranges reproduces that TID - widen Timer0/VCount, check the MAC, or include the SID.</p>"; return; }
+      renderTable($("g5-cal-results"), ["Timer0", "VCount", "VFrame", "GxStat", "Second", "Row"], res.slice(0, 40).map(function (r) {
+        var rows = gen5.idRows(r.seed, p.game, 0, 3); var i = -1;
+        rows.forEach(function (x, k) { if (i < 0 && x.tid === tid && (sid === null || x.sid === sid)) i = k; });
+        return { data: r, cells: [r.timer0.toString(16).toUpperCase(), r.vcount.toString(16).toUpperCase(), r.vframe, r.gxstat, r.second, i] };
+      }));
+    }, 10);
+  }
+
   $("g4-calc").addEventListener("click", g4Calc);
+  $("g5-calc").addEventListener("click", g5Calc);
+  $("g5-tid-search").addEventListener("click", g5TidSearch);
+  $("g5-calibrate").addEventListener("click", g5Calibrate);
   $("g4-tid-search").addEventListener("click", g4TidSearch);
   $("g4-sh-search").addEventListener("click", g4ShinySearch);
   $("g4-start").addEventListener("click", g4Start);

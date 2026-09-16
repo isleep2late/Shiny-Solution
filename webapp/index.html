@@ -25,6 +25,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
   <button data-tab="g3timer" class="active">Gen 3 Timer</button>
   <button data-tab="g3check">Gen 3 Checker</button>
   <button data-tab="g4">Gen 4</button>
+  <button data-tab="g5">Gen 5</button>
   <button data-tab="g12">Gen 1/2 DVs</button>
   <button data-tab="g1tid">Gen 1 TID</button>
   <button data-tab="g2tid">Gen 2 TID</button>
@@ -171,6 +172,70 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
         <button id="g4-match">Match</button>
       </div>
       <p id="g4-match-result" class="result"></p>
+    </div>
+  </section>
+  <section id="tab-g5" class="tab">
+    <div class="card">
+      <h2>Console profile (Black / White / Black 2 / White 2)</h2>
+      <p class="note">The seed is fixed once at boot: the DS clock to the second, Timer0 and VCount (per console), the MAC and the
+        buttons held while booting. Trainer ID is a fixed number of advances later - no delay, no timer, only the boot second.
+        Timer0 / VCount / VFrame are placeholders until you calibrate them below from a TID you already got.</p>
+      <div class="row">
+        <label>Game <select id="g5-game"><option value="black">Black</option><option value="white" selected>White</option><option value="black2">Black 2</option><option value="white2">White 2</option></select></label>
+        <label>Language <select id="g5-lang"><option value="english" selected>English</option><option value="french">French</option><option value="german">German</option><option value="italian">Italian</option><option value="japanese">Japanese</option><option value="korean">Korean</option><option value="spanish">Spanish</option></select></label>
+        <label>Console <select id="g5-ds"><option value="ds" selected>DS / DS Lite</option><option value="dsi">DSi</option><option value="3ds">3DS</option></select></label>
+        <label>MAC (hex) <input id="g5-mac" class="mono" value="0009BF0E4916"></label>
+        <label>Timer0 from (hex) <input id="g5-t0min" class="mono" size="5" value="C79"></label>
+        <label>to <input id="g5-t0max" class="mono" size="5" value="C7A"></label>
+        <label>VCount (hex) <input id="g5-vcount" class="mono" size="3" value="5F"></label>
+        <label>VFrame <input id="g5-vframe" type="number" min="0" max="15" value="5"></label>
+        <label>GxStat <input id="g5-gxstat" type="number" min="0" max="15" value="6"></label>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Boot seed &amp; TID/SID calculator</h2>
+      <div class="row primary">
+        <label>Boot date/time <input id="g5-date" type="datetime-local" step="1" value="2026-09-16T12:00:00"></label>
+        <label>Timer0 (hex) <input id="g5-calc-t0" class="mono" size="5" value="C79"></label>
+        <button id="g5-calc">Compute</button>
+      </div>
+      <p id="g5-calc-out" class="result mono"></p>
+      <div id="g5-calc-rows"></div>
+    </div>
+    <div class="card">
+      <h2>Find TID targets by boot second</h2>
+      <p class="note">Every second of one clock minute across the profile's Timer0 range, no buttons held. Use a hit by setting the DS
+        clock and booting on that second (C-Gear off), then starting a new game. Row 0 is the plain new game; rows 1-3 are the
+        next table rows, which community guides tie to answering "No" to Juniper that many times (not verified here).</p>
+      <div class="row primary">
+        <label>Target TID <input id="g5-tid" type="number" min="0" max="65535" value="7777"></label>
+        <label>SID (optional) <input id="g5-sid" type="number" min="0" max="65535"></label>
+        <label>Boot minute <input id="g5-tdate" type="datetime-local" value="2026-09-16T12:00"></label>
+        <button id="g5-tid-search">Find</button>
+      </div>
+      <div id="g5-tid-results"></div>
+    </div>
+    <div class="card">
+      <h2>Calibrate the profile from a TID you got</h2>
+      <div class="row">
+        <label>Boot minute <input id="g5-cdate" type="datetime-local" value="2026-09-16T12:00"></label>
+        <label>second from <input id="g5-csmin" type="number" min="0" max="59" value="0"></label>
+        <label>to <input id="g5-csmax" type="number" min="0" max="59" value="59"></label>
+        <label>TID you got <input id="g5-ctid" type="number" min="0" max="65535"></label>
+        <label>SID (optional) <input id="g5-csid" type="number" min="0" max="65535"></label>
+      </div>
+      <div class="row primary">
+        <label>Timer0 from (hex) <input id="g5-ct0min" class="mono" size="5" value="C00"></label>
+        <label>to <input id="g5-ct0max" class="mono" size="5" value="D00"></label>
+        <label>VCount from (hex) <input id="g5-cvcmin" class="mono" size="3" value="50"></label>
+        <label>to <input id="g5-cvcmax" class="mono" size="3" value="70"></label>
+        <label>VFrame from <input id="g5-cvfmin" type="number" min="0" max="15" value="0"></label>
+        <label>to <input id="g5-cvfmax" type="number" min="0" max="15" value="9"></label>
+        <button id="g5-calibrate">Search</button>
+      </div>
+      <div id="g5-cal-results"></div>
+      <p class="note">Gen 5 engine: a port of PokeFinder (Admiral-Fish, GPL-3.0) verified against its vectors; there is no Gen 5
+        decompilation, so nothing here is line-cited to game code.</p>
     </div>
   </section>
   <section id="tab-g12" class="tab">
