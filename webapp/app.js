@@ -375,8 +375,7 @@
       $("g4-shsid").value = h.sid;
       $("g4-target-info").textContent = "target: boot second " + h.second + ", delay " + h.delay +
         ", seed " + ("0000000" + h.seed.toString(16).toUpperCase()).slice(-8) + " (TID " + h.tid + " / SID " + h.sid + ")";
-      var mb = gen4.minutesBefore(h.delay, h.second);
-      $("g4-clock-note").textContent = "Set the DS clock " + mb + " minute(s) BEFORE the target minute — the countdown spans that long, so the A press lands inside the target minute.";
+      g4ClockNote();
       g4Idle();
     });
   }
@@ -402,6 +401,16 @@
 
   function g4Phases() {
     return gen4.timerPhases(g4state.delay, g4state.second, Number($("g4-cald").value), Number($("g4-cals").value));
+  }
+
+  // The DS clock offset must come from the SAME phases the countdown runs, and be
+  // recomputed whenever the calibration moves - calibrating after an attempt rewrites
+  // g4-cald, which used to leave this note showing the previous minute count.
+  function g4ClockNote() {
+    if (!g4state || g4state.delay == null) return;
+    var mb = gen4.minutesBefore(g4state.delay, g4state.second,
+      Number($("g4-cald").value), Number($("g4-cals").value));
+    $("g4-clock-note").textContent = "Set the DS clock " + mb + " minute(s) BEFORE the target minute — the countdown spans that long, so the A press lands inside the target minute.";
   }
 
   function g4Idle() {
@@ -431,6 +440,7 @@
     $("g4-cald").value = Math.round(next * 10) / 10;
     localStorage.setItem(g4CaldKey(), String(next));
     $("g4-cal-result").textContent = "calibrated delay is now " + (Math.round(next * 10) / 10) + modeTag();
+    g4ClockNote();
     g4Idle();
   }
 
