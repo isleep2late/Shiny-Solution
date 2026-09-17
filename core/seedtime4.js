@@ -1,9 +1,9 @@
 // Gen 4 seed-to-time and LCRNG reversal (the tool layer of the RNG guide design, sections 5.3/5.4/6.2).
 //
-// The seed (STRUCTURAL, pokeplatinum/src/main.c:306-315; pokeheartgold/src/main.c:281-284 with
-// include/gf_rtc.h:46-51; pokediamond/arm9/src/main.c:239-249):
+// The seed (STRUCTURAL, pokeplatinum/src/main.c:306-315; pokeheartgold/src/main.c:279-282 with
+// include/gf_rtc.h:47-52; pokediamond/arm9/src/main.c:239-249):
 //   seed = ((month*day + minute + second) << 24) + (hour << 16) + (year - 2000) + delay
-// where delay is gSystem.vblankCounter, the count of VBlanks since boot (main.c:136-150). The same
+// where delay is gSystem.vblankCounter, the count of VBlanks since boot (main.c:134-148). The same
 // value seeds the MT (TID/SID = 2nd output, coin flips) and the LCRNG (everything else).
 //
 // This module is the tool layer over that formula:
@@ -181,11 +181,11 @@
   }
 
   // HGSS roamers: when a saved game is continued, every active roamer re-rolls its route from the LCRNG
-  // before the player has control: pokeheartgold/src/field_warp_tasks.c:355-379 (FieldTask_ContinueGame_Normal,
+  // before the player has control: pokeheartgold/src/field_warp_tasks.c:415-439 (FieldTask_ContinueGame_Normal,
   // case 0, calls sub_02067BE8) -> asm/unk_02067A60.s:212-220 (a thunk: Save_Roamers_Get, then
   // Save_RandomizeRoamersLocation) -> src/field_roamer.c:123-130 (every active roamer in the order Raikou,
   // Entei, Latias, Latios of include/constants/roamer.h:4-7; two more thunks re-roll on the warps at
-  // field_warp_tasks.c:633 and :744). The draw (:236-254): LCRandom() % 16 + Johto start for Raikou/Entei,
+  // field_warp_tasks.c:693 and :744). The draw (:236-254): LCRandom() % 16 + Johto start for Raikou/Entei,
   // % 25 + Kanto start for Latias/Latios, retried while it equals the roamer's current map or the player's
   // last map (:118-121 passes PlayerLocationHistoryGetBack). Route tables: field_roamer.c:24-69
   // (Johto 29-39, 42-46; Kanto 1-22, 24, 26, 28). PokeFinder HGSSRoamer.cpp models the retry against the

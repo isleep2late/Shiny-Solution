@@ -65,7 +65,7 @@
     },
     "hgss/nds/seed-to-time-v0": {
       id: "hgss/nds/seed-to-time-v0", kind: "chosen",
-      text: "HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:281-284 with include/gf_rtc.h:46-51), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
+      text: "HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:279-282 with include/gf_rtc.h:47-52), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
       status: "PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate)"
     }
   };
@@ -114,12 +114,12 @@
     gen3Timer: { synth: "EonTimer's frame model, docs/FACTS.md Timer models", claim: "phase 2 is the target frame in milliseconds at the console's rate plus the calibration, after the pre-timer; GBA 16777216 Hz / 280896 cycles per frame = 59.7275 fps is the community timer's constant, not a game line" },
     gen3Calibrate: { synth: "EonTimer's frame calibration, docs/FACTS.md Timer models", claim: "the calibration moves by (target - hit) frames in milliseconds" },
     dpptSeed: { cite: "pokeplatinum/src/main.c:306-315", claim: GEN4_SEED_CLAIM },
-    hgssSeed: { cite: "pokeheartgold/src/main.c:281-284", claim: GEN4_SEED_CLAIM },
-    hgssRtc: { cite: "pokeheartgold/include/gf_rtc.h:46-51", claim: "RngSeedFromRTC folds the date and the time into the seed's high bytes" },
+    hgssSeed: { cite: "pokeheartgold/src/main.c:279-282", claim: GEN4_SEED_CLAIM },
+    hgssRtc: { cite: "pokeheartgold/include/gf_rtc.h:47-52", claim: "RngSeedFromRTC folds the date and the time into the seed's high bytes" },
     dpptStatic: { cite: "pokeplatinum/src/pokemon.c:412,452-470", claim: GEN4_STATIC_CLAIM },
     hgssStatic: { cite: "pokeheartgold/src/pokemon.c:195,226-239", claim: GEN4_STATIC_CLAIM },
     dpptWild: { cite: "pokeplatinum/src/overlay006/wild_encounters.c:1047-1087,1462", claim: GEN4_WILD_CLAIM + " (Method J)" },
-    hgssWild: { cite: "pokeheartgold/src/field/encounter_check.c:821-875,1350", claim: GEN4_WILD_CLAIM + " (Method K)" },
+    hgssWild: { cite: "pokeheartgold/src/field/encounter_check.c:822-876,1351", claim: GEN4_WILD_CLAIM + " (Method K)" },
     gen4Timer: { synth: "EonTimer's delay model, docs/FACTS.md Timer models", claim: "phase 1 = target second x 1000 + calibration + 200 - ms(target delay), padded to whole minutes; phase 2 = ms(target delay) - calibration; calibration = ms(calibrated delay) - calibrated second x 1000; NDS 59.8261 fps is the community timer's constant, not a game line" },
     coinToss: { cite: "pokeplatinum/src/applications/poketch/coin_toss/main.c:158", claim: "each Poketch coin flip is one Mersenne Twister output modulo 2 (1 = heads); the LCRNG frame does not move" },
     elmCall: { cite: "pokeheartgold/src/application/pokegear/phone/scripts/phone_scripts_prof_elm.c:84-86", claim: "each call to Elm is one LCRNG output, modulo 3 for E / K / P on the story states that roll three ways, modulo 2 before" },
