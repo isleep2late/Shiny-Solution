@@ -614,7 +614,7 @@
    "id": "hgss/nds/seed-to-time-v0",
    "kind": "chosen",
    "seed": null,
-   "text": "HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:281-284 with include/gf_rtc.h:46-51), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
+   "text": "HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:279-282 with include/gf_rtc.h:47-52), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
    "typed": null,
    "status": "PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate)"
   }
@@ -809,7 +809,7 @@
    "console": "NDS_SLOT1",
    "lines": [
     "Seed model: hgss/nds/seed-to-time-v0",
-    "  HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:281-284 with include/gf_rtc.h:46-51), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
+    "  HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:279-282 with include/gf_rtc.h:47-52), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
     "  Validation status: PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate).",
     "  Console rate: 59.8261 fps (core/timers.js, EonTimer's constants); a frame is 16.7151 ms.",
     "  EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console."
@@ -820,7 +820,7 @@
    "console": "DSI",
    "lines": [
     "Seed model: hgss/nds/seed-to-time-v0",
-    "  HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:281-284 with include/gf_rtc.h:46-51), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
+    "  HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:279-282 with include/gf_rtc.h:47-52), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
     "  Validation status: PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate).",
     "  Console rate: 59.8261 fps (core/timers.js, EonTimer's constants); a frame is 16.7151 ms.",
     "  EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console."
@@ -831,7 +831,7 @@
    "console": "NDS_SLOT1",
    "lines": [
     "Seed model: hgss/nds/seed-to-time-v0",
-    "  HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:281-284 with include/gf_rtc.h:46-51), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
+    "  HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:279-282 with include/gf_rtc.h:47-52), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
     "  Validation status: PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate).",
     "  Console rate: 59.8261 fps (core/timers.js, EonTimer's constants); a frame is 16.7151 ms.",
     "  EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console."
@@ -842,7 +842,7 @@
    "console": "DSI",
    "lines": [
     "Seed model: hgss/nds/seed-to-time-v0",
-    "  HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:281-284 with include/gf_rtc.h:46-51), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
+    "  HeartGold / SoulSilver: the same seed formula (pokeheartgold/src/main.c:279-282 with include/gf_rtc.h:47-52), the same back-step; Elm's calls verify the seed (phone_scripts_prof_elm.c:59,84,86), and the roamers' re-roll on continue is counted when you say which roam.",
     "  Validation status: PokeFinder's seed-to-time and reversal data bit for bit; EMPIRICAL / model output: no DS session has landed a seed chosen by this tool (the hardware gate).",
     "  Console rate: 59.8261 fps (core/timers.js, EonTimer's constants); a frame is 16.7151 ms.",
     "  EMPIRICAL / model output: no hardware session has run this procedure. Every frame, time and delay here is the engine's prediction from the decompiled code; the typed outcome in the last step is what ties it to your console."

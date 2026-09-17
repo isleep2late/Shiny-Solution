@@ -6,7 +6,7 @@ namespace ShinySolution.Core;
 // ordering, same return semantics). Citations live in the JS file and docs/FACTS.md ("Gen 4 seed-to-time
 // and reversal"); the short forms here name the same lines.
 //   seed = ((month*day + minute + second) << 24) + (hour << 16) + (year - 2000) + delay
-//   (pokeplatinum/src/main.c:306-315; pokeheartgold/src/main.c:281-284 + include/gf_rtc.h:46-51)
+//   (pokeplatinum/src/main.c:306-315; pokeheartgold/src/main.c:279-282 + include/gf_rtc.h:47-52)
 public sealed record SeedTimeRow(int Year, int Month, int Day, int Hour, int Minute, int Second, uint Delay, int DelaySigned, uint Seed);
 
 public sealed record RoamerInfo(int Raikou, int Entei, int Lati, int Skips, string RouteString);

@@ -72,7 +72,7 @@ savestate with shifted timing instead of computing targets. State addresses: Gen
 Spe DV == 10, Spc DV == 10 and Atk DV has bit 1 set (Atk in {2,3,6,7,10,11,14,15}) —
 1/8192. On the packed DV word: byte0 & 0x2F == 0x2A pattern family, byte1 == 0xAA.
 Gen 1 mons have no shininess; the Time Capsule copies DVs verbatim
-(`pokecrystal/engine/link/link.asm:1024-1108`), so a Gen 1 mon is shiny in Gen 2 iff its
+(`pokecrystal/engine/link/link.asm:1032-1116`), so a Gen 1 mon is shiny in Gen 2 iff its
 DVs already satisfy the rule — hunting "shiny" DVs in Gen 1 works.
 
 ## Where DVs are rolled
@@ -176,7 +176,7 @@ for Blue, so its citations are pokered's.
 
 | fact | where | label |
 |---|---|---|
-| the title screen waits in `.awaitUserInterruptionLoop` on `CheckForUserInterruption`, which runs one `DelayFrame` and one `JoypadLowSensitivity` per frame and returns on START or A (`hJoy5`) or Up+Select+B (`hJoyHeld`); the loop ends, the cry and the fade play, then `jp MainMenu`: START held is read on the first poll after the title's scroll-in, so any START-down frame inside the hold window opens the menu on one fixed frame | `pokered/engine/movie/title.asm:227-239,266`, `pokered/home/overworld.asm:2395-2424`; Yellow polls `hJoyHeld & (A\|START)` by level in its own title loop, `pokeyellow/engine/movie/title.asm:166-175` | STRUCTURAL (the loop); the window's frames EMPIRICAL (the tables below) |
+| the title screen waits in `.awaitUserInterruptionLoop` on `CheckForUserInterruption`, which runs one `DelayFrame` and one `JoypadLowSensitivity` per frame and returns on START or A (`hJoy5`) or Up+Select+B (`hJoyHeld`); the loop ends, the cry and the fade play, then `jp MainMenu`: START held is read on the first poll after the title's scroll-in, so any START-down frame inside the hold window opens the menu on one fixed frame | `pokered/engine/movie/title.asm:227-239,266`, `pokered/home/overworld.asm:2394-2423`; Yellow polls `hJoyHeld & (A\|START)` by level in its own title loop, `pokeyellow/engine/movie/title.asm:166-175` | STRUCTURAL (the loop); the window's frames EMPIRICAL (the tables below) |
 | the NEW GAME menu waits in `HandleMenuInput` with `wMenuWatchedKeys = A\|B\|START`; A on NEW GAME goes to `StartNewGame` -> `OakSpeech` -> `InitPlayerData2`, whose first two `Random` calls write `wPlayerID`: `hRandomSub` (the high byte) then `hRandomAdd` (the low byte) | `pokered/engine/menus/main_menu.asm:64-68,85-86`, `pokered/engine/movie/oak_speech/oak_speech.asm:42-52`, `pokered/engine/movie/oak_speech/init_player_data.asm:1-10`; Yellow `pokeyellow/engine/menus/main_menu.asm:63-66,84`, `pokeyellow/engine/movie/oak_speech/oak_speech.asm:60`, `pokeyellow/engine/movie/oak_speech/init_player_data.asm:1-10` | STRUCTURAL |
 | the only RNG is `Random_`: `hRandomAdd += rDIV` and `hRandomSub -= rDIV`, called once per VBlank, so the Trainer ID is a function of the frame of the A press and of the DIV phase that the hold-START boot fixes; the table's offset is that frame counted from the menu (A press frame = menu frame + 80 + offset) | `pokered/engine/math/random.asm:1-13`, `pokered/home/vblank.asm:37`; Yellow `pokeyellow/engine/math/random.asm:1-13`, `pokeyellow/home/vblank.asm:43` | STRUCTURAL (the stir); the offset EMPIRICAL (the tables' definition) |
 
@@ -246,7 +246,7 @@ boot ROMs as Red, `wSaveFileStatus $D088`, `wPlayerID $D359` (`pokeblue.sym`).
 (`pokeyellow/engine/movie/intro_yellow.asm:12-20`); the title loop tests `hJoyHeld & (A|START)` (level,
 `pokeyellow/engine/movie/title.asm:166-175`); `PlayShootingStar` shows the copyright screen for 180 frames,
 waits 64 more, then `AnimateShootingStar` polls `CheckForUserInterruption`
-(`pokeyellow/engine/movie/intro.asm:82-123`, `pokeyellow/home/overworld.asm:2273-2302`). EMPIRICAL (the `hold` search at
+(`pokeyellow/engine/movie/intro.asm:75-116`, `pokeyellow/home/overworld.asm:2272-2301`). EMPIRICAL (the `hold` search at
 step 1 over every candidate range, `timeline` brightness with no input):
 
 | hold START from (frames) | GBA silicon: menu | DMG: menu | what happens |
@@ -602,7 +602,7 @@ mechanisms at the instruction level; **any hardware sample of any Gen 2 configur
 
 ## The seed
 
-Verified in all three decomps (`pokeheartgold/include/gf_rtc.h:46-51` + `src/main.c:281-284`,
+Verified in all three decomps (`pokeheartgold/include/gf_rtc.h:47-52` + `src/main.c:279-282`,
 `pokeplatinum/src/main.c:306-315`, `pokediamond/arm9/src/main.c:239-249`):
 
 ```
@@ -778,11 +778,11 @@ Each row carries the game's check:
   (skipped roamer calls in parentheses, 20 calls after them) is reproduced.
 - HGSS roamers: when a saved game is continued, every active roamer re-rolls its route from the
   LCRNG before the player has control, in the order Raikou, Entei, Latias, Latios: the continue task
-  `FieldTask_ContinueGame_Normal` (`pokeheartgold/src/field_warp_tasks.c:355-379`, case 0) calls
+  `FieldTask_ContinueGame_Normal` (`pokeheartgold/src/field_warp_tasks.c:415-439`, case 0) calls
   `sub_02067BE8`, a thunk at `asm/unk_02067A60.s:212-220` (`Save_Roamers_Get`, then
   `Save_RandomizeRoamersLocation`), which is `src/field_roamer.c:123-130` looping the active roamers
   of `include/constants/roamer.h:4-7` (two more thunks re-roll on the warps at
-  `field_warp_tasks.c:633` and `:744`). The draw (`:236-254`): `LCRandom() % 16` into the Johto
+  `field_warp_tasks.c:693` and `:744`). The draw (`:236-254`): `LCRandom() % 16` into the Johto
   table for Raikou/Entei, `% 25` into the Kanto table for Latias/Latios, retried while it equals the
   roamer's current map or the player's last map (`:118-121` passes `PlayerLocationHistoryGetBack`);
   tables `:24-69`: Johto 29-39, 42-46, Kanto 1-22, 24, 26, 28. Those calls come before the Elm
@@ -1595,7 +1595,7 @@ pokeplatinum `7c0aa10b`, pokeheartgold `814275e`; PokeFinder `7adce35`.
   DPPt `LCRNG_RandMod(n) = rand / ((0xffff / n) + 1)` (`pokeplatinum/include/inlines.h:156-169`)
   except the places that spell `LCRNG_Next() % n` (surf/fish level `wild_encounters.c:967`,
   typed slot pick `:1312`, held item `pokemon.c:4681`, Unown form `:1489`); HGSS
-  `LCRandRange(n) = LCRandom() % n` (`pokeheartgold/include/math_util.h:34`) everywhere.
+  `LCRandRange(n) = LCRandom() % n` (`pokeheartgold/include/math_util.h:35`) everywhere.
 - **PID** = `lo | (hi << 16)`, low half first: `Random32()` (`pokeemerald/include/random.h:12`),
   `pokeplatinum/src/pokemon.c:412`, `pokeheartgold/src/pokemon.c:195`. The one exception is
   the FRLG Unown loop, `(Random() << 16) | Random()`, high half first
@@ -1715,12 +1715,12 @@ bit 15 of the PID is set (`pokeemerald:784-791`).
 - Shiny "always" (red Gyarados): `Pokemon_FindShinyPersonality` / `GenerateShinyPersonality`:
   `low = rand & 7`, `high = rand & 7`, then for each of 13 TSV bits one call decides which half
   gets the bit (`pokeplatinum/src/pokemon.c:2762-2795`, `pokeheartgold/src/pokemon.c:2132-2152`,
-  called from `encounter_check.c:796`): 15 calls, then IVs.
+  called from `encounter_check.c:797`): 15 calls, then IVs.
 - Shiny "never" (Manaphy egg): ARNG `x*0x6C078965 + 1` rerolls until not shiny, no LCRNG call
   (`pokeplatinum/src/overlay005/daycare.c:1130-1131`, `src/math_util.c:106`).
 - Method J/K statics go through the wild creator: Cute Charm roll, Synchronize/nature, PID
   loop, IVs, then one held-item roll after the IVs (`pokeplatinum/src/overlay006/wild_encounters.c:1227-1235,1462`,
-  `pokeplatinum/src/pokemon.c:4681`; HGSS `pokeheartgold/src/field/encounter_check.c:988-996,1350`); `callsUsedWithItem` counts it.
+  `pokeplatinum/src/pokemon.c:4681`; HGSS `pokeheartgold/src/field/encounter_check.c:989-997,1351`); `callsUsedWithItem` counts it.
 - HGSS starters are created three in a row, 4 calls each, so starter i is at frame + 4i
   (`pokeheartgold/src/choose_starter.c:55-59`); DPPt starters are single `GivePokemon` mons
   (`statics-gen4.json` creation notes).
@@ -1772,7 +1772,7 @@ Great Marsh/Safari (EMPIRICAL, PokeFinder `WildGenerator4.cpp:247-270`).
 ## Gen 4 wild Method K (HGSS): `gen4Wild` with `method: "K"`
 
 `pokeheartgold/src/field/encounter_check.c`; every roll is modulo. The wild creator is `generateWildNonShinyAndAddToParty`
-(`pokeheartgold/src/field/encounter_check.c:821-875,1350`: the Cute Charm roll, the nature, the PID loop and the IVs, then
+(`pokeheartgold/src/field/encounter_check.c:822-876,1351`: the Cute Charm roll, the nature, the PID loop and the IVs, then
 `addGeneratedMonToBattleSetupParty` rolls the held item).
 
 1. Rock smash `(LCRandom() % 100) >= rate` (`:388`), fishing `LCRandRange(100) >= rate` (`:341`)
@@ -1891,7 +1891,7 @@ a readout must show the set of the method in use (each set is pinned by a test).
 | D1 | Emerald typed slots | Magnet Pull on land only, Static on land and water, neither on rocks (`pokeemerald/src/wild_encounter.c:430,432,438,443-444`) | applies both leads to every encounter type (`WildGenerator3.cpp`, `if ((lead == Lead::MagnetPull \|\| lead == Lead::Static) && ...)`) | Emerald water tables have no Steel type and rock tables no Electric type, so no shipped table differs; pinned with synthetic tables (`pin D1`) |
 | D2 | Emerald Everstone roll | `Random() >= USHRT_MAX/2` (= 0x7fff) -> no inheritance (`daycare.c:446-447`) | `(rand >> 15) == 0` inherits, so an output of exactly 0x7fff inherits | 1 in 65536 trigger frames (`pin D2`) |
 | D3 | HGSS Bug Contest with a Pressure-family lead | slot and level only (`pokeheartgold/src/overlay_bug_contest.c:178-186`) | adds the Pressure `nextUShort(2)` roll (`calculateLevel<true, true>` with force) | Pressure lead in the contest (`pin D3`) |
-| D4 | HGSS Safari surf/fishing with a Pressure-family lead | slot swap on land only (`pokeheartgold/src/field/encounter_check.c:961-965`) | `Grass \|\| safari` -> swap roll on water too | Pressure lead in Safari water (`pin D4`) |
+| D4 | HGSS Safari surf/fishing with a Pressure-family lead | slot swap on land only (`pokeheartgold/src/field/encounter_check.c:962-966`) | `Grass \|\| safari` -> swap roll on water too | Pressure lead in Safari water (`pin D4`) |
 | D5 | DPPt surf/fishing with Magnet Pull | typed pick overwritten by the Static check (`pokeplatinum/src/overlay006/wild_encounters.c:1113-1115`) | forces the Steel slot | needs a Steel type in a water table (none shipped); pinned with a synthetic table (`pin D5`) |
 | D6 | Gen 4 Everstone | LCRNG roll at trigger, `>= 0x7fff` fails (`pokeplatinum/src/overlay005/daycare.c:336-341`, `pokeheartgold/src/get_egg.c:241,247`), then MT loops until the parent's nature (`pokeplatinum/src/overlay005/daycare.c:353-367`, `pokeheartgold/src/get_egg.c:259-274`) | `EggGenerator4` ignores the parents' items | our `everstoneNature` / `everstoneProc` options; the oracle vectors run with them off (`pin D6`) |
 | D7 | Feebas roll off the tile | Route 119: `Random()%100` after the map check and before the spot comparison (`pokeemerald/src/wild_encounter.c:121-122,137`, `pokeruby:84-85,98`); Mt. Coronet B1F: `RandMod(2)` first in `PlayerAvatar_IsFacingFeebasTile` (`pokeplatinum/src/overlay006/feebas_fishing.c:37`, via `pokeplatinum/src/overlay006/wild_encounters.c:407`, `pokeplatinum/src/map_header.c:194-196`) | `feebasLocation && feebasTile` gates the roll (`WildGenerator3.cpp`, `WildGenerator4.cpp`), so an off-tile cast on the map spends no call | every off-tile cast on the map is one call later than PokeFinder's; `feebasMap` spends it, `feebasTile` can hit (`pin D7`) |
@@ -1899,7 +1899,7 @@ a readout must show the set of the method in use (each set is pinned by a test).
 Not a mechanic but a label: PokeFinder folds the four Ruins of Alph interior banks into one
 location and uses **10** for the Sinjoh-event hall (`hgss.py`, "Ruins of Alpha interior all
 share the same table"); in the decomp that hall is bank 13 and bank 10 is the plain
-underground hall (`pokeheartgold/src/field/encounter_check.c:1388`, `pokeheartgold/src/data/map_headers.h:9466-9467,14746-14747`). The
+underground hall (`pokeheartgold/src/field/encounter_check.c:1389`, `pokeheartgold/src/data/map_headers.h:9466-9467,14746-14747`). The
 vector builder maps PokeFinder location 10 to `sinjoh: true`.
 
 ## Not modelled / open
