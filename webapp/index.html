@@ -149,6 +149,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
     </div>
     <div class="card">
       <h2>Two-phase timer</h2>
+      <p class="note">The two phases and the delay calibration are <a href="https://github.com/DasAmpharos/EonTimer" target="_blank" rel="noopener noreferrer">EonTimer</a>'s Gen 4 timer model (Toast++, 2010; ported and maintained by DasAmpharos; MIT), ported here - the community's RNG timer, also as a <a href="https://dasampharos.github.io/EonTimer/" target="_blank" rel="noopener noreferrer">web version</a>.</p>
       <p id="g4-target-info">no target loaded — pick a row in the TID table above</p>
       <p id="g4-cc" class="result"></p>
       <p id="g4-clock-note" class="result"></p>
@@ -178,7 +179,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
     <div class="card">
       <h2>Console profile (Black / White / Black 2 / White 2)</h2>
       <p class="note">The seed is fixed once at boot: the DS clock to the second, Timer0 and VCount (per console), the MAC and the
-        buttons held while booting. Trainer ID is a fixed number of advances later - no delay, no timer, only the boot second.
+        buttons held while booting. Trainer ID is a fixed number of advances later - no delay, no timer here, only the boot second, which on hardware is the job of <a href="https://github.com/DasAmpharos/EonTimer" target="_blank" rel="noopener noreferrer">EonTimer</a>'s Gen 5 timer.
         The defaults are melonDS 1.1 with its built-in firmware, measured (Timer0 0xBBD, VCount 0x5A, VFrame 5, GxStat 6, MAC 00:09:BF:11:22:33); a real DS needs its own values - calibrate below from a TID you already got.</p>
       <div class="row">
         <label>Game <select id="g5-game"><option value="black">Black</option><option value="white" selected>White</option><option value="black2">Black 2</option><option value="white2">White 2</option></select></label>
@@ -205,7 +206,7 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
     <div class="card">
       <h2>Find TID targets by boot second</h2>
       <p class="note">Every second of one clock minute across the profile's Timer0 range, no buttons held. Use a hit by setting the DS
-        clock and booting on that second (C-Gear off), then starting a new game. Row 0 is the plain new game; rows 1-3 are the
+        clock and booting on that second (C-Gear off, <a href="https://github.com/DasAmpharos/EonTimer" target="_blank" rel="noopener noreferrer">EonTimer</a>'s Gen 5 timer or a clock in view), then starting a new game. Row 0 is the plain new game; rows 1-3 are the
         next table rows, which community guides tie to answering "No" to Juniper that many times (not verified here).</p>
       <div class="row primary">
         <label>Target TID (blank = list the minute) <input id="g5-tid" type="number" min="0" max="65535" value="7777"></label>
@@ -305,7 +306,8 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <h2>4. Cue</h2>
       <p>Press ANCHOR (or Space with nothing focused) at the anchor moment the protocol names. The beeps play
       from one pre-rendered buffer on the audio clock, every tone on an exact sample; the screen flashes with
-      each beep, and the long high beep is the A press. Space again cancels.</p>
+      each beep, and the long high beep is the A press. Space again cancels. This count-in is what the speedrunning
+      community plays with <a href="https://github.com/stringflow/FlowTimer" target="_blank" rel="noopener noreferrer">FlowTimer</a> (stringflow) for the Gen 1 manips, and the correction plays the part of its offset.</p>
       <div id="g1-display" class="bigtime">--</div>
       <div class="row primary">
         <button id="g1-anchor-btn" disabled>ANCHOR (Space)</button>
@@ -459,7 +461,9 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <h2>4. Cue</h2>
       <p>Press ANCHOR (or Space with nothing focused) at the anchor moment the protocol names. The beeps play from one
       pre-rendered buffer on the audio clock (the Gen 1 tab's player: one AudioContext for the page), every tone on an
-      exact sample; the screen flashes with each beep, and the long high beep is the A tap. Space again cancels.</p>
+      exact sample; the screen flashes with each beep, and the long high beep is the A tap. Space again cancels. This
+      count-in is what the speedrunning community plays with <a href="https://github.com/stringflow/FlowTimer" target="_blank" rel="noopener noreferrer">FlowTimer</a> (stringflow) for the Gold/Silver/Crystal manips,
+      and the correction plays the part of its offset.</p>
       <div id="g2-display" class="bigtime">--</div>
       <div class="row primary">
         <button id="g2-anchor-btn" disabled>ANCHOR (Space)</button>
@@ -646,7 +650,9 @@ window.addEventListener("unhandledrejection", function (e) { var el = document.g
       <p>Shiny-Solution manipulates the actual RNG of the classic Pokémon games: every mechanic
       here was verified against the pret decompilations. This web version covers everything that
       needs no emulator: searchers, calculators, checkers and calibrated timers for real-hardware
-      manipulation.</p>
+      manipulation. The Gen 3 and Gen 4 timers are ports of <a href="https://github.com/DasAmpharos/EonTimer" target="_blank" rel="noopener noreferrer">EonTimer</a>'s models (Toast++, 2010; ported and
+      maintained by DasAmpharos; MIT), the community's RNG timer, and the Gen 1 / Gen 2 cues follow <a href="https://github.com/stringflow/FlowTimer" target="_blank" rel="noopener noreferrer">FlowTimer</a>
+      (stringflow), the speedrunning community's beep timer.</p>
       <p>Modes: RUN is the default and is human input only (an anchor press, a typed outcome; run-legal).
       PRACTICE / HUNT is turned on with the switch above the tabs and shows a banner on every tab while it is
       on; it keeps its own calibration stores, and every record and cue log says which mode it was made in.

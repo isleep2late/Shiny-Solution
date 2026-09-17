@@ -506,6 +506,7 @@
     panel.className = "card hidden";
     panel.id = "g3-timer-panel";
     panel.innerHTML = '<h2>Timer — click Start at the exact instant you power on; press A on the long beep</h2>' +
+      '<p class="note">This is <a href="https://github.com/DasAmpharos/EonTimer" target="_blank" rel="noopener noreferrer">EonTimer</a>\'s Gen 3 standard timer, ported here (MIT); its calibration is the calibration below.</p>' +
       '<p id="g3-info"></p><div id="g3-display" class="bigtime">--:--.---</div>' +
       '<div class="row"><button id="g3-start">Start at power-on (Space)</button>' +
       '<button id="g3-cancel">Cancel</button>' +
