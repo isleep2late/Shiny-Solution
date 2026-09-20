@@ -100,18 +100,7 @@ out = {
     'url': 'https://github.com/Admiral-Fish/PokeFinder'},
    {'who': 'PKHeX', 'role': 'the LCRNG reversal',
     'what': 'The reverse-multiplier constants and the reversal algorithm follow PKHeX (LCRNG.rMult and related).',
-    'url': 'https://github.com/kwsch/PKHeX'},
-   {'who': 'ConstructiveCynicism', 'role': 'pointed at the technique',
-    'what': ('Said plainly that encounter manipulation - hard reset plus specific held inputs on an existing file - '
-             'is the Gen 3 RNG work speedruns actually use, and that the Trainer ID is reseeded when naming the '
-             'player. Both were right and both shaped what this does and does not offer. Their FRLG-StarterTool '
-             'documents the FireRed/LeafGreen side, and its scanned tables were offered to this project; nothing '
-             'here is copied from them, and they are the right thing to check our own derivation against.'),
-    'url': 'https://github.com/ConstructiveCynicism/FRLG-StarterTool'},
-   {'who': 'CasualPokePlayer', 'role': 'corrected the scope',
-    'what': ('Established that Emerald and FireRed/LeafGreen are practically impossible to manipulate for TID/SID '
-             'and that Ruby/Sapphire pair manipulation does have Any% use - which is why R/S is the family this '
-             'starts with.')}],
+    'url': 'https://github.com/kwsch/PKHeX'}],
  'credit_note': ('These credits name whose work this rests on or came from. None of them endorse this tool, have '
                  'checked it, or agree with what it says.'),
  'inputs_sha1': {f: hashlib.sha1(open(os.path.join(ROOT,'core','data',f),'rb').read()).hexdigest()
